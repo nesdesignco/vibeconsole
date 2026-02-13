@@ -512,6 +512,7 @@
 #github-panel.visible {
   width: var(--panel-width);
   border-left-color: var(--border-subtle);
+  overflow: visible;
 }
 
 /* GitHub Content */
