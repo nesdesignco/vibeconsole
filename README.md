@@ -40,7 +40,9 @@
 
 <br>
 
-<!-- TODO: Add demo screenshot or GIF: <p align="center"><img src="assets/demo.gif" width="800"></p> -->
+<p align="center">
+  <img src="docs/screenshots/vibe-console-source-control.png" width="900" alt="VibeConsole Source Control panel screenshot">
+</p>
 
 ---
 
