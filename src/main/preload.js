@@ -80,6 +80,8 @@ const allowedChannels = new Set([
   'generate-git-commit-message',
   'git-commit',
   'git-commit-amend',
+  'git-push',
+  'git-pull',
   'git-fetch',
   'git-ahead-behind',
   'load-saved-prompts',

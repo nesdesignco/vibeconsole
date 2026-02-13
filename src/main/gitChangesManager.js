@@ -502,6 +502,36 @@ async function gitFetch(projectPath, prune = true) {
   }
 }
 
+async function gitPush(projectPath, branch, setUpstream) {
+  if (!projectPath) return { error: 'Missing project path' };
+
+  try {
+    const args = ['push'];
+    if (setUpstream && branch) {
+      args.push('-u', 'origin', branch);
+    }
+    await execFileGit(args, projectPath, 2 * 1024 * 1024, 120000);
+    return { error: null };
+  } catch (err) {
+    return { error: formatGitError(err, 'Push failed') };
+  }
+}
+
+async function gitPull(projectPath, branch, noUpstream) {
+  if (!projectPath) return { error: 'Missing project path' };
+
+  try {
+    const args = ['pull'];
+    if (noUpstream && branch) {
+      args.push('origin', branch);
+    }
+    await execFileGit(args, projectPath, 10 * 1024 * 1024, 120000);
+    return { error: null };
+  } catch (err) {
+    return { error: formatGitError(err, 'Pull failed') };
+  }
+}
+
 /**
  * Parse hunk header line for labels.
  */
@@ -1473,6 +1503,16 @@ function setupIPC(ipcMain) {
 
   ipcMain.handle(IPC.GIT_COMMIT_AMEND, async (event, { projectPath, message }) => {
     const result = await gitCommitAmend(projectPath, message);
+    return invalidateOnSuccess(projectPath, result, { status: true, aheadBehind: true, activity: true });
+  });
+
+  ipcMain.handle(IPC.GIT_PUSH, async (event, { projectPath, branch, setUpstream }) => {
+    const result = await gitPush(projectPath, branch, setUpstream);
+    return invalidateOnSuccess(projectPath, result, { status: true, aheadBehind: true, activity: false });
+  });
+
+  ipcMain.handle(IPC.GIT_PULL, async (event, { projectPath, branch, noUpstream }) => {
+    const result = await gitPull(projectPath, branch, noUpstream);
     return invalidateOnSuccess(projectPath, result, { status: true, aheadBehind: true, activity: true });
   });
 

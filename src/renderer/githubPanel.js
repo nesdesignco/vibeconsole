@@ -3306,7 +3306,7 @@ async function handleCommit() {
  */
 async function handleCommitAndPush() {
   const committed = await handleCommit();
-  if (committed) handlePush();
+  if (committed) await handlePush();
 }
 
 /**
@@ -3375,81 +3375,83 @@ async function handleFetch(options = {}) {
 }
 
 /**
- * Handle pull (terminal-hybrid)
+ * Handle pull (IPC background)
  */
-function handlePull() {
+async function handlePull() {
   if (operationInProgress || _pullInProgress) return;
   const state = require('./state');
   const projectPath = state.getProjectPath();
   if (!projectPath) return;
 
-  const { shellQuote } = require('./shellEscape');
   const branch = typeof _syncData.branch === 'string' && _syncData.branch.trim() ? _syncData.branch.trim() : null;
   const hasUpstream = Boolean(_syncData.hasUpstream);
 
-  const pullCmd = hasUpstream
-    ? 'git pull'
-    : (branch ? `git pull origin ${shellQuote(branch)}` : 'git pull');
-  const command = `cd ${shellQuote(projectPath)} && ${pullCmd}`;
-
   _pullInProgress = true;
+  operationInProgress = true;
   syncRemoteButtonsState();
+  updateCommitBtnState();
+
   try {
-    sendToTerminal(command);
-    showToast(hasUpstream ? 'Pull sent to terminal' : 'No upstream configured; pull sent to terminal', 'info');
-    scheduleRefresh(7000);
+    const result = await ipcRenderer.invoke(IPC.GIT_PULL, {
+      projectPath,
+      branch,
+      noUpstream: !hasUpstream
+    });
+    if (result.error) {
+      showToast(result.error, 'error');
+      return;
+    }
+    showToast('Pulled from remote', 'success');
+    await loadChanges(true);
+    updateSyncStatus();
+  } catch (err) {
+    console.error('Pull failed:', err);
+    showToast('Pull failed', 'error');
   } finally {
-    // Terminal command execution is async; we only throttle the button briefly.
-    setTimeout(() => {
-      _pullInProgress = false;
-      syncRemoteButtonsState();
-    }, 1500);
+    _pullInProgress = false;
+    operationInProgress = false;
+    syncRemoteButtonsState();
+    updateCommitBtnState();
   }
 }
 
 /**
- * Handle push (terminal-hybrid)
+ * Handle push (IPC background)
  */
-function handlePush() {
+async function handlePush() {
   if (operationInProgress) return;
   const state = require('./state');
   const projectPath = state.getProjectPath();
   if (!projectPath) return;
 
-  const { shellQuote } = require('./shellEscape');
   const branch = typeof _syncData.branch === 'string' && _syncData.branch.trim() ? _syncData.branch.trim() : null;
   const hasUpstream = Boolean(_syncData.hasUpstream);
-  const pushCmd = hasUpstream
-    ? 'git push'
-    : (branch ? `git push -u origin ${shellQuote(branch)}` : 'git push');
-  const command = `cd ${shellQuote(projectPath)} && ${pushCmd}`;
-  sendToTerminal(command);
-  showToast(hasUpstream ? 'Push sent to terminal' : 'No upstream configured; push sent to terminal', 'info');
-  scheduleRefresh(5000);
-}
 
-/**
- * Send a command to the active terminal
- */
-function sendToTerminal(command) {
-  if (typeof window.terminalSendCommand === 'function') {
-    window.terminalSendCommand(command);
-  } else {
-    showToast('No terminal available', 'error');
-  }
-}
+  operationInProgress = true;
+  syncRemoteButtonsState();
+  updateCommitBtnState();
 
-/**
- * Schedule a panel refresh (supplements git watcher)
- */
-let _refreshTimer = null;
-function scheduleRefresh(delayMs) {
-  if (_refreshTimer) clearTimeout(_refreshTimer);
-  _refreshTimer = setTimeout(() => {
-    _refreshTimer = null;
-    loadChanges(true);
+  try {
+    const result = await ipcRenderer.invoke(IPC.GIT_PUSH, {
+      projectPath,
+      branch,
+      setUpstream: !hasUpstream
+    });
+    if (result.error) {
+      showToast(result.error, 'error');
+      return;
+    }
+    showToast('Pushed to remote', 'success');
+    await loadChanges(true);
     updateSyncStatus();
-  }, delayMs);
+  } catch (err) {
+    console.error('Push failed:', err);
+    showToast('Push failed', 'error');
+  } finally {
+    operationInProgress = false;
+    syncRemoteButtonsState();
+    updateCommitBtnState();
+  }
 }
 
 /**

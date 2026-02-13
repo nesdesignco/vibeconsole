@@ -102,6 +102,8 @@ const IPC = {
   STASH_SHOW: 'stash-git-show',
   GIT_COMMIT: 'git-commit',
   GIT_COMMIT_AMEND: 'git-commit-amend',
+  GIT_PUSH: 'git-push',
+  GIT_PULL: 'git-pull',
   GIT_FETCH: 'git-fetch',
   GIT_AHEAD_BEHIND: 'git-ahead-behind',
 
