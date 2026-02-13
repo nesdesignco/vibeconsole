@@ -188,33 +188,37 @@
           "purpose": "Get menu template based on active AI tool"
         },
         "buildAICommandsSubmenu": {
-          "line": 93,
+          "line": 99,
           "params": [
             "tool"
           ],
           "purpose": "Build AI commands submenu based on active tool"
         },
         "buildToolSwitcherSubmenu": {
-          "line": 181,
+          "line": 187,
           "purpose": "Build tool switcher submenu"
         },
         "sendCommand": {
-          "line": 200,
+          "line": 206,
           "params": [
             "command"
           ],
           "purpose": "Send command to terminal"
         },
         "toggleHistoryPanel": {
-          "line": 209,
+          "line": 215,
           "purpose": "Toggle history panel"
         },
+        "toggleSidebar": {
+          "line": 224,
+          "purpose": "Toggle sidebar visibility"
+        },
         "openHistoryFile": {
-          "line": 218,
+          "line": 233,
           "purpose": "Open history file in default editor"
         },
         "createMenu": {
-          "line": 232,
+          "line": 247,
           "purpose": "Create and set application menu"
         }
       },
@@ -222,7 +226,8 @@
         "listens": [],
         "emits": [
           "RUN_COMMAND",
-          "TOGGLE_HISTORY_PANEL"
+          "TOGGLE_HISTORY_PANEL",
+          "TOGGLE_SIDEBAR"
         ]
       }
     },
@@ -343,6 +348,7 @@
         "logInput",
         "getHistory",
         "getLogFilePath",
+        "sanitizeHistoryLine",
         "setupIPC"
       ],
       "depends": [
@@ -352,24 +358,31 @@
       ],
       "functions": {
         "init": {
-          "line": 18,
+          "line": 19,
           "params": [
             "app"
           ],
           "purpose": "Initialize prompt logger"
         },
         "getLogFilePath": {
-          "line": 25,
+          "line": 26,
           "purpose": "Get log file path"
         },
         "enqueueLogWrite": {
-          "line": 29,
+          "line": 30,
           "params": [
             "logEntry"
           ]
         },
+        "sanitizeHistoryLine": {
+          "line": 40,
+          "params": [
+            "line",
+            "terminalId = 'global'"
+          ]
+        },
         "logInput": {
-          "line": 43,
+          "line": 94,
           "params": [
             "data",
             "terminalId = 'global'"
@@ -377,11 +390,11 @@
           "purpose": "Process and log input data"
         },
         "getHistory": {
-          "line": 72,
+          "line": 124,
           "purpose": "Get prompt history"
         },
         "setupIPC": {
-          "line": 89,
+          "line": 141,
           "params": [
             "ipcMain"
           ],
@@ -548,21 +561,32 @@
         "editor",
         "sidebarResize",
         "aiToolSelector",
-        "savedPromptsPanel"
+        "savedPromptsPanel",
+        "electronBridge",
+        "shared/ipcChannels"
       ],
       "functions": {
+        "toggleSidebarSafe": {
+          "line": 23
+        },
         "init": {
-          "line": 22,
+          "line": 36,
           "purpose": "Initialize all modules"
         },
         "setupButtonHandlers": {
-          "line": 204,
+          "line": 225,
           "purpose": "Setup button click handlers"
         },
         "setupKeyboardShortcuts": {
-          "line": 251,
+          "line": 272,
           "purpose": "Setup keyboard shortcuts"
         }
+      },
+      "ipc": {
+        "listens": [
+          "TOGGLE_SIDEBAR"
+        ],
+        "emits": []
       }
     },
     "renderer/terminal": {
@@ -1820,39 +1844,39 @@
       ],
       "functions": {
         "init": {
-          "line": 87,
+          "line": 88,
           "purpose": "Initialize GitHub panel"
         },
         "setupGitWatcher": {
-          "line": 142,
+          "line": 144,
           "purpose": "Setup .git directory watcher for auto-refresh when panel is visible"
         },
         "setupEventListeners": {
-          "line": 172,
+          "line": 174,
           "purpose": "Setup event listeners"
         },
         "setupIPCListeners": {
-          "line": 204,
+          "line": 206,
           "purpose": "Setup IPC listeners"
         },
         "refreshIssues": {
-          "line": 213,
+          "line": 215,
           "purpose": "Refresh current tab"
         },
         "show": {
-          "line": 243,
+          "line": 245,
           "purpose": "Show GitHub panel"
         },
         "hide": {
-          "line": 256,
+          "line": 258,
           "purpose": "Hide GitHub panel"
         },
         "toggle": {
-          "line": 266,
+          "line": 268,
           "purpose": "Toggle GitHub panel visibility"
         },
         "setTab": {
-          "line": 277,
+          "line": 279,
           "params": [
             "tab",
             "options = {}"
@@ -1860,21 +1884,21 @@
           "purpose": "Set active tab"
         },
         "renderLoading": {
-          "line": 316,
+          "line": 318,
           "params": [
             "message = 'Loading...'"
           ],
           "purpose": "Render loading state"
         },
         "renderError": {
-          "line": 333,
+          "line": 335,
           "params": [
             "message"
           ],
           "purpose": "Render error state"
         },
         "showToast": {
-          "line": 357,
+          "line": 359,
           "params": [
             "message",
             "type = 'info'"
@@ -1882,37 +1906,37 @@
           "purpose": "Show toast notification"
         },
         "publishGitChangesCount": {
-          "line": 384,
+          "line": 386,
           "params": [
             "count"
           ]
         },
         "loadAutoStagePreference": {
-          "line": 391
+          "line": 393
         },
         "persistAutoStagePreference": {
-          "line": 402
+          "line": 404
         },
         "syncAutoStageToggle": {
-          "line": 410
+          "line": 412
         },
         "getToastIcon": {
-          "line": 424,
+          "line": 425,
           "params": [
             "type"
           ],
           "purpose": "Get toast icon based on type"
         },
         "loadBranches": {
-          "line": 442,
+          "line": 443,
           "purpose": "Load git branches"
         },
         "renderBranches": {
-          "line": 479,
+          "line": 480,
           "purpose": "Render branches list"
         },
         "renderBranchItem": {
-          "line": 525,
+          "line": 526,
           "params": [
             "branch",
             "currentBranch"
@@ -1920,125 +1944,125 @@
           "purpose": "Render single branch item"
         },
         "attachBranchEventListeners": {
-          "line": 553,
+          "line": 554,
           "purpose": "Attach branch event listeners"
         },
         "handleSwitchBranch": {
-          "line": 576,
+          "line": 577,
           "params": [
             "branchName"
           ],
           "purpose": "Handle branch switch"
         },
         "handleDeleteBranch": {
-          "line": 603,
+          "line": 604,
           "params": [
             "branchName"
           ],
           "purpose": "Handle branch deletion"
         },
         "renderBranchesError": {
-          "line": 635,
+          "line": 636,
           "params": [
             "message"
           ],
           "purpose": "Render branches error"
         },
         "loadWorktrees": {
-          "line": 658,
+          "line": 659,
           "purpose": "Load git worktrees"
         },
         "renderWorktrees": {
-          "line": 695,
+          "line": 696,
           "purpose": "Render worktrees list"
         },
         "renderWorktreeItem": {
-          "line": 727,
+          "line": 728,
           "params": [
             "worktree"
           ],
           "purpose": "Render single worktree item"
         },
         "attachWorktreeEventListeners": {
-          "line": 756,
+          "line": 757,
           "purpose": "Attach worktree event listeners"
         },
         "handleRemoveWorktree": {
-          "line": 769,
+          "line": 770,
           "params": [
             "wtPath"
           ],
           "purpose": "Handle worktree removal"
         },
         "renderWorktreesError": {
-          "line": 797,
+          "line": 798,
           "params": [
             "message"
           ],
           "purpose": "Render worktrees error"
         },
         "setupModalListeners": {
-          "line": 817,
+          "line": 818,
           "purpose": "Setup modal event listeners"
         },
         "showCreateBranchModal": {
-          "line": 864,
+          "line": 865,
           "purpose": "Show create branch modal"
         },
         "populateBaseBranchSelect": {
-          "line": 890,
+          "line": 891,
           "params": [
             "select"
           ],
           "purpose": "Populate base branch select dropdown"
         },
         "hideCreateBranchModal": {
-          "line": 929,
+          "line": 930,
           "purpose": "Hide create branch modal"
         },
         "setupConflictModalListeners": {
-          "line": 936
+          "line": 937
         },
         "showConflictModal": {
-          "line": 1005,
+          "line": 1006,
           "params": [
             "filePath"
           ]
         },
         "hideConflictModal": {
-          "line": 1048
+          "line": 1049
         },
         "handleCreateBranch": {
-          "line": 1057,
+          "line": 1058,
           "purpose": "Handle create branch"
         },
         "computeChangesHash": {
-          "line": 1100,
+          "line": 1101,
           "params": [
             "data"
           ],
           "purpose": "==================== CHANGES FUNCTIONALITY ===================="
         },
         "formatActivityDate": {
-          "line": 1120,
+          "line": 1121,
           "params": [
             "date"
           ]
         },
         "activityLevel": {
-          "line": 1127,
+          "line": 1128,
           "params": [
             "count"
           ]
         },
         "buildActivityGrid": {
-          "line": 1135,
+          "line": 1136,
           "params": [
             "activity"
           ]
         },
         "renderActivityHeatmapSection": {
-          "line": 1201,
+          "line": 1202,
           "params": [
             "activity",
             "totalHint = null",
@@ -2046,13 +2070,13 @@
           ]
         },
         "clearActivitySlot": {
-          "line": 1277
+          "line": 1278
         },
         "getActivityRenderOptions": {
-          "line": 1283
+          "line": 1284
         },
         "renderActivitySlot": {
-          "line": 1290,
+          "line": 1291,
           "params": [
             "activity",
             "totalHint = null",
@@ -2060,29 +2084,29 @@
           ]
         },
         "setActivityPending": {
-          "line": 1314,
+          "line": 1315,
           "params": [
             "pending"
           ]
         },
         "loadChanges": {
-          "line": 1321,
+          "line": 1322,
           "params": [
             "force"
           ]
         },
         "_loadChangesImpl": {
-          "line": 1328
+          "line": 1329
         },
         "renderChanges": {
-          "line": 1373,
+          "line": 1374,
           "params": [
             "gen"
           ],
           "purpose": "Render source control sections with clear separation (merge, working tree, staged, sync)."
         },
         "renderCommitItem": {
-          "line": 1585,
+          "line": 1586,
           "params": [
             "commit",
             "options = { kind: 'outgoing' }"
@@ -2090,7 +2114,7 @@
           "purpose": "Render a single commit item"
         },
         "renderChangeItem": {
-          "line": 1607,
+          "line": 1608,
           "params": [
             "file",
             "diffType"
@@ -2098,32 +2122,32 @@
           "purpose": "Render a single change item"
         },
         "toggleSection": {
-          "line": 1656,
+          "line": 1657,
           "params": [
             "sectionId"
           ],
           "purpose": "Toggle a collapsible section"
         },
         "attachChangesEventListeners": {
-          "line": 1669,
+          "line": 1670,
           "purpose": "Attach event listeners for changes"
         },
         "handleStageFile": {
-          "line": 1766,
+          "line": 1767,
           "params": [
             "filePath"
           ],
           "purpose": "Handle staging a file"
         },
         "handleUnstageFile": {
-          "line": 1790,
+          "line": 1791,
           "params": [
             "filePath"
           ],
           "purpose": "Handle unstaging a file"
         },
         "handleDiscardFile": {
-          "line": 1814,
+          "line": 1815,
           "params": [
             "filePath",
             "diffType"
@@ -2131,121 +2155,121 @@
           "purpose": "Handle discarding changes for a file"
         },
         "handleStashFile": {
-          "line": 1841,
+          "line": 1842,
           "params": [
             "filePath"
           ],
           "purpose": "Handle stashing a single file"
         },
         "handleStageAll": {
-          "line": 1868,
+          "line": 1869,
           "purpose": "Handle staging all files"
         },
         "handleUnstageAll": {
-          "line": 1892,
+          "line": 1893,
           "purpose": "Handle unstaging all files"
         },
         "handleDiscardAllUnstaged": {
-          "line": 1916,
+          "line": 1917,
           "purpose": "Handle discarding all unstaged changes"
         },
         "handleStashAll": {
-          "line": 1942,
+          "line": 1943,
           "purpose": "Handle stashing all changes"
         },
         "handleUndoLastCommit": {
-          "line": 1969,
+          "line": 1970,
           "purpose": "Handle undoing the last commit"
         },
         "handleRevertCommit": {
-          "line": 1995,
+          "line": 1996,
           "params": [
             "hash"
           ],
           "purpose": "Handle reverting a specific commit"
         },
         "handleStashApply": {
-          "line": 2022,
+          "line": 2023,
           "params": [
             "stashRef"
           ],
           "purpose": "Handle applying a stash"
         },
         "handleStashPop": {
-          "line": 2050,
+          "line": 2051,
           "params": [
             "stashRef"
           ],
           "purpose": "Handle popping a stash"
         },
         "handleStashDrop": {
-          "line": 2078,
+          "line": 2079,
           "params": [
             "stashRef"
           ],
           "purpose": "Handle dropping a stash"
         },
         "showStashDiffModal": {
-          "line": 2104,
+          "line": 2105,
           "params": [
             "stashRef"
           ],
           "purpose": "Show diff modal for a stash"
         },
         "loadStashSection": {
-          "line": 2166,
+          "line": 2167,
           "params": [
             "gen"
           ],
           "purpose": "Load and render stash section"
         },
         "attachStashEventListeners": {
-          "line": 2219,
+          "line": 2220,
           "purpose": "Attach event listeners for stash section"
         },
         "renderChangesError": {
-          "line": 2269,
+          "line": 2270,
           "params": [
             "message"
           ],
           "purpose": "Render changes error"
         },
         "setDiffViewMode": {
-          "line": 2290,
+          "line": 2291,
           "params": [
             "mode"
           ],
           "purpose": "==================== DIFF MODAL ===================="
         },
         "setCurrentDiffState": {
-          "line": 2305,
+          "line": 2306,
           "params": [
             "nextState"
           ]
         },
         "clearCurrentDiffState": {
-          "line": 2313
+          "line": 2314
         },
         "extractDiffHunks": {
-          "line": 2319,
+          "line": 2320,
           "params": [
             "diffText"
           ]
         },
         "syncDiffControls": {
-          "line": 2352
+          "line": 2353
         },
         "syncDiffSearchControls": {
-          "line": 2397
+          "line": 2398
         },
         "applySelectedHunk": {
-          "line": 2406,
+          "line": 2407,
           "params": [
             "action"
           ]
         },
         "showDiffModal": {
-          "line": 2443,
+          "line": 2444,
           "params": [
             "filePath",
             "diffType"
@@ -2253,25 +2277,25 @@
           "purpose": "Show diff modal for a file"
         },
         "showCommitDiffModal": {
-          "line": 2523,
+          "line": 2524,
           "params": [
             "commitHash"
           ],
           "purpose": "Show diff modal for a commit"
         },
         "hideDiffModal": {
-          "line": 2591,
+          "line": 2592,
           "purpose": "Hide diff modal"
         },
         "parseDiff": {
-          "line": 2602,
+          "line": 2603,
           "params": [
             "diffText"
           ],
           "purpose": "Parse unified diff into structured lines"
         },
         "renderDiffContent": {
-          "line": 2657,
+          "line": 2658,
           "params": [
             "container",
             "lines"
@@ -2279,13 +2303,13 @@
           "purpose": "Render parsed diff content into the modal body"
         },
         "buildSplitRows": {
-          "line": 2710,
+          "line": 2711,
           "params": [
             "lines"
           ]
         },
         "renderSplitSide": {
-          "line": 2743,
+          "line": 2744,
           "params": [
             "line",
             "side",
@@ -2293,97 +2317,104 @@
           ]
         },
         "renderSplitDiffContent": {
-          "line": 2754,
+          "line": 2755,
           "params": [
             "container",
             "lines"
           ]
         },
         "tokenizeForWordDiff": {
-          "line": 2795,
+          "line": 2796,
           "params": [
             "text"
           ]
         },
         "highlightModifiedPair": {
-          "line": 2800,
+          "line": 2801,
           "params": [
             "oldText",
             "newText"
           ]
         },
         "setupDiffModalListeners": {
-          "line": 2837,
+          "line": 2838,
           "purpose": "Setup diff modal listeners"
         },
         "setupCommitArea": {
-          "line": 2944,
+          "line": 2945,
           "purpose": "Setup commit area event listeners"
         },
+        "syncRemoteButtonsState": {
+          "line": 3107
+        },
         "setDescriptionVisibility": {
-          "line": 3100,
+          "line": 3128,
           "params": [
             "visible"
           ]
         },
         "updateCommitBtnState": {
-          "line": 3124,
+          "line": 3152,
           "purpose": "Update commit button enabled/disabled state"
         },
         "updateCommitArea": {
-          "line": 3150,
+          "line": 3180,
           "purpose": "Update commit area visibility and button labels"
         },
         "buildCommitMessage": {
-          "line": 3183,
+          "line": 3214,
           "purpose": "Build full commit message from summary + description"
         },
         "clearCommitInputs": {
-          "line": 3193,
+          "line": 3224,
           "purpose": "Clear commit inputs"
         },
         "handleCommit": {
-          "line": 3209,
+          "line": 3240,
           "purpose": "Handle creating a commit (native execFile)"
         },
         "handleCommitAndPush": {
-          "line": 3276,
+          "line": 3307,
           "purpose": "Handle commit and push"
         },
         "handleAmendCommit": {
-          "line": 3284,
+          "line": 3315,
           "purpose": "Handle amending the last commit"
         },
         "handleFetch": {
-          "line": 3316,
+          "line": 3347,
           "params": [
             "options = {}"
           ],
           "purpose": "Fetch remote refs and refresh sync indicators."
         },
+        "handlePull": {
+          "line": 3380,
+          "purpose": "Handle pull (terminal-hybrid)"
+        },
         "handlePush": {
-          "line": 3347,
+          "line": 3413,
           "purpose": "Handle push (terminal-hybrid)"
         },
         "sendToTerminal": {
-          "line": 3368,
+          "line": 3434,
           "params": [
             "command"
           ],
           "purpose": "Send a command to the active terminal"
         },
         "scheduleRefresh": {
-          "line": 3380,
+          "line": 3446,
           "params": [
             "delayMs"
           ]
         },
         "updateSyncStatus": {
-          "line": 3392,
+          "line": 3458,
           "purpose": "Update sync status (ahead/behind counts)"
         },
         "renderBranchBar": {
-          "line": 3414,
+          "line": 3480,
           "purpose": "Branch/upstream info now lives in the activity header."
         }
       },
