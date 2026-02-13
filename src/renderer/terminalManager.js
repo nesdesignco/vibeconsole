@@ -67,6 +67,12 @@ class TerminalManager {
     return (buf.baseY - buf.viewportY) <= thresholdLines;
   }
 
+  _syncScrollDownButton(instance) {
+    if (!instance || !instance.scrollBtn || !instance.terminal) return;
+    const isAtBottom = this._isAtOrNearBottom(instance.terminal, 1);
+    instance.scrollBtn.classList.toggle('visible', !isAtBottom);
+  }
+
   /**
    * Set current project context
    * @param {string|null} projectPath - Project path or null for global
@@ -279,21 +285,22 @@ class TerminalManager {
     scrollBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>';
     element.appendChild(scrollBtn);
 
+    const syncScrollBtn = () => {
+      const isAtBottom = this._isAtOrNearBottom(terminal, 1);
+      scrollBtn.classList.toggle('visible', !isAtBottom);
+    };
+
     scrollBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       terminal.scrollToBottom();
       terminal.focus();
+      syncScrollBtn();
     });
 
     // Track scroll position to show/hide scroll button
-    terminal.onScroll(() => {
-      const isAtBottom = this._isAtOrNearBottom(terminal, 1);
-      if (isAtBottom) {
-        scrollBtn.classList.remove('visible');
-      } else {
-        scrollBtn.classList.add('visible');
-      }
-    });
+    terminal.onScroll(syncScrollBtn);
+    // Some programmatic scroll changes (fit/restore) may not emit onScroll reliably.
+    syncScrollBtn();
 
     // Focus terminal on click anywhere in the container
     element.addEventListener('click', () => {
@@ -364,6 +371,8 @@ class TerminalManager {
       terminal,
       fitAddon,
       element,
+      scrollBtn,
+      syncScrollBtn,
       state,
       lastSentCols: null,
       lastSentRows: null
@@ -516,6 +525,7 @@ class TerminalManager {
             // Restore saved scroll position, or scroll to bottom for new terminals
             instance.terminal.scrollToBottom();
           }
+          this._syncScrollDownButton(instance);
           // Focus if this is the active terminal
           if (this.activeTerminalId === terminalId) {
             instance.terminal.focus();
@@ -675,6 +685,7 @@ class TerminalManager {
           if (wasAtBottom) {
             instance.terminal.scrollToBottom();
           }
+          this._syncScrollDownButton(instance);
         } catch (err) {
           console.error(`Failed to fit terminal ${id}:`, err);
         }
@@ -694,6 +705,7 @@ class TerminalManager {
       if (wasAtBottom) {
         instance.terminal.scrollToBottom();
       }
+      this._syncScrollDownButton(instance);
     }
   }
 
@@ -733,9 +745,11 @@ class TerminalManager {
     const instance = this.terminals.get(terminalId);
     if (!instance || !instance.opened) return;
     const buf = instance.terminal.buffer.active;
+    // Use a small threshold: after fit/reflow xterm can land 1-2 lines above baseY.
+    const wasAtBottom = this._isAtOrNearBottom(instance.terminal, 1);
     this._savedScrollState.set(terminalId, {
       viewportY: buf.viewportY,
-      wasAtBottom: buf.viewportY >= buf.baseY
+      wasAtBottom
     });
   }
 
