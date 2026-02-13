@@ -33,7 +33,6 @@
   <a href="#-quick-start">Quick Start</a> •
   <a href="#%EF%B8%8F-keyboard-shortcuts">Shortcuts</a> •
   <a href="#-architecture">Architecture</a> •
-  <a href="#%EF%B8%8F-roadmap">Roadmap</a> •
   <a href="#-faq">FAQ</a> •
   <a href="#-contributing">Contributing</a>
 </p>
@@ -163,23 +162,6 @@ src/
 
 ---
 
-## 🗺️ Roadmap
-
-- [x] Multi-terminal with grid layouts
-- [x] File tree with drag-drop to terminal
-- [x] Git changes, branches, and worktrees
-- [x] Plugin system with marketplace
-- [x] Claude & Codex usage tracking
-- [x] Saved prompts panel
-- [x] Auto-updater
-- [ ] Windows & Linux support
-- [ ] Theme customization
-- [ ] Remote SSH terminal support
-
-> Have an idea? [Open an issue](https://github.com/nesdesignco/vibeconsole/issues) with the `enhancement` label.
-
----
-
 ## 🛠️ Tech Stack
 
 <table>
@@ -275,11 +257,17 @@ See [**CONTRIBUTING.md**](CONTRIBUTING.md) for detailed guidelines.
 
 ---
 
-## 👥 Contributors
+## Contributors
 
-<a href="https://github.com/nesdesignco/vibeconsole/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=nesdesignco/vibeconsole" alt="Contributors">
-</a>
+Thanks to everyone who has contributed to VibeConsole.
+
+<p align="center">
+  <a href="https://github.com/nesdesignco/vibeconsole/graphs/contributors">
+    <img src="https://contrib.rocks/image?repo=nesdesignco/vibeconsole" width="900" alt="VibeConsole contributors">
+  </a>
+</p>
+
+View the full list on the [GitHub contributors page](https://github.com/nesdesignco/vibeconsole/graphs/contributors).
 
 ## 📄 License
 
