@@ -47,7 +47,7 @@ let _lastAutoFetchAt = 0;
 let _activeConflictState = null;
 let _activityPending = false;
 
-const AUTO_FETCH_INTERVAL_MS = 120000;
+const AUTO_FETCH_INTERVAL_MS = 30000;
 
 // Load deduplication: generation counters discard stale IPC responses,
 // _hasData flags prevent showing the loading spinner on subsequent refreshes.
