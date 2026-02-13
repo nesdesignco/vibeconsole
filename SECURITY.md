@@ -6,7 +6,7 @@ If you discover a security vulnerability in VibeConsole, please report it respon
 
 **Do NOT open a public GitHub issue for security vulnerabilities.**
 
-Instead, please email: **security@nesdesign.co**
+Instead, please email: **security@vibeconsole.dev**
 
 ### What to include
 
