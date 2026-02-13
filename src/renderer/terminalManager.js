@@ -73,6 +73,25 @@ class TerminalManager {
     instance.scrollBtn.classList.toggle('visible', !isAtBottom);
   }
 
+  _scheduleDeferredScrollRestore(terminalId, maxAttempts = 10) {
+    let attempts = 0;
+    const tick = () => {
+      const instance = this.terminals.get(terminalId);
+      if (!instance || !instance.opened || !this._isInDOM(instance)) return;
+
+      if (this._restoreScrollState(terminalId)) {
+        this._syncScrollDownButton(instance);
+        return;
+      }
+
+      attempts++;
+      if (attempts >= maxAttempts || !this._savedScrollState.has(terminalId)) return;
+      setTimeout(tick, 60);
+    };
+
+    setTimeout(tick, 60);
+  }
+
   /**
    * Set current project context
    * @param {string|null} projectPath - Project path or null for global
@@ -290,17 +309,28 @@ class TerminalManager {
       scrollBtn.classList.toggle('visible', !isAtBottom);
     };
 
+    let syncRafId = null;
+    const scheduleSyncScrollBtn = () => {
+      if (syncRafId) return;
+      syncRafId = requestAnimationFrame(() => {
+        syncRafId = null;
+        syncScrollBtn();
+      });
+    };
+
     scrollBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       terminal.scrollToBottom();
       terminal.focus();
-      syncScrollBtn();
+      scheduleSyncScrollBtn();
     });
 
     // Track scroll position to show/hide scroll button
-    terminal.onScroll(syncScrollBtn);
+    terminal.onScroll(scheduleSyncScrollBtn);
+    terminal.onRender(scheduleSyncScrollBtn);
+    element.addEventListener('wheel', scheduleSyncScrollBtn, { passive: true });
     // Some programmatic scroll changes (fit/restore) may not emit onScroll reliably.
-    syncScrollBtn();
+    scheduleSyncScrollBtn();
 
     // Focus terminal on click anywhere in the container
     element.addEventListener('click', () => {
@@ -373,6 +403,7 @@ class TerminalManager {
       element,
       scrollBtn,
       syncScrollBtn,
+      scheduleSyncScrollBtn,
       state,
       lastSentCols: null,
       lastSentRows: null
@@ -524,6 +555,11 @@ class TerminalManager {
           } else if (!this._restoreScrollState(terminalId)) {
             // Restore saved scroll position, or scroll to bottom for new terminals
             instance.terminal.scrollToBottom();
+            // If we had a saved scroll position but the buffer isn't populated yet,
+            // retry briefly to avoid snapping to the top.
+            if (this._savedScrollState.has(terminalId)) {
+              this._scheduleDeferredScrollRestore(terminalId);
+            }
           }
           this._syncScrollDownButton(instance);
           // Focus if this is the active terminal
@@ -679,11 +715,16 @@ class TerminalManager {
     for (const [id, instance] of this.terminals) {
       if (instance.opened && this._isInDOM(instance)) {
         try {
+          const buf = instance.terminal.buffer.active;
+          const viewportYBefore = buf.viewportY;
           const wasAtBottom = this._isAtOrNearBottom(instance.terminal, 1);
           instance.fitAddon.fit();
           this._sendResize(id);
           if (wasAtBottom) {
             instance.terminal.scrollToBottom();
+          } else {
+            const newBaseY = instance.terminal.buffer.active.baseY;
+            instance.terminal.scrollToLine(Math.min(viewportYBefore, newBaseY));
           }
           this._syncScrollDownButton(instance);
         } catch (err) {
@@ -699,11 +740,16 @@ class TerminalManager {
   fitTerminal(terminalId) {
     const instance = this.terminals.get(terminalId);
     if (instance && instance.opened && this._isInDOM(instance)) {
+      const buf = instance.terminal.buffer.active;
+      const viewportYBefore = buf.viewportY;
       const wasAtBottom = this._isAtOrNearBottom(instance.terminal, 1);
       instance.fitAddon.fit();
       this._sendResize(terminalId);
       if (wasAtBottom) {
         instance.terminal.scrollToBottom();
+      } else {
+        const newBaseY = instance.terminal.buffer.active.baseY;
+        instance.terminal.scrollToLine(Math.min(viewportYBefore, newBaseY));
       }
       this._syncScrollDownButton(instance);
     }
@@ -716,7 +762,15 @@ class TerminalManager {
     if (this.activeTerminalId) {
       const instance = this.terminals.get(this.activeTerminalId);
       if (instance) {
-        instance.terminal.write(data);
+        const wasAtBottom = this._isAtOrNearBottom(instance.terminal, 1);
+        instance.terminal.write(data, () => {
+          if (wasAtBottom) instance.terminal.scrollToBottom();
+          if (typeof instance.scheduleSyncScrollBtn === 'function') {
+            instance.scheduleSyncScrollBtn();
+          } else {
+            this._syncScrollDownButton(instance);
+          }
+        });
       }
     }
   }
@@ -760,17 +814,21 @@ class TerminalManager {
   _restoreScrollState(terminalId) {
     const saved = this._savedScrollState.get(terminalId);
     if (!saved) return false;
-    this._savedScrollState.delete(terminalId);
 
     const instance = this.terminals.get(terminalId);
     if (!instance || !instance.opened) return false;
 
     if (saved.wasAtBottom) {
       instance.terminal.scrollToBottom();
+      this._savedScrollState.delete(terminalId);
     } else {
       const newBaseY = instance.terminal.buffer.active.baseY;
+      // Buffer not populated yet (baseY=0) but we have a meaningful saved viewport.
+      // Defer restore to avoid snapping to the top.
+      if (newBaseY === 0 && saved.viewportY > 0) return false;
       const clampedY = Math.min(saved.viewportY, newBaseY);
       instance.terminal.scrollToLine(clampedY);
+      this._savedScrollState.delete(terminalId);
     }
     return true;
   }
@@ -953,7 +1011,15 @@ class TerminalManager {
     ipcRenderer.on(IPC.TERMINAL_OUTPUT_ID, (event, { terminalId, data }) => {
       const instance = this.terminals.get(terminalId);
       if (instance) {
-        instance.terminal.write(data);
+        const wasAtBottom = this._isAtOrNearBottom(instance.terminal, 1);
+        instance.terminal.write(data, () => {
+          if (wasAtBottom) instance.terminal.scrollToBottom();
+          if (typeof instance.scheduleSyncScrollBtn === 'function') {
+            instance.scheduleSyncScrollBtn();
+          } else {
+            this._syncScrollDownButton(instance);
+          }
+        });
       }
     });
 
