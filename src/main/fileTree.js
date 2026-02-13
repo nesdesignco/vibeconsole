@@ -38,8 +38,9 @@ function getFileTree(dirPath, maxDepth = 5, currentDepth = 0, visitedPaths = nul
     });
 
     for (const item of items) {
-      // Skip hidden files and node_modules
-      if (item.name.startsWith('.') || item.name === 'node_modules') continue;
+      // Show dotfiles (e.g. .env, .gitignore). Keep excluding heavy/noisy directories.
+      if (item.name === 'node_modules') continue;
+      if (item.isDirectory() && item.name === '.git') continue;
 
       const fullPath = path.join(dirPath, item.name);
       const fileInfo = {
