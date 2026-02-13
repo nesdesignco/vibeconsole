@@ -252,7 +252,6 @@ See [**CONTRIBUTING.md**](CONTRIBUTING.md) for detailed guidelines.
 |------|------|
 | 🐛 Bug Report | [Open an issue](https://github.com/nesdesignco/vibeconsole/issues/new?template=bug_report.md) |
 | 💡 Feature Request | [Open an issue](https://github.com/nesdesignco/vibeconsole/issues/new?template=feature_request.md) |
-| 🔒 Security | [SECURITY.md](SECURITY.md) |
 | 📖 Docs | [CONTRIBUTING.md](CONTRIBUTING.md) |
 
 ---
