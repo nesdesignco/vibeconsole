@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+
+# Build outputs and caches
+dist/
+out/
+release/
+.cache/
+coverage/
+*.tsbuildinfo
+
+# Electron / packaging artifacts
+*.log
+builder-debug.yml
+electron-builder-debug.yml
+*.blockmap
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE / editor files
+.vscode/
+.idea/
+CODEX.md
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Local AI tool configs
+.codex/
+.claude/
+.frame/
+.mcp.json
+mcp.json
+
+# Local hooks path (project-specific)
+# (tracked) .githooks/
+
+# Python caches (if any helper scripts are used)
+__pycache__/
+*.pyc
+*.pyo
+
+# Local walkthrough or scratch content
+WALKTHROUGH/
+
+# Build assets
+# Keep packaging inputs tracked (e.g. build/icon.icns), but ignore generated iconsets if present.
+build/icon.iconset/

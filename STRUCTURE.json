@@ -1,0 +1,4206 @@
+{
+  "version": "1.0",
+  "description": "Claude Code IDE - Module structure and IPC communication map",
+  "lastUpdated": "2026-02-13",
+  "architecture": {
+    "type": "electron",
+    "mainProcess": "src/main/index.js",
+    "rendererProcess": "src/renderer/index.js",
+    "preload": "src/main/preload.js"
+  },
+  "modules": {
+    "main/index": {
+      "file": "src/main/index.js",
+      "description": "M",
+      "exports": [
+        "createWindow"
+      ],
+      "depends": [
+        "electron",
+        "path",
+        "fs",
+        "url",
+        "shared/ipcChannels",
+        "ptyManager",
+        "menu",
+        "dialogs",
+        "fileTree",
+        "promptLogger",
+        "workspace",
+        "fileEditor",
+        "pluginsManager",
+        "claudeUsageManager",
+        "codexUsageManager",
+        "gitBranchesManager",
+        "gitChangesManager",
+        "aiToolManager",
+        "savedPromptsManager",
+        "autoUpdater"
+      ],
+      "functions": {
+        "createWindow": {
+          "line": 39,
+          "purpose": "Create main application window"
+        },
+        "isTrustedAppUrl": {
+          "line": 103,
+          "params": [
+            "rawUrl"
+          ],
+          "purpose": "Allow only local app URLs to load inside the app window."
+        },
+        "openExternalSafely": {
+          "line": 126,
+          "params": [
+            "rawUrl"
+          ],
+          "purpose": "Avoid forwarding file/custom scheme URLs to the OS."
+        },
+        "setupAllIPC": {
+          "line": 140,
+          "purpose": "Setup all IPC handlers"
+        },
+        "init": {
+          "line": 189,
+          "purpose": "Initialize application"
+        },
+        "initModulesWithWindow": {
+          "line": 200,
+          "params": [
+            "window"
+          ],
+          "purpose": "Initialize modules that need window reference"
+        }
+      },
+      "ipc": {
+        "listens": [
+          "LOAD_AI_USAGE",
+          "REFRESH_AI_USAGE"
+        ],
+        "emits": [
+          "AI_USAGE_DATA"
+        ]
+      }
+    },
+    "main/pty": {
+      "file": "src/main/pty.js",
+      "description": "P",
+      "exports": [
+        "init",
+        "startPTY",
+        "writeToPTY",
+        "resizePTY",
+        "killPTY",
+        "getCurrentPTY",
+        "getProjectPath",
+        "setProjectPath",
+        "setupIPC"
+      ],
+      "depends": [
+        "node-pty",
+        "child_process"
+      ],
+      "functions": {
+        "init": {
+          "line": 14,
+          "purpose": "Initialize PTY module"
+        },
+        "getProjectPath": {
+          "line": 20,
+          "purpose": "Get current project path"
+        },
+        "setProjectPath": {
+          "line": 27,
+          "params": [
+            "path"
+          ],
+          "purpose": "Set current project path"
+        },
+        "getShell": {
+          "line": 34,
+          "purpose": "Determine shell based on platform"
+        },
+        "startPTY": {
+          "line": 54,
+          "params": [
+            "workingDir = null"
+          ],
+          "purpose": "Start PTY process"
+        },
+        "writeToPTY": {
+          "line": 89,
+          "params": [
+            "data"
+          ],
+          "purpose": "Write data to PTY"
+        },
+        "resizePTY": {
+          "line": 98,
+          "params": [
+            "cols",
+            "rows"
+          ],
+          "purpose": "Resize PTY"
+        },
+        "killPTY": {
+          "line": 107,
+          "purpose": "Kill PTY process"
+        },
+        "getCurrentPTY": {
+          "line": 117,
+          "purpose": "Get current PTY process"
+        },
+        "setupIPC": {
+          "line": 124,
+          "params": [
+            "ipcMain"
+          ],
+          "purpose": "Setup IPC handlers"
+        }
+      }
+    },
+    "main/menu": {
+      "file": "src/main/menu.js",
+      "description": "A",
+      "exports": [
+        "init",
+        "createMenu",
+        "getMenuTemplate"
+      ],
+      "depends": [
+        "electron",
+        "fs",
+        "path",
+        "shared/ipcChannels"
+      ],
+      "functions": {
+        "init": {
+          "line": 19,
+          "params": [
+            "window",
+            "app",
+            "toolManager"
+          ],
+          "purpose": "Initialize menu module"
+        },
+        "getMenuTemplate": {
+          "line": 28,
+          "purpose": "Get menu template based on active AI tool"
+        },
+        "buildAICommandsSubmenu": {
+          "line": 93,
+          "params": [
+            "tool"
+          ],
+          "purpose": "Build AI commands submenu based on active tool"
+        },
+        "buildToolSwitcherSubmenu": {
+          "line": 181,
+          "purpose": "Build tool switcher submenu"
+        },
+        "sendCommand": {
+          "line": 200,
+          "params": [
+            "command"
+          ],
+          "purpose": "Send command to terminal"
+        },
+        "toggleHistoryPanel": {
+          "line": 209,
+          "purpose": "Toggle history panel"
+        },
+        "openHistoryFile": {
+          "line": 218,
+          "purpose": "Open history file in default editor"
+        },
+        "createMenu": {
+          "line": 232,
+          "purpose": "Create and set application menu"
+        }
+      },
+      "ipc": {
+        "listens": [],
+        "emits": [
+          "RUN_COMMAND",
+          "TOGGLE_HISTORY_PANEL"
+        ]
+      }
+    },
+    "main/dialogs": {
+      "file": "src/main/dialogs.js",
+      "description": "D",
+      "exports": [
+        "init",
+        "showFolderPicker",
+        "showNewProjectDialog",
+        "setupIPC"
+      ],
+      "depends": [
+        "fs",
+        "path",
+        "electron",
+        "shared/ipcChannels"
+      ],
+      "functions": {
+        "init": {
+          "line": 17,
+          "params": [
+            "window",
+            "callback"
+          ],
+          "purpose": "Initialize dialogs module"
+        },
+        "showFolderPicker": {
+          "line": 25,
+          "params": [
+            "event"
+          ],
+          "purpose": "Show folder picker dialog"
+        },
+        "showNewProjectDialog": {
+          "line": 48,
+          "params": [
+            "event",
+            "projectName"
+          ],
+          "purpose": "Show new project dialog"
+        },
+        "setupIPC": {
+          "line": 92,
+          "params": [
+            "ipcMain"
+          ],
+          "purpose": "Setup IPC handlers"
+        }
+      },
+      "ipc": {
+        "listens": [
+          "SELECT_PROJECT_FOLDER",
+          "CREATE_NEW_PROJECT"
+        ],
+        "emits": [
+          "PROJECT_SELECTED"
+        ]
+      }
+    },
+    "main/fileTree": {
+      "file": "src/main/fileTree.js",
+      "description": "F",
+      "exports": [
+        "getFileTree",
+        "setupIPC"
+      ],
+      "depends": [
+        "fs",
+        "path",
+        "electron",
+        "shared/ipcChannels",
+        "shared/pathValidation"
+      ],
+      "functions": {
+        "getFileTree": {
+          "line": 19,
+          "params": [
+            "dirPath",
+            "maxDepth = 5",
+            "currentDepth = 0",
+            "visitedPaths = null"
+          ]
+        },
+        "safeSend": {
+          "line": 69,
+          "params": [
+            "sender",
+            "channel",
+            "data"
+          ],
+          "purpose": "Setup IPC handlers"
+        },
+        "setupIPC": {
+          "line": 73,
+          "params": [
+            "ipcMain"
+          ]
+        }
+      },
+      "ipc": {
+        "listens": [
+          "LOAD_FILE_TREE",
+          "CREATE_FILE",
+          "CREATE_FOLDER",
+          "RENAME_FILE",
+          "REVEAL_IN_FINDER",
+          "DELETE_FILE"
+        ],
+        "emits": []
+      }
+    },
+    "main/promptLogger": {
+      "file": "src/main/promptLogger.js",
+      "description": "P",
+      "exports": [
+        "init",
+        "logInput",
+        "getHistory",
+        "getLogFilePath",
+        "setupIPC"
+      ],
+      "depends": [
+        "fs",
+        "path",
+        "shared/ipcChannels"
+      ],
+      "functions": {
+        "init": {
+          "line": 18,
+          "params": [
+            "app"
+          ],
+          "purpose": "Initialize prompt logger"
+        },
+        "getLogFilePath": {
+          "line": 25,
+          "purpose": "Get log file path"
+        },
+        "enqueueLogWrite": {
+          "line": 29,
+          "params": [
+            "logEntry"
+          ]
+        },
+        "logInput": {
+          "line": 43,
+          "params": [
+            "data",
+            "terminalId = 'global'"
+          ],
+          "purpose": "Process and log input data"
+        },
+        "getHistory": {
+          "line": 72,
+          "purpose": "Get prompt history"
+        },
+        "setupIPC": {
+          "line": 89,
+          "params": [
+            "ipcMain"
+          ],
+          "purpose": "Setup IPC handlers"
+        }
+      },
+      "ipc": {
+        "listens": [
+          "LOAD_PROMPT_HISTORY"
+        ],
+        "emits": [
+          "PROMPT_HISTORY_DATA"
+        ]
+      }
+    },
+    "main/editor": {
+      "file": "src/main/editor.js",
+      "description": "File reading/writing for editor overlay",
+      "exports": [
+        "init"
+      ],
+      "depends": [
+        "shared/ipcChannels",
+        "fs",
+        "path"
+      ],
+      "functions": {
+        "readFile": {
+          "line": 15,
+          "purpose": "Read file contents",
+          "params": [
+            "filePath"
+          ],
+          "returns": "string"
+        },
+        "writeFile": {
+          "line": 30,
+          "purpose": "Write file contents",
+          "params": [
+            "filePath",
+            "content"
+          ]
+        },
+        "init": {
+          "line": 45,
+          "purpose": "Setup IPC handlers"
+        }
+      },
+      "ipc": {
+        "listens": [
+          "read-file",
+          "write-file"
+        ],
+        "emits": [
+          "file-content",
+          "file-saved"
+        ]
+      }
+    },
+    "main/workspace": {
+      "file": "src/main/workspace.js",
+      "description": "W",
+      "exports": [
+        "init",
+        "loadWorkspace",
+        "getProjects",
+        "addProject",
+        "removeProject",
+        "updateProjectLastOpened",
+        "setupIPC"
+      ],
+      "depends": [
+        "fs",
+        "path",
+        "os",
+        "shared/ipcChannels"
+      ],
+      "functions": {
+        "init": {
+          "line": 22,
+          "params": [
+            "app",
+            "_window"
+          ],
+          "purpose": "Initialize workspace module"
+        },
+        "ensureWorkspaceDir": {
+          "line": 31,
+          "purpose": "Ensure workspace directory and file exist"
+        },
+        "createDefaultWorkspace": {
+          "line": 44,
+          "purpose": "Create default workspace structure"
+        },
+        "loadWorkspace": {
+          "line": 61,
+          "purpose": "Load workspace from file"
+        },
+        "saveWorkspace": {
+          "line": 77,
+          "params": [
+            "data"
+          ],
+          "purpose": "Save workspace to file"
+        },
+        "getProjects": {
+          "line": 91,
+          "purpose": "Get projects from active workspace"
+        },
+        "addProject": {
+          "line": 100,
+          "params": [
+            "projectPath",
+            "name"
+          ],
+          "purpose": "Add project to workspace"
+        },
+        "removeProject": {
+          "line": 124,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "Remove project from workspace"
+        },
+        "updateProjectLastOpened": {
+          "line": 137,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "Update project's last opened timestamp"
+        },
+        "setupIPC": {
+          "line": 153,
+          "params": [
+            "ipcMain"
+          ],
+          "purpose": "Setup IPC handlers"
+        }
+      },
+      "ipc": {
+        "listens": [
+          "LOAD_WORKSPACE",
+          "ADD_PROJECT_TO_WORKSPACE",
+          "REMOVE_PROJECT_FROM_WORKSPACE"
+        ],
+        "emits": [
+          "WORKSPACE_DATA",
+          "WORKSPACE_UPDATED"
+        ]
+      }
+    },
+    "renderer/index": {
+      "file": "src/renderer/index.js",
+      "description": "R",
+      "exports": [],
+      "depends": [
+        "terminal",
+        "fileTreeUI",
+        "historyPanel",
+        "pluginsPanel",
+        "githubPanel",
+        "state",
+        "projectListUI",
+        "editor",
+        "sidebarResize",
+        "aiToolSelector",
+        "savedPromptsPanel"
+      ],
+      "functions": {
+        "init": {
+          "line": 22,
+          "purpose": "Initialize all modules"
+        },
+        "setupButtonHandlers": {
+          "line": 204,
+          "purpose": "Setup button click handlers"
+        },
+        "setupKeyboardShortcuts": {
+          "line": 251,
+          "purpose": "Setup keyboard shortcuts"
+        }
+      }
+    },
+    "renderer/terminal": {
+      "file": "src/renderer/terminal.js",
+      "description": "T",
+      "exports": [
+        "initTerminal",
+        "writeToTerminal",
+        "writelnToTerminal",
+        "fitTerminal",
+        "getTerminal",
+        "startTerminal",
+        "restartTerminal",
+        "sendCommand",
+        "setActiveTerminal",
+        "getActiveTerminalState",
+        "getMultiTerminalUI"
+      ],
+      "depends": [
+        "electronBridge",
+        "shared/ipcChannels",
+        "multiTerminalUI"
+      ],
+      "functions": {
+        "initTerminal": {
+          "line": 16,
+          "params": [
+            "containerId"
+          ],
+          "purpose": "Initialize terminal (now creates MultiTerminalUI)"
+        },
+        "writeToTerminal": {
+          "line": 24,
+          "params": [
+            "data"
+          ],
+          "purpose": "Write to active terminal"
+        },
+        "writelnToTerminal": {
+          "line": 33,
+          "params": [
+            "data"
+          ],
+          "purpose": "Write line to active terminal"
+        },
+        "fitTerminal": {
+          "line": 42,
+          "purpose": "Fit all terminals"
+        },
+        "getTerminal": {
+          "line": 51,
+          "purpose": "Get terminal manager"
+        },
+        "startTerminal": {
+          "line": 61,
+          "purpose": "Start terminal (no longer needed - auto-starts)"
+        },
+        "restartTerminal": {
+          "line": 69,
+          "params": [
+            "projectPath",
+            "options = {}"
+          ],
+          "purpose": "Restart terminal with new path (creates new terminal in path for current project)"
+        },
+        "sendCommand": {
+          "line": 81,
+          "params": [
+            "command",
+            "terminalId = null"
+          ],
+          "purpose": "Send command to active terminal or specific terminal"
+        },
+        "setActiveTerminal": {
+          "line": 90,
+          "params": [
+            "terminalId"
+          ],
+          "purpose": "Set active terminal"
+        },
+        "getActiveTerminalState": {
+          "line": 99,
+          "purpose": "Get currently active terminal state."
+        },
+        "getMultiTerminalUI": {
+          "line": 132,
+          "purpose": "Get MultiTerminalUI instance"
+        }
+      },
+      "ipc": {
+        "listens": [
+          "RUN_COMMAND"
+        ],
+        "emits": []
+      }
+    },
+    "renderer/fileTreeUI": {
+      "file": "src/renderer/fileTreeUI.js",
+      "description": "F",
+      "exports": [
+        "init",
+        "setProjectPathGetter",
+        "setOnFileClick",
+        "renderFileTree",
+        "clearFileTree",
+        "refreshFileTree",
+        "loadFileTree",
+        "focus",
+        "blur"
+      ],
+      "depends": [
+        "electronBridge",
+        "shared/ipcChannels",
+        "shellEscape"
+      ],
+      "functions": {
+        "init": {
+          "line": 20,
+          "params": [
+            "elementId",
+            "getProjectPath"
+          ],
+          "purpose": "Initialize file tree UI"
+        },
+        "setProjectPathGetter": {
+          "line": 34,
+          "params": [
+            "getter"
+          ],
+          "purpose": "Set project path getter"
+        },
+        "setOnFileClick": {
+          "line": 41,
+          "params": [
+            "callback"
+          ],
+          "purpose": "Set file click callback"
+        },
+        "renderFileTree": {
+          "line": 48,
+          "params": [
+            "files",
+            "parentElement",
+            "indent = 0"
+          ],
+          "purpose": "Render file tree recursively"
+        },
+        "clearFileTree": {
+          "line": 154,
+          "purpose": "Clear file tree"
+        },
+        "refreshFileTree": {
+          "line": 163,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "Refresh file tree"
+        },
+        "loadFileTree": {
+          "line": 173,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "Load file tree for path"
+        },
+        "validateFileName": {
+          "line": 181,
+          "params": [
+            "name"
+          ],
+          "purpose": "Validate a file/folder name"
+        },
+        "getTargetDir": {
+          "line": 190,
+          "params": [
+            "file"
+          ],
+          "purpose": "Get the directory path for creating new items relative to a file"
+        },
+        "createInlineInput": {
+          "line": 197,
+          "params": [
+            "fileItem",
+            "initialValue",
+            "onSubmit",
+            "onCancel"
+          ],
+          "purpose": "Create an inline input for rename or new file/folder"
+        },
+        "showNewItemInput": {
+          "line": 274,
+          "params": [
+            "file",
+            "isFolder"
+          ],
+          "purpose": "Show inline input for creating a new file or folder inside a directory"
+        },
+        "startRename": {
+          "line": 363,
+          "params": [
+            "file"
+          ],
+          "purpose": "Start inline rename for a file item"
+        },
+        "addMenuItem": {
+          "line": 379,
+          "params": [
+            "menu",
+            "label",
+            "onClick",
+            "options = {}"
+          ],
+          "purpose": "Add a menu item helper"
+        },
+        "addSeparator": {
+          "line": 393,
+          "params": [
+            "menu"
+          ],
+          "purpose": "Add a separator to the menu"
+        },
+        "showContextMenu": {
+          "line": 402,
+          "params": [
+            "x",
+            "y",
+            "file"
+          ],
+          "purpose": "Show context menu for a file item"
+        },
+        "closeContextMenu": {
+          "line": 503,
+          "purpose": "Close context menu if open"
+        },
+        "setupIPC": {
+          "line": 517,
+          "purpose": "Setup IPC listeners"
+        },
+        "focus": {
+          "line": 533,
+          "purpose": "Focus file tree for keyboard navigation"
+        },
+        "getVisibleItems": {
+          "line": 558,
+          "purpose": "Get all visible file items (for navigation)"
+        },
+        "handleKeydown": {
+          "line": 577,
+          "params": [
+            "e"
+          ],
+          "purpose": "Handle keyboard navigation in file tree"
+        },
+        "blur": {
+          "line": 639,
+          "purpose": "Blur/unfocus file tree"
+        }
+      },
+      "ipc": {
+        "listens": [
+          "FILE_TREE_DATA",
+          "FILE_DELETED"
+        ],
+        "emits": [
+          "LOAD_FILE_TREE",
+          "LOAD_FILE_TREE",
+          "CREATE_FOLDER",
+          "CREATE_FILE",
+          "RENAME_FILE",
+          "REVEAL_IN_FINDER",
+          "DELETE_FILE"
+        ]
+      }
+    },
+    "renderer/historyPanel": {
+      "file": "src/renderer/historyPanel.js",
+      "description": "H",
+      "exports": [
+        "init",
+        "isHistoryVisible",
+        "toggleHistoryPanel",
+        "loadPromptHistory"
+      ],
+      "depends": [
+        "electronBridge",
+        "shared/ipcChannels"
+      ],
+      "functions": {
+        "init": {
+          "line": 17,
+          "params": [
+            "panelId",
+            "contentId",
+            "onToggle"
+          ],
+          "purpose": "Initialize history panel"
+        },
+        "isHistoryVisible": {
+          "line": 28,
+          "purpose": "Check if history panel is visible"
+        },
+        "toggleHistoryPanel": {
+          "line": 35,
+          "purpose": "Toggle history panel visibility"
+        },
+        "loadPromptHistory": {
+          "line": 56,
+          "purpose": "Load prompt history from file"
+        },
+        "renderPromptHistory": {
+          "line": 63,
+          "params": [
+            "historyData"
+          ],
+          "purpose": "Render prompt history data"
+        },
+        "setupIPC": {
+          "line": 101,
+          "purpose": "Setup IPC listeners"
+        }
+      },
+      "ipc": {
+        "listens": [
+          "PROMPT_HISTORY_DATA",
+          "TOGGLE_HISTORY_PANEL"
+        ],
+        "emits": [
+          "LOAD_PROMPT_HISTORY"
+        ]
+      }
+    },
+    "renderer/state": {
+      "file": "src/renderer/state.js",
+      "description": "A",
+      "exports": [
+        "init",
+        "getProjectPath",
+        "setProjectPath",
+        "setMultiTerminalUI",
+        "onProjectChange",
+        "selectProjectFolder",
+        "createNewProject"
+      ],
+      "depends": [
+        "electronBridge",
+        "shared/ipcChannels"
+      ],
+      "functions": {
+        "init": {
+          "line": 20,
+          "params": [
+            "elements"
+          ],
+          "purpose": "Initialize state module"
+        },
+        "getProjectPath": {
+          "line": 30,
+          "purpose": "Get current project path"
+        },
+        "setMultiTerminalUI": {
+          "line": 37,
+          "params": [
+            "ui"
+          ],
+          "purpose": "Set MultiTerminalUI reference for terminal session management"
+        },
+        "setProjectPath": {
+          "line": 44,
+          "params": [
+            "path"
+          ],
+          "purpose": "Set project path and switch terminal session"
+        },
+        "onProjectChange": {
+          "line": 62,
+          "params": [
+            "callback"
+          ],
+          "purpose": "Register callback for project change"
+        },
+        "updateProjectUI": {
+          "line": 69,
+          "purpose": "Update project UI elements"
+        },
+        "selectProjectFolder": {
+          "line": 90,
+          "purpose": "Request folder selection"
+        },
+        "createNewProject": {
+          "line": 97,
+          "purpose": "Request new project creation"
+        },
+        "setupIPC": {
+          "line": 120,
+          "purpose": "Setup IPC listeners"
+        }
+      },
+      "ipc": {
+        "listens": [
+          "PROJECT_SELECTED"
+        ],
+        "emits": [
+          "SELECT_PROJECT_FOLDER"
+        ]
+      }
+    },
+    "renderer/editor": {
+      "file": "src/renderer/editor.js",
+      "description": "F",
+      "exports": [
+        "init",
+        "openFile",
+        "saveFile",
+        "isEditorOpen",
+        "getCurrentFile"
+      ],
+      "depends": [
+        "electronBridge",
+        "shared/ipcChannels",
+        "state"
+      ],
+      "functions": {
+        "init": {
+          "line": 26,
+          "params": [
+            "onRefreshFileTree"
+          ],
+          "purpose": "Initialize editor module"
+        },
+        "openFile": {
+          "line": 44,
+          "params": [
+            "filePath",
+            "source = 'terminal'"
+          ],
+          "purpose": "Open file in editor"
+        },
+        "closeEditor": {
+          "line": 52,
+          "purpose": "Close editor"
+        },
+        "saveFile": {
+          "line": 77,
+          "purpose": "Save file"
+        },
+        "updateStatus": {
+          "line": 96,
+          "params": [
+            "status",
+            "className = ''"
+          ],
+          "purpose": "Update editor status"
+        },
+        "checkModified": {
+          "line": 106,
+          "purpose": "Check if content is modified"
+        },
+        "setupEventHandlers": {
+          "line": 120,
+          "purpose": "Setup event handlers"
+        },
+        "setupIPC": {
+          "line": 206,
+          "purpose": "Setup IPC listeners"
+        },
+        "isEditorOpen": {
+          "line": 258,
+          "purpose": "Check if editor is open"
+        },
+        "getCurrentFile": {
+          "line": 265,
+          "purpose": "Get currently editing file path"
+        }
+      },
+      "ipc": {
+        "listens": [
+          "FILE_CONTENT",
+          "FILE_SAVED"
+        ],
+        "emits": [
+          "READ_FILE",
+          "WRITE_FILE"
+        ]
+      }
+    },
+    "renderer/projectListUI": {
+      "file": "src/renderer/projectListUI.js",
+      "description": "P",
+      "exports": [
+        "init",
+        "loadProjects",
+        "renderProjects",
+        "selectProject",
+        "setActiveProject",
+        "getActiveProject",
+        "addProject",
+        "removeProject",
+        "selectNextProject",
+        "selectPrevProject",
+        "focus",
+        "blur"
+      ],
+      "depends": [
+        "electronBridge",
+        "shared/ipcChannels"
+      ],
+      "functions": {
+        "init": {
+          "line": 21,
+          "params": [
+            "containerId",
+            "onSelectCallback"
+          ],
+          "purpose": "Initialize project list UI"
+        },
+        "setupCollapseToggle": {
+          "line": 31,
+          "purpose": "Setup collapse toggle for projects section"
+        },
+        "loadProjects": {
+          "line": 53,
+          "purpose": "Load projects from workspace"
+        },
+        "renderProjects": {
+          "line": 60,
+          "params": [
+            "projectsList"
+          ],
+          "purpose": "Render project list"
+        },
+        "createProjectItem": {
+          "line": 100,
+          "params": [
+            "project",
+            "index"
+          ],
+          "purpose": "Create a project item element"
+        },
+        "addContextMenuItem": {
+          "line": 167,
+          "params": [
+            "menu",
+            "label",
+            "onClick"
+          ]
+        },
+        "addContextMenuSeparator": {
+          "line": 195,
+          "params": [
+            "menu"
+          ]
+        },
+        "showProjectContextMenu": {
+          "line": 201,
+          "params": [
+            "x",
+            "y",
+            "project"
+          ]
+        },
+        "writeClipboardText": {
+          "line": 258,
+          "params": [
+            "text"
+          ]
+        },
+        "showProjectToast": {
+          "line": 283,
+          "params": [
+            "message",
+            "type = 'info'"
+          ]
+        },
+        "closeProjectContextMenu": {
+          "line": 311
+        },
+        "confirmRemoveProject": {
+          "line": 325,
+          "params": [
+            "projectPath",
+            "projectName"
+          ],
+          "purpose": "Show confirmation dialog and remove project"
+        },
+        "selectProject": {
+          "line": 351,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "Terminal session switching is handled by state.js via multiTerminalUI"
+        },
+        "setActiveProject": {
+          "line": 362,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "Set active project (visual only)"
+        },
+        "getActiveProject": {
+          "line": 381,
+          "purpose": "Get active project path"
+        },
+        "addProject": {
+          "line": 388,
+          "params": [
+            "projectPath",
+            "projectName"
+          ],
+          "purpose": "Add project to workspace"
+        },
+        "removeProject": {
+          "line": 398,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "Remove project from workspace"
+        },
+        "setupIPC": {
+          "line": 405,
+          "purpose": "Setup IPC listeners"
+        },
+        "selectNextProject": {
+          "line": 418,
+          "purpose": "Select next project in list"
+        },
+        "selectPrevProject": {
+          "line": 429,
+          "purpose": "Select previous project in list"
+        },
+        "focus": {
+          "line": 440,
+          "purpose": "Focus project list for keyboard navigation"
+        },
+        "handleKeydown": {
+          "line": 463,
+          "params": [
+            "e"
+          ],
+          "purpose": "Handle keyboard navigation in project list"
+        },
+        "blur": {
+          "line": 498,
+          "purpose": "Blur/unfocus project list"
+        }
+      },
+      "ipc": {
+        "listens": [
+          "WORKSPACE_DATA",
+          "WORKSPACE_UPDATED"
+        ],
+        "emits": [
+          "LOAD_WORKSPACE",
+          "ADD_PROJECT_TO_WORKSPACE",
+          "REMOVE_PROJECT_FROM_WORKSPACE"
+        ]
+      }
+    },
+    "renderer/multiTerminalUI": {
+      "file": "src/renderer/multiTerminalUI.js",
+      "description": "M",
+      "exports": [
+        "MultiTerminalUI"
+      ],
+      "depends": [
+        "terminalManager",
+        "terminalTabBar",
+        "terminalGrid"
+      ],
+      "functions": {}
+    },
+    "renderer/terminalManager": {
+      "file": "src/renderer/terminalManager.js",
+      "description": "T",
+      "exports": [
+        "TerminalManager"
+      ],
+      "depends": [
+        "electronBridge",
+        "xterm",
+        "xterm-addon-fit",
+        "shared/ipcChannels",
+        "shellEscape"
+      ],
+      "functions": {},
+      "ipc": {
+        "listens": [
+          "TERMINAL_OUTPUT_ID",
+          "TERMINAL_DESTROYED"
+        ],
+        "emits": [
+          "TERMINAL_INPUT_ID",
+          "TERMINAL_DESTROY",
+          "TERMINAL_INPUT_ID",
+          "TERMINAL_RESIZE_ID"
+        ]
+      }
+    },
+    "shared/ipcChannels": {
+      "file": "src/shared/ipcChannels.js",
+      "description": "I",
+      "exports": [
+        "IPC"
+      ],
+      "depends": [],
+      "functions": {}
+    },
+    "main/fileEditor": {
+      "file": "src/main/fileEditor.js",
+      "description": "F",
+      "exports": [
+        "init",
+        "readFile",
+        "writeFile",
+        "setupIPC"
+      ],
+      "depends": [
+        "fs",
+        "path",
+        "shared/ipcChannels",
+        "shared/pathValidation"
+      ],
+      "functions": {
+        "init": {
+          "line": 16,
+          "params": [
+            "_window"
+          ],
+          "purpose": "Initialize file editor module"
+        },
+        "readFile": {
+          "line": 23,
+          "params": [
+            "filePath"
+          ],
+          "purpose": "Read file contents"
+        },
+        "writeFile": {
+          "line": 44,
+          "params": [
+            "filePath",
+            "content"
+          ],
+          "purpose": "Write file contents"
+        },
+        "getFileExtension": {
+          "line": 63,
+          "params": [
+            "filePath"
+          ],
+          "purpose": "Get file extension"
+        },
+        "safeSend": {
+          "line": 67,
+          "params": [
+            "sender",
+            "channel",
+            "data"
+          ]
+        },
+        "setupIPC": {
+          "line": 74,
+          "params": [
+            "ipcMain"
+          ],
+          "purpose": "Setup IPC handlers"
+        }
+      },
+      "ipc": {
+        "listens": [
+          "READ_FILE",
+          "WRITE_FILE"
+        ],
+        "emits": []
+      }
+    },
+    "main/ptyManager": {
+      "file": "src/main/ptyManager.js",
+      "description": "P",
+      "exports": [
+        "init",
+        "createTerminal",
+        "writeToTerminal",
+        "resizeTerminal",
+        "destroyTerminal",
+        "destroyAll",
+        "getTerminalCount",
+        "getTerminalIds",
+        "hasTerminal",
+        "getTerminalsByProject",
+        "getTerminalInfo",
+        "getAvailableShells",
+        "setupIPC"
+      ],
+      "depends": [
+        "node-pty",
+        "shared/ipcChannels",
+        "promptLogger",
+        "child_process",
+        "fs"
+      ],
+      "functions": {
+        "init": {
+          "line": 20,
+          "params": [
+            "window"
+          ],
+          "purpose": "Initialize PTY manager with window reference"
+        },
+        "getDefaultShell": {
+          "line": 28,
+          "purpose": "Get default shell based on platform"
+        },
+        "getAvailableShells": {
+          "line": 45,
+          "purpose": "Get available shells on the system"
+        },
+        "createTerminal": {
+          "line": 134,
+          "params": [
+            "workingDir = null",
+            "projectPath = null",
+            "shellPath = null"
+          ]
+        },
+        "getTerminalsByProject": {
+          "line": 214,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "Get terminals for a specific project"
+        },
+        "getTerminalInfo": {
+          "line": 229,
+          "params": [
+            "terminalId"
+          ],
+          "purpose": "Get terminal info"
+        },
+        "writeToTerminal": {
+          "line": 240,
+          "params": [
+            "terminalId",
+            "data"
+          ],
+          "purpose": "Write data to specific terminal"
+        },
+        "resizeTerminal": {
+          "line": 250,
+          "params": [
+            "terminalId",
+            "cols",
+            "rows"
+          ],
+          "purpose": "Resize specific terminal"
+        },
+        "destroyTerminal": {
+          "line": 260,
+          "params": [
+            "terminalId"
+          ],
+          "purpose": "Destroy specific terminal"
+        },
+        "destroyAll": {
+          "line": 272,
+          "purpose": "Destroy all terminals"
+        },
+        "getTerminalCount": {
+          "line": 283,
+          "purpose": "Get terminal count"
+        },
+        "getTerminalIds": {
+          "line": 290,
+          "purpose": "Get all terminal IDs"
+        },
+        "hasTerminal": {
+          "line": 297,
+          "params": [
+            "terminalId"
+          ],
+          "purpose": "Check if terminal exists"
+        },
+        "setupIPC": {
+          "line": 304,
+          "params": [
+            "ipcMain"
+          ],
+          "purpose": "Setup IPC handlers for multi-terminal"
+        }
+      },
+      "ipc": {
+        "listens": [
+          "GET_AVAILABLE_SHELLS",
+          "TERMINAL_CREATE",
+          "TERMINAL_DESTROY",
+          "TERMINAL_INPUT_ID",
+          "TERMINAL_RESIZE_ID"
+        ],
+        "emits": [
+          "TERMINAL_OUTPUT_ID",
+          "TERMINAL_DESTROYED"
+        ]
+      }
+    },
+    "renderer/sidebarResize": {
+      "file": "src/renderer/sidebarResize.js",
+      "description": "S",
+      "exports": [
+        "init",
+        "getWidth",
+        "setWidth",
+        "resetWidth",
+        "toggle",
+        "hide",
+        "show",
+        "isVisible"
+      ],
+      "depends": [],
+      "functions": {
+        "init": {
+          "line": 25,
+          "params": [
+            "onResize"
+          ],
+          "purpose": "Initialize sidebar resize functionality"
+        },
+        "handleMouseDown": {
+          "line": 65,
+          "params": [
+            "e"
+          ],
+          "purpose": "Handle mouse down on resize handle"
+        },
+        "handleMouseMove": {
+          "line": 79,
+          "params": [
+            "e"
+          ],
+          "purpose": "Handle mouse move during resize"
+        },
+        "handleMouseUp": {
+          "line": 95,
+          "params": [
+            "e"
+          ],
+          "purpose": "Handle mouse up to finish resize"
+        },
+        "resetWidth": {
+          "line": 115,
+          "purpose": "Reset sidebar width to default"
+        },
+        "getWidth": {
+          "line": 128,
+          "purpose": "Get current sidebar width"
+        },
+        "setWidth": {
+          "line": 136,
+          "params": [
+            "width"
+          ],
+          "purpose": "Set sidebar width programmatically"
+        },
+        "toggle": {
+          "line": 151,
+          "purpose": "Toggle sidebar visibility"
+        },
+        "hide": {
+          "line": 164,
+          "purpose": "Hide sidebar"
+        },
+        "show": {
+          "line": 180,
+          "purpose": "Show sidebar"
+        },
+        "isVisible": {
+          "line": 196,
+          "purpose": "Check if sidebar is hidden"
+        }
+      }
+    },
+    "renderer/terminalGrid": {
+      "file": "src/renderer/terminalGrid.js",
+      "description": "T",
+      "exports": [
+        "TerminalGrid",
+        "GRID_LAYOUTS"
+      ],
+      "depends": [],
+      "functions": {}
+    },
+    "renderer/terminalTabBar": {
+      "file": "src/renderer/terminalTabBar.js",
+      "description": "T",
+      "exports": [
+        "TerminalTabBar"
+      ],
+      "depends": [
+        "electronBridge",
+        "shared/ipcChannels",
+        "escapeHtml",
+        "pluginsPanel",
+        "githubPanel",
+        "savedPromptsPanel",
+        "aiToolSelector",
+        "state"
+      ],
+      "functions": {},
+      "ipc": {
+        "listens": [
+          "AI_USAGE_DATA",
+          "UPDATE_AVAILABLE",
+          "UPDATE_DOWNLOAD_PROGRESS",
+          "UPDATE_DOWNLOADED",
+          "UPDATE_ERROR"
+        ],
+        "emits": [
+          "LOAD_AI_USAGE",
+          "REFRESH_AI_USAGE",
+          "LOAD_AI_USAGE",
+          "DOWNLOAD_UPDATE",
+          "INSTALL_UPDATE"
+        ]
+      }
+    },
+    "main/pluginsManager": {
+      "file": "src/main/pluginsManager.js",
+      "description": "P",
+      "exports": [
+        "init",
+        "setupIPC",
+        "getAllPlugins",
+        "togglePlugin"
+      ],
+      "depends": [
+        "fs",
+        "path",
+        "os",
+        "child_process",
+        "util",
+        "shared/ipcChannels"
+      ],
+      "functions": {
+        "init": {
+          "line": 26,
+          "params": [
+            "window"
+          ],
+          "purpose": "Initialize plugins manager"
+        },
+        "readJsonFile": {
+          "line": 33,
+          "params": [
+            "filePath"
+          ],
+          "purpose": "Read JSON file safely"
+        },
+        "writeJsonFile": {
+          "line": 47,
+          "params": [
+            "filePath",
+            "data"
+          ],
+          "purpose": "Write JSON file safely"
+        },
+        "getEnabledPlugins": {
+          "line": 60,
+          "purpose": "Get enabled plugins from settings"
+        },
+        "getInstalledPlugins": {
+          "line": 68,
+          "purpose": "Get installed plugins"
+        },
+        "getMarketplacePlugins": {
+          "line": 76,
+          "purpose": "Get all available plugins from marketplace"
+        },
+        "getAllPlugins": {
+          "line": 120,
+          "purpose": "Get all plugins with their status"
+        },
+        "togglePlugin": {
+          "line": 142,
+          "params": [
+            "pluginId"
+          ],
+          "purpose": "Toggle plugin enabled/disabled status"
+        },
+        "ensureOfficialMarketplace": {
+          "line": 165,
+          "purpose": "Ensure official marketplace exists"
+        },
+        "refreshMarketplace": {
+          "line": 193,
+          "purpose": "Refresh marketplace plugins (git pull or clone)"
+        },
+        "setupIPC": {
+          "line": 221,
+          "params": [
+            "ipcMain"
+          ],
+          "purpose": "Setup IPC handlers"
+        }
+      },
+      "ipc": {
+        "listens": [
+          "LOAD_PLUGINS",
+          "TOGGLE_PLUGIN",
+          "REFRESH_PLUGINS"
+        ],
+        "emits": [
+          "PLUGIN_TOGGLED"
+        ]
+      }
+    },
+    "renderer/pluginsPanel": {
+      "file": "src/renderer/pluginsPanel.js",
+      "description": "P",
+      "exports": [
+        "init",
+        "show",
+        "hide",
+        "toggle",
+        "loadPlugins",
+        "isVisible"
+      ],
+      "depends": [
+        "electronBridge",
+        "shared/ipcChannels",
+        "shellEscape",
+        "panelHeaderDropdown",
+        "escapeHtml"
+      ],
+      "functions": {
+        "init": {
+          "line": 23,
+          "purpose": "Initialize plugins panel"
+        },
+        "setupEventListeners": {
+          "line": 39,
+          "purpose": "Setup event listeners"
+        },
+        "setupIPCListeners": {
+          "line": 70,
+          "purpose": "Setup IPC listeners"
+        },
+        "loadPlugins": {
+          "line": 94,
+          "purpose": "Load plugins"
+        },
+        "refreshPlugins": {
+          "line": 108,
+          "purpose": "Refresh plugins from marketplace"
+        },
+        "show": {
+          "line": 142,
+          "purpose": "Show plugins panel"
+        },
+        "hide": {
+          "line": 153,
+          "purpose": "Hide plugins panel"
+        },
+        "toggle": {
+          "line": 163,
+          "purpose": "Toggle plugins panel visibility"
+        },
+        "setFilter": {
+          "line": 174,
+          "params": [
+            "filter",
+            "options = {}"
+          ],
+          "purpose": "Set filter"
+        },
+        "getFilteredPlugins": {
+          "line": 187,
+          "purpose": "Get filtered plugins"
+        },
+        "render": {
+          "line": 203,
+          "purpose": "Render plugins list"
+        },
+        "renderPluginItem": {
+          "line": 247,
+          "params": [
+            "plugin"
+          ],
+          "purpose": "Render single plugin item"
+        },
+        "getPluginIcon": {
+          "line": 293,
+          "params": [
+            "name"
+          ],
+          "purpose": "Get icon for plugin based on name"
+        },
+        "togglePlugin": {
+          "line": 332,
+          "params": [
+            "pluginId"
+          ],
+          "purpose": "Toggle plugin enabled/disabled"
+        },
+        "installPlugin": {
+          "line": 344,
+          "params": [
+            "pluginName"
+          ],
+          "purpose": "Install plugin via terminal command"
+        },
+        "showToast": {
+          "line": 361,
+          "params": [
+            "message",
+            "type = 'info'"
+          ],
+          "purpose": "Show toast notification"
+        },
+        "getToastIcon": {
+          "line": 396,
+          "params": [
+            "type"
+          ],
+          "purpose": "Get toast icon based on type"
+        }
+      },
+      "ipc": {
+        "listens": [
+          "PLUGIN_TOGGLED",
+          "TOGGLE_PLUGINS_PANEL"
+        ],
+        "emits": []
+      }
+    },
+    "renderer/githubPanel": {
+      "file": "src/renderer/githubPanel.js",
+      "description": "G",
+      "exports": [
+        "init",
+        "show",
+        "hide",
+        "toggle",
+        "loadBranches",
+        "loadWorktrees",
+        "loadChanges",
+        "isVisible",
+        "isChangesTabActive"
+      ],
+      "depends": [
+        "electronBridge",
+        "shared/ipcChannels",
+        "panelHeaderDropdown",
+        "state",
+        "escapeHtml",
+        "editor",
+        "shellEscape"
+      ],
+      "functions": {
+        "init": {
+          "line": 87,
+          "purpose": "Initialize GitHub panel"
+        },
+        "setupGitWatcher": {
+          "line": 142,
+          "purpose": "Setup .git directory watcher for auto-refresh when panel is visible"
+        },
+        "setupEventListeners": {
+          "line": 172,
+          "purpose": "Setup event listeners"
+        },
+        "setupIPCListeners": {
+          "line": 204,
+          "purpose": "Setup IPC listeners"
+        },
+        "refreshIssues": {
+          "line": 213,
+          "purpose": "Refresh current tab"
+        },
+        "show": {
+          "line": 243,
+          "purpose": "Show GitHub panel"
+        },
+        "hide": {
+          "line": 256,
+          "purpose": "Hide GitHub panel"
+        },
+        "toggle": {
+          "line": 266,
+          "purpose": "Toggle GitHub panel visibility"
+        },
+        "setTab": {
+          "line": 277,
+          "params": [
+            "tab",
+            "options = {}"
+          ],
+          "purpose": "Set active tab"
+        },
+        "renderLoading": {
+          "line": 316,
+          "params": [
+            "message = 'Loading...'"
+          ],
+          "purpose": "Render loading state"
+        },
+        "renderError": {
+          "line": 333,
+          "params": [
+            "message"
+          ],
+          "purpose": "Render error state"
+        },
+        "showToast": {
+          "line": 357,
+          "params": [
+            "message",
+            "type = 'info'"
+          ],
+          "purpose": "Show toast notification"
+        },
+        "publishGitChangesCount": {
+          "line": 384,
+          "params": [
+            "count"
+          ]
+        },
+        "loadAutoStagePreference": {
+          "line": 391
+        },
+        "persistAutoStagePreference": {
+          "line": 402
+        },
+        "syncAutoStageToggle": {
+          "line": 410
+        },
+        "getToastIcon": {
+          "line": 424,
+          "params": [
+            "type"
+          ],
+          "purpose": "Get toast icon based on type"
+        },
+        "loadBranches": {
+          "line": 442,
+          "purpose": "Load git branches"
+        },
+        "renderBranches": {
+          "line": 479,
+          "purpose": "Render branches list"
+        },
+        "renderBranchItem": {
+          "line": 525,
+          "params": [
+            "branch",
+            "currentBranch"
+          ],
+          "purpose": "Render single branch item"
+        },
+        "attachBranchEventListeners": {
+          "line": 553,
+          "purpose": "Attach branch event listeners"
+        },
+        "handleSwitchBranch": {
+          "line": 576,
+          "params": [
+            "branchName"
+          ],
+          "purpose": "Handle branch switch"
+        },
+        "handleDeleteBranch": {
+          "line": 603,
+          "params": [
+            "branchName"
+          ],
+          "purpose": "Handle branch deletion"
+        },
+        "renderBranchesError": {
+          "line": 635,
+          "params": [
+            "message"
+          ],
+          "purpose": "Render branches error"
+        },
+        "loadWorktrees": {
+          "line": 658,
+          "purpose": "Load git worktrees"
+        },
+        "renderWorktrees": {
+          "line": 695,
+          "purpose": "Render worktrees list"
+        },
+        "renderWorktreeItem": {
+          "line": 727,
+          "params": [
+            "worktree"
+          ],
+          "purpose": "Render single worktree item"
+        },
+        "attachWorktreeEventListeners": {
+          "line": 756,
+          "purpose": "Attach worktree event listeners"
+        },
+        "handleRemoveWorktree": {
+          "line": 769,
+          "params": [
+            "wtPath"
+          ],
+          "purpose": "Handle worktree removal"
+        },
+        "renderWorktreesError": {
+          "line": 797,
+          "params": [
+            "message"
+          ],
+          "purpose": "Render worktrees error"
+        },
+        "setupModalListeners": {
+          "line": 817,
+          "purpose": "Setup modal event listeners"
+        },
+        "showCreateBranchModal": {
+          "line": 864,
+          "purpose": "Show create branch modal"
+        },
+        "populateBaseBranchSelect": {
+          "line": 890,
+          "params": [
+            "select"
+          ],
+          "purpose": "Populate base branch select dropdown"
+        },
+        "hideCreateBranchModal": {
+          "line": 929,
+          "purpose": "Hide create branch modal"
+        },
+        "setupConflictModalListeners": {
+          "line": 936
+        },
+        "showConflictModal": {
+          "line": 1005,
+          "params": [
+            "filePath"
+          ]
+        },
+        "hideConflictModal": {
+          "line": 1048
+        },
+        "handleCreateBranch": {
+          "line": 1057,
+          "purpose": "Handle create branch"
+        },
+        "computeChangesHash": {
+          "line": 1100,
+          "params": [
+            "data"
+          ],
+          "purpose": "==================== CHANGES FUNCTIONALITY ===================="
+        },
+        "formatActivityDate": {
+          "line": 1120,
+          "params": [
+            "date"
+          ]
+        },
+        "activityLevel": {
+          "line": 1127,
+          "params": [
+            "count"
+          ]
+        },
+        "buildActivityGrid": {
+          "line": 1135,
+          "params": [
+            "activity"
+          ]
+        },
+        "renderActivityHeatmapSection": {
+          "line": 1201,
+          "params": [
+            "activity",
+            "totalHint = null",
+            "options = {}"
+          ]
+        },
+        "clearActivitySlot": {
+          "line": 1277
+        },
+        "getActivityRenderOptions": {
+          "line": 1283
+        },
+        "renderActivitySlot": {
+          "line": 1290,
+          "params": [
+            "activity",
+            "totalHint = null",
+            "options = {}"
+          ]
+        },
+        "setActivityPending": {
+          "line": 1314,
+          "params": [
+            "pending"
+          ]
+        },
+        "loadChanges": {
+          "line": 1321,
+          "params": [
+            "force"
+          ]
+        },
+        "_loadChangesImpl": {
+          "line": 1328
+        },
+        "renderChanges": {
+          "line": 1373,
+          "params": [
+            "gen"
+          ],
+          "purpose": "Render source control sections with clear separation (merge, working tree, staged, sync)."
+        },
+        "renderCommitItem": {
+          "line": 1585,
+          "params": [
+            "commit",
+            "options = { kind: 'outgoing' }"
+          ],
+          "purpose": "Render a single commit item"
+        },
+        "renderChangeItem": {
+          "line": 1607,
+          "params": [
+            "file",
+            "diffType"
+          ],
+          "purpose": "Render a single change item"
+        },
+        "toggleSection": {
+          "line": 1656,
+          "params": [
+            "sectionId"
+          ],
+          "purpose": "Toggle a collapsible section"
+        },
+        "attachChangesEventListeners": {
+          "line": 1669,
+          "purpose": "Attach event listeners for changes"
+        },
+        "handleStageFile": {
+          "line": 1766,
+          "params": [
+            "filePath"
+          ],
+          "purpose": "Handle staging a file"
+        },
+        "handleUnstageFile": {
+          "line": 1790,
+          "params": [
+            "filePath"
+          ],
+          "purpose": "Handle unstaging a file"
+        },
+        "handleDiscardFile": {
+          "line": 1814,
+          "params": [
+            "filePath",
+            "diffType"
+          ],
+          "purpose": "Handle discarding changes for a file"
+        },
+        "handleStashFile": {
+          "line": 1841,
+          "params": [
+            "filePath"
+          ],
+          "purpose": "Handle stashing a single file"
+        },
+        "handleStageAll": {
+          "line": 1868,
+          "purpose": "Handle staging all files"
+        },
+        "handleUnstageAll": {
+          "line": 1892,
+          "purpose": "Handle unstaging all files"
+        },
+        "handleDiscardAllUnstaged": {
+          "line": 1916,
+          "purpose": "Handle discarding all unstaged changes"
+        },
+        "handleStashAll": {
+          "line": 1942,
+          "purpose": "Handle stashing all changes"
+        },
+        "handleUndoLastCommit": {
+          "line": 1969,
+          "purpose": "Handle undoing the last commit"
+        },
+        "handleRevertCommit": {
+          "line": 1995,
+          "params": [
+            "hash"
+          ],
+          "purpose": "Handle reverting a specific commit"
+        },
+        "handleStashApply": {
+          "line": 2022,
+          "params": [
+            "stashRef"
+          ],
+          "purpose": "Handle applying a stash"
+        },
+        "handleStashPop": {
+          "line": 2050,
+          "params": [
+            "stashRef"
+          ],
+          "purpose": "Handle popping a stash"
+        },
+        "handleStashDrop": {
+          "line": 2078,
+          "params": [
+            "stashRef"
+          ],
+          "purpose": "Handle dropping a stash"
+        },
+        "showStashDiffModal": {
+          "line": 2104,
+          "params": [
+            "stashRef"
+          ],
+          "purpose": "Show diff modal for a stash"
+        },
+        "loadStashSection": {
+          "line": 2166,
+          "params": [
+            "gen"
+          ],
+          "purpose": "Load and render stash section"
+        },
+        "attachStashEventListeners": {
+          "line": 2219,
+          "purpose": "Attach event listeners for stash section"
+        },
+        "renderChangesError": {
+          "line": 2269,
+          "params": [
+            "message"
+          ],
+          "purpose": "Render changes error"
+        },
+        "setDiffViewMode": {
+          "line": 2290,
+          "params": [
+            "mode"
+          ],
+          "purpose": "==================== DIFF MODAL ===================="
+        },
+        "setCurrentDiffState": {
+          "line": 2305,
+          "params": [
+            "nextState"
+          ]
+        },
+        "clearCurrentDiffState": {
+          "line": 2313
+        },
+        "extractDiffHunks": {
+          "line": 2319,
+          "params": [
+            "diffText"
+          ]
+        },
+        "syncDiffControls": {
+          "line": 2352
+        },
+        "syncDiffSearchControls": {
+          "line": 2397
+        },
+        "applySelectedHunk": {
+          "line": 2406,
+          "params": [
+            "action"
+          ]
+        },
+        "showDiffModal": {
+          "line": 2443,
+          "params": [
+            "filePath",
+            "diffType"
+          ],
+          "purpose": "Show diff modal for a file"
+        },
+        "showCommitDiffModal": {
+          "line": 2523,
+          "params": [
+            "commitHash"
+          ],
+          "purpose": "Show diff modal for a commit"
+        },
+        "hideDiffModal": {
+          "line": 2591,
+          "purpose": "Hide diff modal"
+        },
+        "parseDiff": {
+          "line": 2602,
+          "params": [
+            "diffText"
+          ],
+          "purpose": "Parse unified diff into structured lines"
+        },
+        "renderDiffContent": {
+          "line": 2657,
+          "params": [
+            "container",
+            "lines"
+          ],
+          "purpose": "Render parsed diff content into the modal body"
+        },
+        "buildSplitRows": {
+          "line": 2710,
+          "params": [
+            "lines"
+          ]
+        },
+        "renderSplitSide": {
+          "line": 2743,
+          "params": [
+            "line",
+            "side",
+            "contentHtml = null"
+          ]
+        },
+        "renderSplitDiffContent": {
+          "line": 2754,
+          "params": [
+            "container",
+            "lines"
+          ]
+        },
+        "tokenizeForWordDiff": {
+          "line": 2795,
+          "params": [
+            "text"
+          ]
+        },
+        "highlightModifiedPair": {
+          "line": 2800,
+          "params": [
+            "oldText",
+            "newText"
+          ]
+        },
+        "setupDiffModalListeners": {
+          "line": 2837,
+          "purpose": "Setup diff modal listeners"
+        },
+        "setupCommitArea": {
+          "line": 2944,
+          "purpose": "Setup commit area event listeners"
+        },
+        "setDescriptionVisibility": {
+          "line": 3100,
+          "params": [
+            "visible"
+          ]
+        },
+        "updateCommitBtnState": {
+          "line": 3124,
+          "purpose": "Update commit button enabled/disabled state"
+        },
+        "updateCommitArea": {
+          "line": 3150,
+          "purpose": "Update commit area visibility and button labels"
+        },
+        "buildCommitMessage": {
+          "line": 3183,
+          "purpose": "Build full commit message from summary + description"
+        },
+        "clearCommitInputs": {
+          "line": 3193,
+          "purpose": "Clear commit inputs"
+        },
+        "handleCommit": {
+          "line": 3209,
+          "purpose": "Handle creating a commit (native execFile)"
+        },
+        "handleCommitAndPush": {
+          "line": 3276,
+          "purpose": "Handle commit and push"
+        },
+        "handleAmendCommit": {
+          "line": 3284,
+          "purpose": "Handle amending the last commit"
+        },
+        "handleFetch": {
+          "line": 3316,
+          "params": [
+            "options = {}"
+          ],
+          "purpose": "Fetch remote refs and refresh sync indicators."
+        },
+        "handlePush": {
+          "line": 3347,
+          "purpose": "Handle push (terminal-hybrid)"
+        },
+        "sendToTerminal": {
+          "line": 3368,
+          "params": [
+            "command"
+          ],
+          "purpose": "Send a command to the active terminal"
+        },
+        "scheduleRefresh": {
+          "line": 3380,
+          "params": [
+            "delayMs"
+          ]
+        },
+        "updateSyncStatus": {
+          "line": 3392,
+          "purpose": "Update sync status (ahead/behind counts)"
+        },
+        "renderBranchBar": {
+          "line": 3414,
+          "purpose": "Branch/upstream info now lives in the activity header."
+        }
+      },
+      "ipc": {
+        "listens": [
+          "TOGGLE_GITHUB_PANEL"
+        ],
+        "emits": []
+      }
+    },
+    "main/claudeUsageManager": {
+      "file": "src/main/claudeUsageManager.js",
+      "description": "C",
+      "exports": [
+        "init",
+        "setupIPC",
+        "cleanup",
+        "fetchUsage",
+        "getCachedUsage",
+        "startPolling",
+        "stopPolling"
+      ],
+      "depends": [
+        "child_process",
+        "util",
+        "https",
+        "shared/ipcChannels"
+      ],
+      "functions": {
+        "init": {
+          "line": 21,
+          "params": [
+            "window"
+          ],
+          "purpose": "Initialize the module with window reference"
+        },
+        "getOAuthToken": {
+          "line": 31,
+          "purpose": "Get OAuth token from macOS Keychain"
+        },
+        "fetchUsage": {
+          "line": 65,
+          "purpose": "Fetch usage data from Claude OAuth API"
+        },
+        "sendUsageToRenderer": {
+          "line": 168,
+          "purpose": "Send usage data to renderer"
+        },
+        "startPolling": {
+          "line": 186,
+          "params": [
+            "interval = 60000"
+          ],
+          "purpose": "Start periodic polling for usage updates"
+        },
+        "stopPolling": {
+          "line": 204,
+          "purpose": "Stop polling"
+        },
+        "setupIPC": {
+          "line": 219,
+          "params": [
+            "_ipcMain"
+          ],
+          "purpose": "Setup IPC handlers"
+        },
+        "getCachedUsage": {
+          "line": 227,
+          "purpose": "Get cached usage if fresh (< 60s old)"
+        },
+        "cleanup": {
+          "line": 237,
+          "purpose": "Cleanup on app quit"
+        }
+      },
+      "ipc": {
+        "listens": [],
+        "emits": [
+          "AI_USAGE_DATA",
+          "AI_USAGE_DATA"
+        ]
+      }
+    },
+    "main/gitBranchesManager": {
+      "file": "src/main/gitBranchesManager.js",
+      "description": "G",
+      "exports": [
+        "init",
+        "loadBranches",
+        "switchBranch",
+        "createBranch",
+        "deleteBranch",
+        "loadWorktrees",
+        "addWorktree",
+        "removeWorktree",
+        "isWorkingTreeClean",
+        "setupIPC"
+      ],
+      "depends": [
+        "child_process",
+        "shared/ipcChannels",
+        "os",
+        "path"
+      ],
+      "functions": {
+        "isValidBranchName": {
+          "line": 16,
+          "params": [
+            "name"
+          ],
+          "purpose": "Rejects names starting with '-' (flag injection)"
+        },
+        "init": {
+          "line": 29,
+          "params": [
+            "window"
+          ],
+          "purpose": "Initialize manager"
+        },
+        "execFileGit": {
+          "line": 36,
+          "params": [
+            "args",
+            "projectPath"
+          ],
+          "purpose": "Execute git command safely using execFile (prevents argument injection)"
+        },
+        "isWorkingTreeClean": {
+          "line": 51,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "Check if working tree is clean"
+        },
+        "loadBranches": {
+          "line": 63,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "Load all branches"
+        },
+        "switchBranch": {
+          "line": 108,
+          "params": [
+            "projectPath",
+            "branchName"
+          ],
+          "purpose": "Switch to a branch"
+        },
+        "createBranch": {
+          "line": 143,
+          "params": [
+            "projectPath",
+            "branchName",
+            "checkout = true",
+            "baseBranch = null"
+          ],
+          "purpose": "Create a new branch"
+        },
+        "deleteBranch": {
+          "line": 177,
+          "params": [
+            "projectPath",
+            "branchName",
+            "force = false"
+          ],
+          "purpose": "Delete a branch"
+        },
+        "loadWorktrees": {
+          "line": 197,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "Load worktrees"
+        },
+        "addWorktree": {
+          "line": 239,
+          "params": [
+            "projectPath",
+            "worktreePath",
+            "branchName",
+            "createBranch = false"
+          ],
+          "purpose": "Add a worktree"
+        },
+        "removeWorktree": {
+          "line": 270,
+          "params": [
+            "projectPath",
+            "worktreePath",
+            "force = false"
+          ],
+          "purpose": "Remove a worktree"
+        },
+        "setupIPC": {
+          "line": 289,
+          "params": [
+            "ipcMain"
+          ],
+          "purpose": "Setup IPC handlers"
+        }
+      },
+      "ipc": {
+        "listens": [
+          "LOAD_GIT_BRANCHES",
+          "SWITCH_GIT_BRANCH",
+          "CREATE_GIT_BRANCH",
+          "DELETE_GIT_BRANCH",
+          "LOAD_GIT_WORKTREES",
+          "ADD_GIT_WORKTREE",
+          "REMOVE_GIT_WORKTREE",
+          "TOGGLE_GIT_BRANCHES_PANEL"
+        ],
+        "emits": [
+          "TOGGLE_GIT_BRANCHES_PANEL"
+        ]
+      }
+    },
+    "main/aiToolManager": {
+      "file": "src/main/aiToolManager.js",
+      "description": "A",
+      "exports": [
+        "init",
+        "getAvailableTools",
+        "getActiveTool",
+        "setActiveTool",
+        "getConfig",
+        "AI_TOOLS"
+      ],
+      "depends": [
+        "electron",
+        "fs",
+        "path",
+        "shared/ipcChannels"
+      ],
+      "functions": {
+        "init": {
+          "line": 56,
+          "params": [
+            "window",
+            "app"
+          ],
+          "purpose": "Initialize the AI Tool Manager"
+        },
+        "loadConfig": {
+          "line": 66,
+          "purpose": "Load configuration from file"
+        },
+        "saveConfig": {
+          "line": 81,
+          "purpose": "Save configuration to file"
+        },
+        "getAvailableTools": {
+          "line": 92,
+          "purpose": "Get all available AI tools"
+        },
+        "getActiveTool": {
+          "line": 99,
+          "purpose": "Get the currently active tool"
+        },
+        "setActiveTool": {
+          "line": 107,
+          "params": [
+            "toolId"
+          ],
+          "purpose": "Set the active AI tool"
+        },
+        "getConfig": {
+          "line": 126,
+          "purpose": "Get full configuration for renderer"
+        },
+        "setupIPC": {
+          "line": 136,
+          "purpose": "Setup IPC handlers"
+        }
+      },
+      "ipc": {
+        "listens": [
+          "GET_AI_TOOL_CONFIG",
+          "SET_AI_TOOL"
+        ],
+        "emits": [
+          "AI_TOOL_CHANGED"
+        ]
+      }
+    },
+    "renderer/aiToolSelector": {
+      "file": "src/renderer/aiToolSelector.js",
+      "description": "A",
+      "exports": [
+        "init",
+        "getCurrentTool",
+        "getStartCommand",
+        "getCommand",
+        "supportsFeature",
+        "AI_TOOL_ICONS"
+      ],
+      "depends": [
+        "electronBridge",
+        "shared/ipcChannels",
+        "escapeHtml"
+      ],
+      "functions": {
+        "init": {
+          "line": 23,
+          "params": [
+            "onToolChange"
+          ],
+          "purpose": "Initialize the AI tool selector"
+        },
+        "setupSelector": {
+          "line": 48,
+          "purpose": "Setup the selector dropdown"
+        },
+        "updateUI": {
+          "line": 110,
+          "purpose": "Update UI to reflect current tool"
+        },
+        "getCurrentTool": {
+          "line": 146,
+          "purpose": "Get the current active tool"
+        },
+        "getStartCommand": {
+          "line": 153,
+          "purpose": "Get the start command for current tool"
+        },
+        "getCommand": {
+          "line": 160,
+          "params": [
+            "action"
+          ],
+          "purpose": "Get a specific command for current tool"
+        },
+        "supportsFeature": {
+          "line": 168,
+          "params": [
+            "feature"
+          ],
+          "purpose": "Check if current tool supports a feature"
+        }
+      },
+      "ipc": {
+        "listens": [
+          "AI_TOOL_CHANGED"
+        ],
+        "emits": []
+      }
+    },
+    "main/gitChangesManager": {
+      "file": "src/main/gitChangesManager.js",
+      "description": "G",
+      "exports": [
+        "init",
+        "loadChanges",
+        "loadDiff",
+        "loadCommitDiff",
+        "loadSyncCommits",
+        "loadCommitGraph",
+        "loadGitActivity",
+        "gitFetch",
+        "applyGitHunk",
+        "extractHunkPatches",
+        "loadGitConflict",
+        "resolveGitConflict",
+        "stageFile",
+        "unstageFile",
+        "discardFile",
+        "discardAllUnstaged",
+        "stageAll",
+        "unstageAll",
+        "undoLastCommit",
+        "revertCommit",
+        "stashChanges",
+        "stashList",
+        "stashApply",
+        "stashPop",
+        "stashDrop",
+        "stashShow",
+        "gitCommit",
+        "gitCommitAmend",
+        "gitAheadBehind",
+        "setupIPC"
+      ],
+      "depends": [
+        "child_process",
+        "fs",
+        "os",
+        "path",
+        "electron",
+        "shared/ipcChannels",
+        "shared/pathValidation"
+      ],
+      "functions": {
+        "buildAugmentedPath": {
+          "line": 25
+        },
+        "buildExecEnv": {
+          "line": 55
+        },
+        "isExecutableFile": {
+          "line": 62,
+          "params": [
+            "filePath"
+          ]
+        },
+        "resolveCommandPath": {
+          "line": 71,
+          "params": [
+            "cmd",
+            "envPath"
+          ]
+        },
+        "isValidStashRef": {
+          "line": 118,
+          "params": [
+            "ref"
+          ],
+          "purpose": "Validate stash ref format (e.g. stash@{0})"
+        },
+        "init": {
+          "line": 125,
+          "params": [
+            "_window"
+          ],
+          "purpose": "Initialize manager"
+        },
+        "execFileGit": {
+          "line": 132,
+          "params": [
+            "args",
+            "projectPath",
+            "maxBuffer = 1024 * 1024",
+            "timeout = 10000"
+          ],
+          "purpose": "Execute git command safely using execFile (prevents argument injection)"
+        },
+        "formatGitError": {
+          "line": 149,
+          "params": [
+            "err",
+            "fallback"
+          ]
+        },
+        "execGitWithStdin": {
+          "line": 171,
+          "params": [
+            "args",
+            "input",
+            "projectPath",
+            "timeout = 10000"
+          ],
+          "purpose": "Execute git with stdin payload (used for hunk-level patch operations)."
+        },
+        "execFileCmd": {
+          "line": 210,
+          "params": [
+            "cmd",
+            "args",
+            "projectPath",
+            "maxBuffer = 1024 * 1024",
+            "timeout = 10000"
+          ],
+          "purpose": "Execute a non-git command safely using execFile"
+        },
+        "parseStatusLine": {
+          "line": 236,
+          "params": [
+            "line"
+          ],
+          "purpose": "X = staged status, Y = unstaged status"
+        },
+        "isUnmergedStatus": {
+          "line": 259,
+          "params": [
+            "x",
+            "y"
+          ],
+          "purpose": "See git status short format: DD, AU, UD, UA, DU, AA, UU."
+        },
+        "parseCommitList": {
+          "line": 267,
+          "params": [
+            "stdout"
+          ],
+          "purpose": "Parse commit list from a null-delimited git log format."
+        },
+        "loadLocalCommits": {
+          "line": 288,
+          "params": [
+            "projectPath",
+            "maxCount = 20"
+          ],
+          "purpose": "Load recent commits from HEAD (used when no upstream/tracking branch is configured)."
+        },
+        "formatLocalDate": {
+          "line": 303,
+          "params": [
+            "date"
+          ]
+        },
+        "getActivityCacheKey": {
+          "line": 310,
+          "params": [
+            "projectPath",
+            "days"
+          ]
+        },
+        "getRepoCacheKey": {
+          "line": 314,
+          "params": [
+            "projectPath"
+          ]
+        },
+        "invalidateActivityCache": {
+          "line": 323,
+          "params": [
+            "projectPath"
+          ]
+        },
+        "invalidateRepoStatusCache": {
+          "line": 331,
+          "params": [
+            "projectPath"
+          ]
+        },
+        "invalidateAheadBehindCache": {
+          "line": 338,
+          "params": [
+            "projectPath"
+          ]
+        },
+        "invalidateRepoCaches": {
+          "line": 345,
+          "params": [
+            "projectPath",
+            "options = {}"
+          ]
+        },
+        "loadSyncCommits": {
+          "line": 355,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "Load outgoing (ahead) and incoming (behind) commits relative to upstream."
+        },
+        "loadCommitGraph": {
+          "line": 404,
+          "params": [
+            "projectPath",
+            "maxCount = 200"
+          ],
+          "purpose": "Load ASCII lane graph for recent commits."
+        },
+        "loadGitActivity": {
+          "line": 434,
+          "params": [
+            "projectPath",
+            "days = ACTIVITY_LOOKBACK_DAYS"
+          ],
+          "purpose": "Load GitHub-style daily commit activity for the last N days."
+        },
+        "gitFetch": {
+          "line": 490,
+          "params": [
+            "projectPath",
+            "prune = true"
+          ],
+          "purpose": "Fetch remote refs for accurate incoming/outgoing calculations."
+        },
+        "parseHunkHeaderLine": {
+          "line": 508,
+          "params": [
+            "line"
+          ],
+          "purpose": "Parse hunk header line for labels."
+        },
+        "extractHunkPatches": {
+          "line": 522,
+          "params": [
+            "diffText"
+          ],
+          "purpose": "Extract standalone hunk patches from a unified diff."
+        },
+        "applyGitHunk": {
+          "line": 559,
+          "params": [
+            "projectPath",
+            "filePath",
+            "diffType",
+            "action",
+            "hunkPatch"
+          ],
+          "purpose": "Apply a single hunk patch to index and/or working tree."
+        },
+        "loadGitConflict": {
+          "line": 598,
+          "params": [
+            "projectPath",
+            "filePath"
+          ],
+          "purpose": "Load base/ours/theirs versions for a conflicted file."
+        },
+        "resolveGitConflict": {
+          "line": 633,
+          "params": [
+            "projectPath",
+            "filePath",
+            "resolvedContent"
+          ],
+          "purpose": "Save resolved conflict content and stage file."
+        },
+        "loadCommitDiff": {
+          "line": 651,
+          "params": [
+            "projectPath",
+            "commitHash"
+          ],
+          "purpose": "Load diff for a specific commit"
+        },
+        "loadChanges": {
+          "line": 679,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "Load git changes (status)"
+        },
+        "loadChangesCached": {
+          "line": 800,
+          "params": [
+            "projectPath",
+            "options = {}"
+          ]
+        },
+        "loadDiff": {
+          "line": 833,
+          "params": [
+            "projectPath",
+            "filePath",
+            "diffType"
+          ],
+          "purpose": "diffType: 'staged', 'unstaged', 'untracked', 'conflict'"
+        },
+        "stageFile": {
+          "line": 896,
+          "params": [
+            "projectPath",
+            "filePath"
+          ],
+          "purpose": "Stage a file"
+        },
+        "unstageFile": {
+          "line": 916,
+          "params": [
+            "projectPath",
+            "filePath"
+          ],
+          "purpose": "Unstage a file"
+        },
+        "discardFile": {
+          "line": 937,
+          "params": [
+            "projectPath",
+            "filePath",
+            "diffType"
+          ],
+          "purpose": "diffType: 'staged', 'unstaged', 'untracked'"
+        },
+        "discardAllUnstaged": {
+          "line": 967,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "Discard all unstaged changes"
+        },
+        "stageAll": {
+          "line": 986,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "Stage all files"
+        },
+        "unstageAll": {
+          "line": 1002,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "Unstage all files"
+        },
+        "undoLastCommit": {
+          "line": 1028,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "Undo last commit (soft reset, keeps changes staged)"
+        },
+        "revertCommit": {
+          "line": 1063,
+          "params": [
+            "projectPath",
+            "commitHash"
+          ],
+          "purpose": "Revert a specific commit (creates a new revert commit)"
+        },
+        "gitCommit": {
+          "line": 1096,
+          "params": [
+            "projectPath",
+            "message"
+          ],
+          "purpose": "Create a git commit with the given message"
+        },
+        "gitCommitAmend": {
+          "line": 1133,
+          "params": [
+            "projectPath",
+            "message"
+          ],
+          "purpose": "Amend the last commit, optionally with a new message"
+        },
+        "gitAheadBehind": {
+          "line": 1164,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "Get ahead/behind count relative to upstream tracking branch"
+        },
+        "gitAheadBehindCached": {
+          "line": 1190,
+          "params": [
+            "projectPath",
+            "options = {}"
+          ]
+        },
+        "stashChanges": {
+          "line": 1222,
+          "params": [
+            "projectPath",
+            "filePath",
+            "message"
+          ],
+          "purpose": "Stash changes (optionally a single file, with optional message)"
+        },
+        "stashList": {
+          "line": 1249,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "List stashes"
+        },
+        "stashApply": {
+          "line": 1283,
+          "params": [
+            "projectPath",
+            "stashRef"
+          ],
+          "purpose": "Apply a stash (keeps it in the stash list)"
+        },
+        "stashPop": {
+          "line": 1306,
+          "params": [
+            "projectPath",
+            "stashRef"
+          ],
+          "purpose": "Pop a stash (apply and remove from stash list)"
+        },
+        "stashDrop": {
+          "line": 1329,
+          "params": [
+            "projectPath",
+            "stashRef"
+          ],
+          "purpose": "Drop a stash"
+        },
+        "stashShow": {
+          "line": 1348,
+          "params": [
+            "projectPath",
+            "stashRef"
+          ],
+          "purpose": "Show stash diff"
+        },
+        "setupIPC": {
+          "line": 1367,
+          "params": [
+            "ipcMain"
+          ],
+          "purpose": "Setup IPC handlers"
+        }
+      },
+      "ipc": {
+        "listens": [
+          "LOAD_GIT_CHANGES",
+          "LOAD_GIT_DIFF",
+          "APPLY_GIT_HUNK",
+          "LOAD_GIT_CONFLICT",
+          "RESOLVE_GIT_CONFLICT",
+          "LOAD_COMMIT_DIFF",
+          "STAGE_GIT_FILE",
+          "UNSTAGE_GIT_FILE",
+          "DISCARD_GIT_FILE",
+          "DISCARD_ALL_UNSTAGED",
+          "STAGE_ALL_GIT",
+          "UNSTAGE_ALL_GIT",
+          "UNDO_LAST_COMMIT",
+          "REVERT_COMMIT",
+          "STASH_CHANGES",
+          "STASH_LIST",
+          "STASH_APPLY",
+          "STASH_POP",
+          "STASH_DROP",
+          "STASH_SHOW",
+          "GIT_COMMIT",
+          "GIT_COMMIT_AMEND",
+          "GIT_FETCH",
+          "GIT_AHEAD_BEHIND"
+        ],
+        "emits": []
+      }
+    },
+    "main/savedPromptsManager": {
+      "file": "src/main/savedPromptsManager.js",
+      "description": "S",
+      "exports": [
+        "init",
+        "setupIPC"
+      ],
+      "depends": [
+        "fs",
+        "path",
+        "electron",
+        "shared/ipcChannels"
+      ],
+      "functions": {
+        "init": {
+          "line": 17,
+          "params": [
+            "_window"
+          ],
+          "purpose": "Initialize saved prompts manager"
+        },
+        "getGlobalPromptsPath": {
+          "line": 32,
+          "purpose": "Get global prompts file path"
+        },
+        "getProjectPromptsPath": {
+          "line": 39,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "Get project prompts file path (stored in .frame/ directory)"
+        },
+        "loadPrompts": {
+          "line": 64,
+          "params": [
+            "filePath"
+          ],
+          "purpose": "Load prompts from a file"
+        },
+        "savePrompts": {
+          "line": 88,
+          "params": [
+            "filePath",
+            "data"
+          ],
+          "purpose": "Save prompts to a file"
+        },
+        "generatePromptId": {
+          "line": 101,
+          "purpose": "Generate unique prompt ID"
+        },
+        "getPathForScope": {
+          "line": 108,
+          "params": [
+            "scope",
+            "projectPath"
+          ],
+          "purpose": "Get file path for a given scope"
+        },
+        "addPrompt": {
+          "line": 118,
+          "params": [
+            "scope",
+            "projectPath",
+            "promptData"
+          ],
+          "purpose": "Add a new prompt"
+        },
+        "updatePrompt": {
+          "line": 151,
+          "params": [
+            "scope",
+            "projectPath",
+            "promptId",
+            "updates"
+          ],
+          "purpose": "Update an existing prompt"
+        },
+        "deletePrompt": {
+          "line": 176,
+          "params": [
+            "scope",
+            "projectPath",
+            "promptId"
+          ],
+          "purpose": "Delete a prompt"
+        },
+        "setupIPC": {
+          "line": 191,
+          "params": [
+            "ipcMain"
+          ],
+          "purpose": "Setup IPC handlers"
+        }
+      },
+      "ipc": {
+        "listens": [
+          "LOAD_SAVED_PROMPTS",
+          "ADD_SAVED_PROMPT",
+          "UPDATE_SAVED_PROMPT",
+          "DELETE_SAVED_PROMPT"
+        ],
+        "emits": []
+      }
+    },
+    "renderer/savedPromptsPanel": {
+      "file": "src/renderer/savedPromptsPanel.js",
+      "description": "S",
+      "exports": [
+        "init",
+        "show",
+        "hide",
+        "toggle",
+        "isVisible"
+      ],
+      "depends": [
+        "electronBridge",
+        "shared/ipcChannels",
+        "state",
+        "panelHeaderDropdown",
+        "escapeHtml"
+      ],
+      "functions": {
+        "init": {
+          "line": 32,
+          "purpose": "Initialize saved prompts panel"
+        },
+        "setupEventListeners": {
+          "line": 58,
+          "purpose": "Setup event listeners"
+        },
+        "setupIPCListeners": {
+          "line": 91,
+          "purpose": "Setup IPC listeners"
+        },
+        "loadPrompts": {
+          "line": 114,
+          "purpose": "Load prompts from backend"
+        },
+        "show": {
+          "line": 122,
+          "purpose": "Show panel"
+        },
+        "hide": {
+          "line": 133,
+          "purpose": "Hide panel"
+        },
+        "toggle": {
+          "line": 143,
+          "purpose": "Toggle panel visibility"
+        },
+        "setScope": {
+          "line": 151,
+          "params": [
+            "scope",
+            "options = {}"
+          ]
+        },
+        "getMergedPrompts": {
+          "line": 163,
+          "purpose": "Get merged and filtered prompts"
+        },
+        "render": {
+          "line": 199,
+          "purpose": "Render the panel content"
+        },
+        "renderCategories": {
+          "line": 258,
+          "purpose": "Render category chips"
+        },
+        "renderPromptItem": {
+          "line": 265,
+          "params": [
+            "prompt"
+          ],
+          "purpose": "Render a single prompt item"
+        },
+        "copyToClipboard": {
+          "line": 314,
+          "params": [
+            "promptId",
+            "scope"
+          ]
+        },
+        "writeClipboardText": {
+          "line": 339,
+          "params": [
+            "text"
+          ]
+        },
+        "toggleFavorite": {
+          "line": 387,
+          "params": [
+            "promptId",
+            "scope"
+          ],
+          "purpose": "Toggle favorite status"
+        },
+        "deletePrompt": {
+          "line": 404,
+          "params": [
+            "promptId",
+            "scope"
+          ],
+          "purpose": "Delete a prompt"
+        },
+        "showAddPromptModal": {
+          "line": 418,
+          "purpose": "Show add prompt modal"
+        },
+        "showEditPromptModal": {
+          "line": 448,
+          "params": [
+            "promptId",
+            "scope"
+          ],
+          "purpose": "Show edit prompt modal"
+        },
+        "hidePromptModal": {
+          "line": 479,
+          "purpose": "Hide prompt modal"
+        },
+        "handlePromptFormSubmit": {
+          "line": 489,
+          "params": [
+            "e"
+          ],
+          "purpose": "Handle form submit"
+        },
+        "setupModalListeners": {
+          "line": 528,
+          "purpose": "Setup modal listeners"
+        },
+        "showToast": {
+          "line": 578,
+          "params": [
+            "message",
+            "type = 'info'"
+          ],
+          "purpose": "Show toast notification"
+        },
+        "getToastIcon": {
+          "line": 599,
+          "params": [
+            "type"
+          ]
+        }
+      },
+      "ipc": {
+        "listens": [
+          "SAVED_PROMPTS_DATA",
+          "SAVED_PROMPT_UPDATED",
+          "TOGGLE_SAVED_PROMPTS_PANEL"
+        ],
+        "emits": [
+          "LOAD_SAVED_PROMPTS",
+          "UPDATE_SAVED_PROMPT",
+          "DELETE_SAVED_PROMPT",
+          "UPDATE_SAVED_PROMPT",
+          "ADD_SAVED_PROMPT"
+        ]
+      }
+    },
+    "main/autoUpdater": {
+      "file": "src/main/autoUpdater.js",
+      "description": "A",
+      "exports": [
+        "init",
+        "setupIPC",
+        "cleanup"
+      ],
+      "depends": [
+        "electron-updater",
+        "shared/ipcChannels"
+      ],
+      "functions": {
+        "ensureEventListeners": {
+          "line": 14
+        },
+        "init": {
+          "line": 42,
+          "params": [
+            "window"
+          ],
+          "purpose": "Initialize auto updater"
+        },
+        "setupIPC": {
+          "line": 63,
+          "params": [
+            "_ipcMain"
+          ],
+          "purpose": "Setup IPC handlers"
+        },
+        "send": {
+          "line": 72,
+          "params": [
+            "channel",
+            "data"
+          ],
+          "purpose": "Send message to renderer"
+        },
+        "cleanup": {
+          "line": 81,
+          "purpose": "Cleanup timers"
+        }
+      },
+      "ipc": {
+        "listens": [
+          "CHECK_FOR_UPDATES",
+          "DOWNLOAD_UPDATE",
+          "INSTALL_UPDATE"
+        ],
+        "emits": [
+          "channel"
+        ]
+      }
+    },
+    "main/codexUsageManager": {
+      "file": "src/main/codexUsageManager.js",
+      "description": "C",
+      "exports": [
+        "init",
+        "setupIPC",
+        "cleanup",
+        "fetchUsage",
+        "getCachedUsage",
+        "parseTokenCountCandidatesFromContent",
+        "selectBestRateLimit",
+        "normalizeUsage",
+        "toIsoFromUnixSeconds"
+      ],
+      "depends": [
+        "fs",
+        "path",
+        "os",
+        "shared/ipcChannels"
+      ],
+      "functions": {
+        "toNumberOrNull": {
+          "line": 22,
+          "params": [
+            "value"
+          ]
+        },
+        "toIsoFromUnixSeconds": {
+          "line": 31,
+          "params": [
+            "seconds"
+          ]
+        },
+        "parseTokenCountCandidatesFromContent": {
+          "line": 39,
+          "params": [
+            "content"
+          ]
+        },
+        "isModelSpecificCodexLimit": {
+          "line": 71,
+          "params": [
+            "limitId"
+          ]
+        },
+        "selectBestRateLimit": {
+          "line": 75,
+          "params": [
+            "candidates"
+          ]
+        },
+        "init": {
+          "line": 93,
+          "params": [
+            "window"
+          ],
+          "purpose": "Initialize the module with window reference"
+        },
+        "getSessionsDir": {
+          "line": 101,
+          "purpose": "Get the Codex sessions base directory"
+        },
+        "findRecentSessionFiles": {
+          "line": 109,
+          "params": [
+            "limit = 50"
+          ],
+          "purpose": "Searches ~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl"
+        },
+        "parseBestTokenCount": {
+          "line": 166,
+          "params": [
+            "filePath"
+          ],
+          "purpose": "Returns best matching token_count candidate"
+        },
+        "normalizeUsage": {
+          "line": 200,
+          "params": [
+            "selectedCandidate"
+          ],
+          "purpose": "Normalize Codex token_count data to the same format as Claude usage"
+        },
+        "fetchUsage": {
+          "line": 235,
+          "purpose": "Fetch usage data from Codex session files"
+        },
+        "setupWatcher": {
+          "line": 280,
+          "params": [
+            "filePath"
+          ],
+          "purpose": "Setup file watcher on the active session file"
+        },
+        "sendUsageToRenderer": {
+          "line": 310,
+          "purpose": "Send usage data to renderer"
+        },
+        "startPolling": {
+          "line": 320,
+          "params": [
+            "interval = 30000"
+          ],
+          "purpose": "Start periodic polling for usage updates"
+        },
+        "stopPolling": {
+          "line": 337,
+          "purpose": "Stop polling"
+        },
+        "setupIPC": {
+          "line": 351,
+          "params": [
+            "ipcMain"
+          ],
+          "purpose": "Setup IPC handlers"
+        },
+        "getCachedUsage": {
+          "line": 360,
+          "purpose": "Get cached usage if available"
+        },
+        "cleanup": {
+          "line": 367,
+          "purpose": "Cleanup on app quit"
+        }
+      },
+      "ipc": {
+        "listens": [],
+        "emits": [
+          "AI_USAGE_DATA"
+        ]
+      }
+    },
+    "renderer/escapeHtml": {
+      "file": "src/renderer/escapeHtml.js",
+      "description": "S",
+      "exports": [
+        "escapeHtml",
+        "escapeAttr"
+      ],
+      "depends": [],
+      "functions": {
+        "escapeHtml": {
+          "line": 11,
+          "params": [
+            "text"
+          ],
+          "purpose": "Escape HTML for safe rendering in text content"
+        },
+        "escapeAttr": {
+          "line": 19,
+          "params": [
+            "text"
+          ],
+          "purpose": "Escape string for use in HTML attributes (also escapes quotes)"
+        }
+      }
+    },
+    "renderer/shellEscape": {
+      "file": "src/renderer/shellEscape.js",
+      "description": "S",
+      "exports": [
+        "shellQuote",
+        "ansiCQuote"
+      ],
+      "depends": [],
+      "functions": {
+        "shellQuote": {
+          "line": 12,
+          "params": [
+            "str"
+          ],
+          "purpose": "Uses the '\\'' break-out pattern: end quote, escaped quote, start quote."
+        },
+        "ansiCQuote": {
+          "line": 22,
+          "params": [
+            "str"
+          ],
+          "purpose": "Supports multi-line strings (newlines become \\n)."
+        }
+      }
+    },
+    "shared/pathValidation": {
+      "file": "src/shared/pathValidation.js",
+      "description": "S",
+      "exports": [
+        "isPathWithinProject",
+        "isRelativePathWithinProject"
+      ],
+      "depends": [
+        "path",
+        "fs"
+      ],
+      "functions": {
+        "resolvePathForContainment": {
+          "line": 15,
+          "params": [
+            "p"
+          ],
+          "purpose": "for create/write operations on non-existent targets."
+        },
+        "isPathWithinProject": {
+          "line": 57,
+          "params": [
+            "filePath",
+            "projectPath"
+          ],
+          "purpose": "Resolves symlinks to prevent symlink-based escapes."
+        },
+        "isRelativePathWithinProject": {
+          "line": 72,
+          "params": [
+            "projectPath",
+            "relativePath"
+          ],
+          "purpose": "Resolves symlinks to prevent symlink-based escapes."
+        }
+      }
+    },
+    "main/preload": {
+      "file": "src/main/preload.js",
+      "description": "P",
+      "exports": [],
+      "depends": [
+        "electron"
+      ],
+      "functions": {
+        "isAllowedChannel": {
+          "line": 104,
+          "params": [
+            "channel"
+          ]
+        }
+      },
+      "ipc": {
+        "listens": [
+          "channel"
+        ],
+        "emits": [
+          "channel"
+        ]
+      }
+    },
+    "renderer/electronBridge": {
+      "file": "src/renderer/electronBridge.js",
+      "description": "R",
+      "exports": [
+        "ipcRenderer",
+        "clipboard",
+        "pathApi"
+      ],
+      "depends": [],
+      "functions": {
+        "getPreloadApi": {
+          "line": 6,
+          "purpose": "when nodeIntegration is available (development/backward compatibility)."
+        },
+        "fallbackRequire": {
+          "line": 13,
+          "params": [
+            "moduleName"
+          ]
+        },
+        "getElectronFallback": {
+          "line": 27
+        },
+        "detectSeparator": {
+          "line": 31,
+          "params": [
+            "paths"
+          ]
+        },
+        "normalize": {
+          "line": 40,
+          "params": [
+            "inputPath"
+          ]
+        },
+        "parseSegments": {
+          "line": 44,
+          "params": [
+            "inputPath"
+          ]
+        },
+        "formatPath": {
+          "line": 82,
+          "params": [
+            "parts",
+            "separator"
+          ]
+        },
+        "joinPath": {
+          "line": 93,
+          "params": [
+            "...parts"
+          ]
+        },
+        "dirnamePath": {
+          "line": 111,
+          "params": [
+            "inputPath"
+          ]
+        },
+        "basenamePath": {
+          "line": 125,
+          "params": [
+            "inputPath"
+          ]
+        },
+        "relativePath": {
+          "line": 133,
+          "params": [
+            "fromPath",
+            "toPath"
+          ]
+        },
+        "getPathFallback": {
+          "line": 154
+        }
+      }
+    },
+    "renderer/panelHeaderDropdown": {
+      "file": "src/renderer/panelHeaderDropdown.js",
+      "description": "S",
+      "exports": [
+        "createPanelHeaderDropdown"
+      ],
+      "depends": [],
+      "functions": {
+        "createPanelHeaderDropdown": {
+          "line": 5,
+          "params": [
+            "rootElement",
+            "options = {}"
+          ],
+          "purpose": "Shared dropdown used in panel headers (Plugins, Source Control, Saved Prompts)."
+        }
+      }
+    }
+  },
+  "ipcChannels": {
+    "terminal": {
+      "START_TERMINAL": {
+        "name": "start-terminal",
+        "direction": "renderer → main",
+        "payload": "none",
+        "description": "Request to start PTY process"
+      },
+      "RESTART_TERMINAL": {
+        "name": "restart-terminal",
+        "direction": "renderer → main",
+        "payload": "string (projectPath)",
+        "description": "Restart PTY with new working directory"
+      },
+      "TERMINAL_INPUT": {
+        "name": "terminal-input",
+        "direction": "renderer → main",
+        "payload": "string (user input)",
+        "description": "Send user keystrokes to PTY"
+      },
+      "TERMINAL_OUTPUT": {
+        "name": "terminal-output",
+        "direction": "main → renderer",
+        "payload": "string (PTY output)",
+        "description": "PTY output to display in terminal"
+      },
+      "TERMINAL_RESIZE": {
+        "name": "terminal-resize",
+        "direction": "renderer → main",
+        "payload": "{ cols: number, rows: number }",
+        "description": "Terminal dimensions changed"
+      }
+    },
+    "project": {
+      "SELECT_PROJECT_FOLDER": {
+        "name": "select-project-folder",
+        "direction": "renderer → main",
+        "payload": "none",
+        "description": "Open folder picker dialog"
+      },
+      "CREATE_NEW_PROJECT": {
+        "name": "create-new-project",
+        "direction": "renderer → main",
+        "payload": "none",
+        "description": "Open new project dialog"
+      },
+      "PROJECT_SELECTED": {
+        "name": "project-selected",
+        "direction": "main → renderer",
+        "payload": "string (projectPath)",
+        "description": "User selected a project folder"
+      }
+    },
+    "fileTree": {
+      "LOAD_FILE_TREE": {
+        "name": "load-file-tree",
+        "direction": "renderer → main",
+        "payload": "string (projectPath)",
+        "description": "Request file tree for directory"
+      },
+      "FILE_TREE_DATA": {
+        "name": "file-tree-data",
+        "direction": "main → renderer",
+        "payload": "Array<FileNode>",
+        "description": "File tree data response"
+      },
+      "DELETE_FILE": {
+        "name": "delete-file",
+        "direction": "renderer → main",
+        "payload": "{ filePath: string, projectPath: string }",
+        "description": "Request to move file/folder to trash"
+      },
+      "FILE_DELETED": {
+        "name": "file-deleted",
+        "direction": "main → renderer",
+        "payload": "{ success: boolean, filePath: string, error?: string }",
+        "description": "File deletion result"
+      }
+    },
+    "history": {
+      "LOAD_PROMPT_HISTORY": {
+        "name": "load-prompt-history",
+        "direction": "renderer → main",
+        "payload": "none",
+        "description": "Request prompt history file contents"
+      },
+      "PROMPT_HISTORY_DATA": {
+        "name": "prompt-history-data",
+        "direction": "main → renderer",
+        "payload": "string (history file contents)",
+        "description": "Prompt history data response"
+      },
+      "TOGGLE_HISTORY_PANEL": {
+        "name": "toggle-history-panel",
+        "direction": "main → renderer",
+        "payload": "none",
+        "description": "Toggle history panel visibility (from menu)"
+      }
+    },
+    "commands": {
+      "RUN_COMMAND": {
+        "name": "run-command",
+        "direction": "main → renderer",
+        "payload": "string (command)",
+        "description": "Execute command in terminal (from menu)"
+      }
+    },
+    "tasks": {
+      "LOAD_TASKS": {
+        "name": "load-tasks",
+        "direction": "renderer → main",
+        "payload": "string (projectPath)",
+        "description": "Request tasks for project"
+      },
+      "TASKS_DATA": {
+        "name": "tasks-data",
+        "direction": "main → renderer",
+        "payload": "{ projectPath, tasks }",
+        "description": "Tasks data response"
+      },
+      "ADD_TASK": {
+        "name": "add-task",
+        "direction": "renderer → main",
+        "payload": "{ projectPath, task }",
+        "description": "Add new task"
+      },
+      "UPDATE_TASK": {
+        "name": "update-task",
+        "direction": "renderer → main",
+        "payload": "{ projectPath, taskId, updates }",
+        "description": "Update task status or data"
+      },
+      "DELETE_TASK": {
+        "name": "delete-task",
+        "direction": "renderer → main",
+        "payload": "{ projectPath, taskId }",
+        "description": "Delete task"
+      },
+      "TASK_UPDATED": {
+        "name": "task-updated",
+        "direction": "main → renderer",
+        "payload": "{ action, task, success }",
+        "description": "Task operation result"
+      },
+      "TOGGLE_TASKS_PANEL": {
+        "name": "toggle-tasks-panel",
+        "direction": "main → renderer",
+        "payload": "none",
+        "description": "Toggle tasks panel visibility (from menu)"
+      }
+    },
+    "frame": {
+      "CHECK_FRAME_PROJECT": {
+        "name": "check-frame-project",
+        "direction": "renderer → main",
+        "payload": "string (projectPath)",
+        "description": "Check if directory is a Frame project"
+      },
+      "FRAME_STATUS": {
+        "name": "frame-status",
+        "direction": "main → renderer",
+        "payload": "{ projectPath, isFrame }",
+        "description": "Frame project status response"
+      },
+      "INITIALIZE_FRAME": {
+        "name": "initialize-frame",
+        "direction": "renderer → main",
+        "payload": "string (projectPath)",
+        "description": "Initialize directory as Frame project"
+      },
+      "FRAME_INITIALIZED": {
+        "name": "frame-initialized",
+        "direction": "main → renderer",
+        "payload": "string (projectPath)",
+        "description": "Frame initialization complete"
+      }
+    },
+    "editor": {
+      "READ_FILE": {
+        "name": "read-file",
+        "direction": "renderer → main",
+        "payload": "string (filePath)",
+        "description": "Read file contents"
+      },
+      "FILE_CONTENT": {
+        "name": "file-content",
+        "direction": "main → renderer",
+        "payload": "{ filePath, content, error? }",
+        "description": "File content response"
+      },
+      "WRITE_FILE": {
+        "name": "write-file",
+        "direction": "renderer → main",
+        "payload": "{ filePath, content }",
+        "description": "Write/save file"
+      },
+      "FILE_SAVED": {
+        "name": "file-saved",
+        "direction": "main → renderer",
+        "payload": "{ filePath, success, error? }",
+        "description": "File save result"
+      }
+    }
+  },
+  "dataTypes": {
+    "FileNode": {
+      "description": "File tree node structure",
+      "schema": {
+        "name": "string",
+        "path": "string",
+        "isDirectory": "boolean",
+        "children": "FileNode[] | undefined"
+      }
+    }
+  },
+  "dataFlow": [
+    {
+      "id": "df1",
+      "name": "User types in terminal",
+      "flow": [
+        "renderer/terminal",
+        "→ terminal-input →",
+        "main/pty",
+        "→ terminal-output →",
+        "renderer/terminal"
+      ]
+    },
+    {
+      "id": "df2",
+      "name": "User selects project",
+      "flow": [
+        "renderer/state",
+        "→ select-project-folder →",
+        "main/dialogs",
+        "→ project-selected →",
+        "renderer/state",
+        "→ load-file-tree →",
+        "main/fileTree",
+        "→ file-tree-data →",
+        "renderer/fileTreeUI"
+      ]
+    },
+    {
+      "id": "df3",
+      "name": "User starts Claude Code",
+      "flow": [
+        "renderer/state",
+        "→ restart-terminal →",
+        "main/pty",
+        "(starts in project dir)",
+        "→ terminal-input (claude\\r) →",
+        "main/pty"
+      ]
+    },
+    {
+      "id": "df4",
+      "name": "Menu command execution",
+      "flow": [
+        "main/menu",
+        "→ run-command →",
+        "renderer/terminal",
+        "→ terminal-input →",
+        "main/pty"
+      ]
+    },
+    {
+      "id": "df5",
+      "name": "Task delegation to Claude",
+      "flow": [
+        "renderer/tasksPanel (play button)",
+        "→ sendTaskToClaude()",
+        "→ renderer/terminal.sendCommand()",
+        "→ terminal-input →",
+        "main/pty (Claude Code)"
+      ]
+    },
+    {
+      "id": "df6",
+      "name": "Task status update",
+      "flow": [
+        "renderer/tasksPanel (action button)",
+        "→ update-task →",
+        "main/tasksManager",
+        "→ tasks.json",
+        "→ task-updated →",
+        "renderer/tasksPanel (re-render)"
+      ]
+    },
+    {
+      "id": "df7",
+      "name": "Frame project initialization",
+      "flow": [
+        "renderer/state (init button)",
+        "→ initialize-frame →",
+        "main/frameProject",
+        "→ creates CLAUDE.md, tasks.json, etc.",
+        "→ frame-initialized →",
+        "renderer/state"
+      ]
+    }
+  ],
+  "files": {
+    "entry": {
+      "main": "src/main/index.js",
+      "renderer": "src/renderer/index.js",
+      "html": "index.html",
+      "bundle": "dist/renderer.js"
+    },
+    "frameConfig": {
+      "claude": "CLAUDE.md",
+      "structure": "STRUCTURE.json",
+      "tasks": "tasks.json",
+      "projectNotes": "PROJECT_NOTES.md",
+      "quickstart": "QUICKSTART.md"
+    },
+    "config": {
+      "package": "package.json",
+      "esbuild": "esbuild.config.js"
+    },
+    "docs": {
+      "readme": "README.md"
+    }
+  },
+  "conventions": {
+    "ipcNaming": "kebab-case (e.g., terminal-input)",
+    "fileNaming": "camelCase for JS files",
+    "exportStyle": "named exports (not default)",
+    "stateManagement": "centralized in renderer/state.js"
+  },
+  "architectureNotes": {
+    "circularDependencies": {
+      "issue": "esbuild bundler renames modules when circular dependencies exist (e.g., terminal → terminal2)",
+      "affected": [
+        "tasksPanel cannot import terminal directly"
+      ],
+      "solution": "Use window.terminalSendCommand global function instead of direct import",
+      "pattern": "Expose functions on window object for cross-module communication that would cause circular deps"
+    },
+    "ipcVsGlobal": {
+      "useIPC": "For main ↔ renderer communication",
+      "useGlobal": "For renderer ↔ renderer communication that would cause circular dependency"
+    }
+  }
+}

@@ -1,0 +1,704 @@
+/* ==================== TERMINAL COMPONENT ==================== */
+#terminal {
+  flex: 1;
+  width: 100%;
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+/* ==================== MULTI-TERMINAL STYLES ==================== */
+.multi-terminal-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.terminal-tab-bar-container {
+  flex-shrink: 0;
+}
+
+/* Two-row toolbar wrapper */
+.terminal-toolbar-wrapper {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  overflow: visible;
+}
+
+/* Top row - usage bars left, action buttons right */
+.terminal-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-deep);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 0 var(--space-md);
+  height: 36px;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.toolbar-right button {
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  transition: all var(--transition-fast);
+}
+
+.toolbar-right button:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.toolbar-right button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* Bottom row - terminal tabs */
+.terminal-tab-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 0 var(--space-sm);
+  height: 38px;
+}
+
+.terminal-tabs {
+  display: flex;
+  overflow-x: auto;
+  gap: var(--space-xs);
+  padding: var(--space-sm) 0;
+}
+
+.terminal-tabs::-webkit-scrollbar {
+  height: 2px;
+}
+
+.terminal-tabs::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 2px;
+}
+
+.terminal-tab {
+  display: flex;
+  align-items: center;
+  padding: var(--space-xs) var(--space-sm);
+  background: transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  user-select: none;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 500;
+  max-width: 150px;
+  min-width: 80px;
+  transition: all var(--transition-fast);
+  border: 1px solid var(--border-default);
+}
+
+.terminal-tab:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.terminal-tab.active {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--border-default);
+  box-shadow: var(--shadow-sm);
+}
+
+.terminal-tab .tab-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.terminal-tab .tab-close {
+  margin-left: var(--space-xs);
+  opacity: 0;
+  transition: all var(--transition-fast);
+}
+
+.terminal-tab:hover .tab-close,
+.terminal-tab .tab-close:focus-visible {
+  opacity: 1;
+}
+
+/* `.btn.btn-close` defines hover styling */
+
+.tab-rename-input {
+  background: var(--bg-primary);
+  border: 1px solid var(--accent-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 12px;
+  padding: 2px 6px;
+  width: 100px;
+  outline: none;
+  border-radius: var(--radius-sm);
+}
+
+.terminal-tab-bar > .btn-new-terminal {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+
+.terminal-tab-bar > .btn-new-terminal:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-default);
+}
+
+.terminal-tab-bar > .btn-new-terminal:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+
+/* Grid Layout Dropdown */
+.grid-layout-dropdown {
+  position: relative;
+  z-index: calc(var(--z-dropdown) + 1);
+  display: none;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+  user-select: none;
+}
+
+.grid-layout-dropdown:hover {
+  border-color: var(--border-default);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+.grid-layout-dropdown-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.grid-layout-dropdown-arrow {
+  opacity: 0.5;
+}
+
+.grid-layout-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 64px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px var(--overlay-light);
+  z-index: calc(var(--z-dropdown) + 2);
+  overflow: hidden;
+}
+
+.grid-layout-dropdown.open .grid-layout-dropdown-menu {
+  display: block;
+}
+
+.grid-layout-dropdown-item {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--transition-fast), color var(--transition-fast);
+  white-space: nowrap;
+  text-align: center;
+}
+
+.grid-layout-dropdown-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.grid-layout-dropdown-item.active {
+  color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
+}
+
+/* Active AI usage card */
+.ai-usage-bars {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  min-width: 0;
+}
+
+.ai-usage-bars:hover {
+  background: var(--bg-hover);
+}
+
+.usage-tool {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 150px;
+  pointer-events: none;
+}
+
+.usage-tool-icon {
+  width: 14px;
+  height: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.usage-tool-icon .ai-tool-icon {
+  width: 14px;
+  height: 14px;
+}
+
+.usage-tool-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.usage-metrics {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+.usage-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  pointer-events: none;
+}
+
+/* Weekly item - always visible in toolbar layout */
+.usage-item.weekly {
+  opacity: 0.7;
+  transition: opacity var(--transition-fast);
+}
+
+.ai-usage-bars:hover .usage-item.weekly {
+  opacity: 1;
+}
+
+.usage-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.usage-bar-container {
+  width: 40px;
+  height: 5px;
+  background: var(--bg-deep);
+  border-radius: 3px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.usage-bar-fill {
+  height: 100%;
+  background: var(--accent-primary);
+  border-radius: 3px;
+  transition: width var(--transition-normal), background var(--transition-fast);
+}
+
+.usage-bar-fill.warning {
+  background: var(--warning);
+}
+
+.usage-bar-fill.critical {
+  background: var(--error);
+}
+
+.usage-percent {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 22px;
+  text-align: right;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.usage-reset {
+  font-size: 9px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+@media (max-width: 980px) {
+  .usage-tool-name {
+    max-width: 72px;
+  }
+
+  .usage-reset {
+    display: none;
+  }
+}
+
+.terminal-content {
+  flex: 1;
+  overflow: hidden;
+  background: var(--bg-primary);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+}
+
+.terminal-content.tab-view .tab-content-area {
+  height: 100%;
+  padding: var(--space-sm);
+}
+
+.terminal-instance {
+  height: 100%;
+  width: 100%;
+  position: relative;
+  transition: box-shadow var(--transition-fast);
+}
+
+.terminal-instance:focus,
+.terminal-instance:focus-visible,
+.terminal-instance .xterm:focus,
+.terminal-instance .xterm:focus-visible {
+  outline: none;
+}
+
+/* Scroll-to-bottom button */
+.terminal-scroll-down {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 10;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border-default);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-fast), background var(--transition-fast);
+  box-shadow: var(--shadow-md);
+}
+
+.terminal-scroll-down.visible {
+  opacity: 0.85;
+  pointer-events: auto;
+}
+
+.terminal-scroll-down:hover {
+  opacity: 1;
+  background: var(--accent-primary);
+  color: var(--bg-deep);
+  border-color: var(--accent-primary);
+}
+
+.terminal-instance.drag-over {
+  box-shadow: inset 0 0 0 2px var(--accent-primary), inset 0 0 20px var(--accent-glow);
+}
+
+/* Terminal Empty State */
+.terminal-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: var(--bg-primary);
+}
+
+.terminal-empty-state .empty-state-content {
+  text-align: center;
+  color: var(--text-tertiary);
+}
+
+.terminal-empty-state p {
+  margin-bottom: var(--space-sm);
+  font-size: 14px;
+}
+
+.terminal-empty-state .shortcut-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.terminal-empty-state kbd {
+  display: inline-block;
+  padding: 2px 6px;
+  margin: 0 2px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  color: var(--text-secondary);
+}
+
+/* Grid View Styles */
+.terminal-grid {
+  height: 100%;
+  background: var(--bg-tertiary);
+  gap: 2px;
+}
+
+.grid-cell {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  position: relative;
+  min-width: 200px;
+  min-height: 100px;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition-fast);
+}
+
+.grid-cell-empty {
+  border-style: dashed;
+  border-color: var(--border-default);
+  background: color-mix(in srgb, var(--bg-secondary) 60%, transparent);
+  align-items: center;
+  justify-content: center;
+}
+
+.grid-cell-empty-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--text-muted);
+}
+
+.grid-cell-empty-label {
+  font-size: 12px;
+}
+
+.btn-grid-new {
+  border: 1px solid var(--border-default);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-grid-new:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  background: var(--accent-subtle);
+}
+
+.grid-cell.active {
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 1px var(--accent-subtle);
+}
+
+.grid-cell-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--bg-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.grid-cell.active .grid-cell-header {
+  background: var(--accent-subtle);
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
+}
+
+.grid-cell-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.grid-cell-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.grid-cell-actions {
+  display: flex;
+  gap: 2px;
+}
+
+.grid-cell-actions button {
+  opacity: 0;
+  transition: all var(--transition-fast);
+}
+
+.grid-cell:hover .grid-cell-actions button,
+.grid-cell.active .grid-cell-actions button {
+  opacity: 1;
+}
+
+.grid-cell-actions button:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+/* `.btn.btn-close` defines hover styling */
+
+.grid-resizer {
+  position: absolute;
+  background: transparent;
+  z-index: 10;
+  transition: background-color var(--transition-fast);
+}
+
+.grid-resizer-right {
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  cursor: col-resize;
+}
+
+.grid-resizer-bottom {
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  cursor: row-resize;
+}
+
+.grid-resizer:hover,
+.grid-resizer.active {
+  background: var(--accent-primary);
+}
+
+.grid-resizer.disabled {
+  display: none;
+}
+
+/* ==================== UPGRADE BUTTON ==================== */
+.btn-upgrade {
+  position: relative;
+  background: var(--accent-subtle);
+  border: 1px solid var(--accent-primary) !important;
+  color: var(--accent-primary) !important;
+  padding: var(--space-xs) var(--space-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.btn-upgrade:hover {
+  background: var(--accent-primary) !important;
+  color: var(--bg-deep) !important;
+}
+
+.btn-upgrade.downloading {
+  opacity: 0.8;
+  cursor: wait;
+}
+
+.btn-upgrade.downloading svg {
+  animation: spin 1s linear infinite;
+}
+
+.btn-upgrade.ready {
+  background: var(--success-subtle) !important;
+  border-color: var(--success) !important;
+  color: var(--success) !important;
+}
+
+.btn-upgrade.ready:hover {
+  background: var(--success) !important;
+  color: var(--bg-deep) !important;
+}
+
+.upgrade-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  background: var(--accent-primary);
+  color: var(--white);
+  font-size: 9px;
+  font-weight: 700;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  pointer-events: none;
+  box-shadow: 0 1px 3px var(--overlay-subtle);
+}
+
+.btn-upgrade.ready .upgrade-badge {
+  background: var(--success);
+}

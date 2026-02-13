@@ -1,0 +1,115 @@
+{
+  "name": "vibeconsole",
+  "productName": "VibeConsole",
+  "version": "1.0.0",
+  "description": "Vibe Console - Project Management IDE for Claude Code",
+  "main": "src/main/index.js",
+  "scripts": {
+    "postinstall": "electron-rebuild",
+    "lint": "eslint --max-warnings 0 src/",
+    "test": "node --test test/*.test.js",
+    "typecheck": "tsc --project jsconfig.json --noEmit",
+    "check": "npm run lint",
+    "build": "npm run build:renderer && npm run dist:mac:package",
+    "build:renderer": "npm run lint && esbuild src/renderer/index.js --bundle --outfile=dist/renderer.js --platform=node --external:electron",
+    "build:fast": "esbuild src/renderer/index.js --bundle --outfile=dist/renderer.js --platform=node --external:electron",
+    "watch": "esbuild src/renderer/index.js --bundle --outfile=dist/renderer.js --platform=node --external:electron --watch",
+    "start": "npm run build:renderer && electron .",
+    "dev": "npm run watch & electron .",
+    "structure": "node scripts/update-structure.js",
+    "structure:changed": "node scripts/update-structure.js --changed",
+    "prepare": "git config core.hooksPath .githooks || true",
+    "dist": "npm run build:renderer && electron-builder --mac --dir",
+    "dist:mac": "npm run build",
+    "dist:mac:package": "electron-builder --mac && rm -f release/*.blockmap release/*.yml release/*.yaml",
+    "dist:mac:unsigned": "npm run build:renderer && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac"
+  },
+  "keywords": [
+    "electron",
+    "terminal",
+    "claude",
+    "vibeconsole",
+    "ide",
+    "project-management"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nesdesignco/vibeconsole.git"
+  },
+  "homepage": "https://vibeconsole.dev",
+  "bugs": {
+    "url": "https://github.com/nesdesignco/vibeconsole/issues"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^3.6.0",
+    "@eslint/js": "^10.0.1",
+    "electron": "^28.0.0",
+    "electron-builder": "^26.7.0",
+    "esbuild": "^0.27.2",
+    "eslint": "^10.0.0",
+    "globals": "^17.3.0",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.0",
+    "node-pty": "^1.0.0",
+    "xterm": "^5.3.0",
+    "xterm-addon-fit": "^0.8.0"
+  },
+  "build": {
+    "appId": "com.vibeconsole.ide",
+    "productName": "VibeConsole",
+    "mac": {
+      "category": "public.app-category.developer-tools",
+      "icon": "build/icon.icns",
+      "target": [
+        "dmg"
+      ],
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false
+    },
+    "dmg": {
+      "title": "${productName} ${version}",
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "nesdesignco",
+      "repo": "vibeconsole"
+    },
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "index.html",
+      "src/**/*",
+      "dist/**/*",
+      "vendor/**/*",
+      "node_modules/**/*",
+      "!node_modules/**/*.md",
+      "!node_modules/**/test/**",
+      "!node_modules/**/tests/**"
+    ],
+    "extraResources": [
+      {
+        "from": "resources/",
+        "to": "resources/",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ]
+  }
+}

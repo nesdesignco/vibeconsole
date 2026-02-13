@@ -1,0 +1,255 @@
+/* ==================== UNIFIED BUTTON SYSTEM ==================== */
+
+/* Base .btn class - all buttons share these properties */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  position: relative;
+  white-space: nowrap;
+  user-select: none;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* ==================== SIZE VARIANTS (data-size) ==================== */
+
+/* Default: medium */
+.btn {
+  height: var(--btn-height-md);
+  font-size: var(--btn-font-md);
+  padding: 0 8px;
+}
+
+.btn[data-size="sm"] {
+  height: var(--btn-height-sm);
+  font-size: var(--btn-font-sm);
+  padding: 0 6px;
+}
+
+.btn[data-size="md"] {
+  height: var(--btn-height-md);
+  font-size: var(--btn-font-md);
+  padding: 0 8px;
+}
+
+.btn[data-size="lg"] {
+  height: var(--btn-height-lg);
+  font-size: var(--btn-font-lg);
+  padding: 0 12px;
+}
+
+.btn[data-size="icon-sm"] {
+  height: 24px;
+  width: 24px;
+  padding: 0;
+}
+
+.btn[data-size="icon"] {
+  height: 28px;
+  width: 28px;
+  padding: 0;
+}
+
+/* ==================== CLOSE (X) BUTTON ==================== */
+
+/* Shared "X" button component. Use together with `.btn` and `data-size="icon-sm"`. */
+.btn.btn-close {
+  color: var(--text-muted);
+}
+
+.btn.btn-close:hover {
+  background: var(--error-subtle);
+  color: var(--error);
+}
+
+.btn.btn-close:active:not(:disabled) {
+  opacity: 0.9;
+}
+
+/* ==================== STYLE VARIANTS (data-variant) ==================== */
+
+/* Ghost (default) - transparent bg, tertiary text */
+.btn,
+.btn[data-variant="ghost"] {
+  background: transparent;
+  color: var(--text-tertiary);
+}
+
+.btn:hover,
+.btn[data-variant="ghost"]:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* Outline - border, transparent bg */
+.btn[data-variant="outline"] {
+  background: transparent;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.btn[data-variant="outline"]:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
+}
+
+/* Solid - accent-subtle bg, accent border */
+.btn[data-variant="solid"] {
+  background: var(--accent-subtle);
+  border: 1px solid var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.btn[data-variant="solid"]:hover {
+  background: var(--accent-primary);
+  color: var(--bg-deep);
+}
+
+/* Primary - gradient bg, dark text */
+.btn[data-variant="primary"] {
+  background: linear-gradient(180deg, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+  border: none;
+  color: var(--bg-deep);
+  font-weight: 600;
+  box-shadow: 0 2px 8px var(--accent-shadow);
+}
+
+.btn[data-variant="primary"]:hover {
+  background: linear-gradient(180deg, var(--accent-light) 0%, var(--accent-primary) 100%);
+  box-shadow: 0 4px 16px var(--accent-shadow-hover);
+}
+
+/* Danger - transparent, red on hover */
+.btn[data-variant="danger"] {
+  background: transparent;
+  color: var(--text-tertiary);
+}
+
+.btn[data-variant="danger"]:hover {
+  background: var(--error-subtle);
+  color: var(--error);
+}
+
+/* ==================== COLOR TINTS (data-tint) ==================== */
+
+/* Accent tint (default for solid) */
+.btn[data-tint="accent"][data-variant="solid"],
+.btn[data-tint="accent"][data-variant="outline"] {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.btn[data-tint="accent"][data-variant="solid"] {
+  background: var(--accent-subtle);
+}
+
+.btn[data-tint="accent"][data-variant="solid"]:hover {
+  background: var(--accent-primary);
+  color: var(--bg-deep);
+}
+
+.btn[data-tint="accent"][data-variant="ghost"]:hover {
+  color: var(--accent-primary);
+  background: var(--accent-subtle);
+}
+
+/* Info tint */
+.btn[data-tint="info"][data-variant="solid"] {
+  background: var(--info-subtle);
+  border-color: var(--info);
+  color: var(--info);
+}
+
+.btn[data-tint="info"][data-variant="solid"]:hover {
+  background: var(--info);
+  color: var(--bg-deep);
+}
+
+.btn[data-tint="info"][data-variant="ghost"]:hover {
+  color: var(--info);
+  background: var(--info-subtle);
+}
+
+/* Warning tint */
+.btn[data-tint="warning"][data-variant="solid"] {
+  background: var(--warning-bg);
+  border-color: var(--warning);
+  color: var(--warning);
+}
+
+.btn[data-tint="warning"][data-variant="solid"]:hover {
+  background: var(--warning);
+  color: var(--bg-deep);
+}
+
+.btn[data-tint="warning"][data-variant="ghost"]:hover {
+  color: var(--warning);
+  background: var(--warning-subtle);
+}
+
+/* Success tint */
+.btn[data-tint="success"][data-variant="solid"] {
+  background: var(--success-subtle);
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.btn[data-tint="success"][data-variant="solid"]:hover {
+  background: var(--success);
+  color: var(--bg-deep);
+}
+
+.btn[data-tint="success"][data-variant="ghost"]:hover {
+  color: var(--success);
+  background: var(--success-subtle);
+}
+
+/* Error tint */
+.btn[data-tint="error"][data-variant="solid"] {
+  background: var(--error-subtle);
+  border-color: var(--error);
+  color: var(--error);
+}
+
+.btn[data-tint="error"][data-variant="solid"]:hover {
+  background: var(--error);
+  color: var(--bg-deep);
+}
+
+.btn[data-tint="error"][data-variant="ghost"]:hover {
+  color: var(--error);
+  background: var(--error-subtle);
+}
+
+/* ==================== STATES ==================== */
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.btn:active:not(:disabled) {
+  opacity: 0.8;
+}
+
+/* Shared spin animation - used by buttons, loading spinners, etc. */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.btn.spinning svg {
+  animation: spin 1s linear infinite;
+}

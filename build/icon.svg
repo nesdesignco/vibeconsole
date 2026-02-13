@@ -1,0 +1,56 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1c1c2e"/>
+      <stop offset="100%" stop-color="#0a0a1a"/>
+    </linearGradient>
+    <linearGradient id="glyph" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#c4b5fd"/>
+      <stop offset="50%" stop-color="#a78bfa"/>
+      <stop offset="100%" stop-color="#8b5cf6"/>
+    </linearGradient>
+    <filter id="glow">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="18" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="outerGlow">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="30" result="blur"/>
+      <feFlood flood-color="#a78bfa" flood-opacity="0.25" result="color"/>
+      <feComposite in="color" in2="blur" operator="in" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- macOS squircle background -->
+  <rect x="0" y="0" width="1024" height="1024" rx="228" ry="228" fill="url(#bg)"/>
+
+  <!-- Subtle highlight on top edge -->
+  <rect x="0" y="0" width="1024" height="1024" rx="228" ry="228" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.08"/>
+
+  <!-- Bold chevron ">" -->
+  <polyline
+    points="300,320 540,512 300,704"
+    fill="none"
+    stroke="url(#glyph)"
+    stroke-width="88"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    filter="url(#outerGlow)"
+  />
+
+  <!-- Underscore "_" cursor -->
+  <line
+    x1="590" y1="704"
+    x2="770" y2="704"
+    stroke="url(#glyph)"
+    stroke-width="88"
+    stroke-linecap="round"
+    filter="url(#outerGlow)"
+  />
+</svg>

@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; connect-src https://api.anthropic.com https://api.openai.com; img-src 'self' data:;">
+  <title>Vibe Console</title>
+  <link rel="stylesheet" href="node_modules/xterm/css/xterm.css" />
+  <link rel="stylesheet" href="vendor/fonts/fonts.css">
+  <link rel="stylesheet" href="src/renderer/styles/main.css">
+</head>
+<body>
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <div id="sidebar-resize-handle"></div>
+    <!-- Projects Section -->
+    <div id="projects-section">
+      <div id="projects-header">
+        <button id="projects-collapse-toggle" class="collapse-toggle" tabindex="-1" title="Toggle projects list">▾</button>
+        <span>Projects</span>
+        <button id="btn-add-project" class="btn" data-size="icon-sm" data-variant="ghost" tabindex="-1" title="Add Project">+</button>
+        <button id="btn-create-project" class="btn" data-size="icon-sm" data-variant="ghost" tabindex="-1" title="Create New Project">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        </button>
+      </div>
+      <div id="projects-collapsible">
+        <div id="projects-list">
+          <div class="no-projects-message">No projects yet. Add a project to get started.</div>
+        </div>
+      </div>
+    </div>
+
+    <div id="project-actions">
+      <div class="ai-tool-row">
+        <button id="btn-start-ai" class="btn" data-variant="primary" tabindex="-1" disabled>Start Claude Code</button>
+        <div id="ai-tool-selector" class="ai-tool-dropdown" tabindex="-1">
+          <span class="ai-tool-dropdown-label">Claude</span>
+          <svg class="ai-tool-dropdown-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          <div class="ai-tool-dropdown-menu">
+            <div class="ai-tool-dropdown-item" data-value="claude">Claude</div>
+            <div class="ai-tool-dropdown-item" data-value="codex">Codex</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="file-explorer-header" style="display: none;">
+      <div class="file-explorer-title">
+        <span>Files</span>
+        <button id="btn-refresh-tree" class="btn" data-size="icon-sm" data-variant="ghost" tabindex="-1" title="Refresh">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div id="file-tree">
+      <!-- File tree will be populated here -->
+    </div>
+  </div>
+
+  <!-- Main Content Area -->
+  <div id="main-content">
+    <!-- Terminal -->
+    <div id="terminal-container">
+      <div id="terminal"></div>
+    </div>
+
+    <!-- History Panel -->
+    <div id="history-panel">
+      <div id="history-header" class="panel-header">
+        <h3 class="panel-title">Prompt History</h3>
+        <div class="panel-actions">
+          <button id="history-close" class="btn btn-close panel-close-btn" data-size="icon-sm" data-variant="ghost" tabindex="-1" aria-label="Close panel">✕</button>
+        </div>
+      </div>
+      <div id="history-content">
+        <!-- History items will be populated here -->
+      </div>
+    </div>
+
+    <!-- Plugins Panel -->
+    <div id="plugins-panel">
+      <div id="plugins-header" class="panel-header">
+        <button id="plugins-collapse-btn" class="btn panel-collapse-btn" data-size="icon-sm" data-variant="ghost" data-tint="accent" title="Collapse panel">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+        <h3 class="panel-title" data-color="accent">Plugins</h3>
+        <div class="panel-actions">
+          <div id="plugins-filter-dropdown" class="panel-header-dropdown">
+            <button class="panel-header-dropdown-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" title="Filter plugins">
+              <span class="panel-header-dropdown-label" data-dropdown-label>All</span>
+              <svg class="panel-header-dropdown-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            <div class="panel-header-dropdown-menu" role="listbox" aria-label="Plugin filter options">
+              <button type="button" class="panel-header-dropdown-item active" data-dropdown-item data-value="all" aria-selected="true">All</button>
+              <button type="button" class="panel-header-dropdown-item" data-dropdown-item data-value="installed" aria-selected="false">Installed</button>
+              <button type="button" class="panel-header-dropdown-item" data-dropdown-item data-value="enabled" aria-selected="false">Enabled</button>
+            </div>
+          </div>
+          <button id="plugins-refresh-btn" class="btn" data-size="icon" data-variant="ghost" data-tint="accent" tabindex="-1" title="Refresh plugin list">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            </svg>
+          </button>
+          <button id="plugins-close" class="btn btn-close panel-close-btn" data-size="icon-sm" data-variant="ghost" tabindex="-1" aria-label="Close panel">✕</button>
+        </div>
+      </div>
+      <div id="plugins-content">
+        <!-- Plugins will be populated here -->
+      </div>
+    </div>
+
+    <!-- Source Control Panel -->
+    <div id="github-panel">
+      <div id="github-header" class="panel-header">
+        <button id="github-collapse-btn" class="btn panel-collapse-btn" data-size="icon-sm" data-variant="ghost" data-tint="accent" title="Collapse panel">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+        <h3 class="panel-title" data-color="accent">Source Control</h3>
+        <div class="panel-actions">
+          <div id="github-tab-dropdown" class="panel-header-dropdown">
+            <button class="panel-header-dropdown-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" title="Select source control view">
+              <span class="panel-header-dropdown-label" data-dropdown-label>Changes</span>
+              <svg class="panel-header-dropdown-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            <div class="panel-header-dropdown-menu" role="listbox" aria-label="Source control views">
+              <button type="button" class="panel-header-dropdown-item active" data-dropdown-item data-value="changes" aria-selected="true">Changes</button>
+              <button type="button" class="panel-header-dropdown-item" data-dropdown-item data-value="branches" aria-selected="false">Branches</button>
+              <button type="button" class="panel-header-dropdown-item" data-dropdown-item data-value="worktrees" aria-selected="false">Worktrees</button>
+            </div>
+          </div>
+          <button id="github-refresh-btn" class="btn" data-size="icon-sm" data-variant="ghost" data-tint="accent" tabindex="-1" title="Refresh">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+            </svg>
+          </button>
+          <button id="github-close" class="btn btn-close panel-close-btn" data-size="icon-sm" data-variant="ghost" tabindex="-1" aria-label="Close panel">✕</button>
+        </div>
+      </div>
+
+      <!-- Activity — visible on Changes tab -->
+      <div id="sc-activity-slot" style="display: none;"></div>
+
+      <!-- Branch Bar — visible on Changes tab -->
+      <div id="sc-branch-bar" style="display: none;"></div>
+
+      <!-- Branches Actions — visible on Branches tab -->
+      <div class="github-branches-actions" id="github-branches-actions" style="display: none;">
+        <button id="github-create-branch-btn" class="github-action-btn">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          New Branch
+        </button>
+      </div>
+
+      <!-- Commit Area — visible on Changes tab, positioned above file list -->
+      <div id="git-commit-area" style="display: none;">
+        <div class="git-commit-inputs">
+          <div class="git-commit-summary-row">
+            <input type="text" id="git-commit-summary" placeholder="Commit message" />
+          </div>
+          <div class="git-commit-description-toggle-row">
+            <button
+              id="git-commit-description-toggle"
+              class="git-commit-description-toggle"
+              type="button"
+              aria-expanded="false"
+              aria-controls="git-commit-description"
+              title="Toggle commit description"
+            >
+              <span class="git-commit-description-toggle-label">Add description</span>
+              <svg class="git-commit-description-toggle-chevron" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+          </div>
+          <textarea id="git-commit-description" placeholder="Description (optional)" rows="2"></textarea>
+        </div>
+        <div class="git-commit-toolbar">
+          <div class="git-commit-toolbar-left">
+            <span id="git-staged-count"></span>
+            <button id="git-auto-stage-toggle" class="git-auto-stage-toggle" type="button" aria-pressed="true" title="Automatically stage all local changes before commit">
+              Auto-stage on
+            </button>
+          </div>
+          <div class="git-commit-toolbar-right">
+            <button id="git-fetch-btn" class="btn" data-size="sm" data-variant="ghost" type="button" title="Fetch from remote">
+              Fetch
+            </button>
+            <button id="git-pull-btn" class="btn" data-size="sm" data-variant="ghost" type="button" title="Pull from remote">
+              Pull
+            </button>
+            <button id="git-clear-message-btn" class="btn" data-size="sm" data-variant="ghost" type="button" title="Clear commit summary and description">
+              Clear
+            </button>
+            <div class="git-commit-split-btns">
+              <button id="git-commit-btn" class="btn" data-size="sm" data-variant="primary" disabled>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Commit
+              </button>
+              <button id="git-commit-dropdown-btn" class="btn" data-size="icon-sm" data-variant="primary" title="More commit options">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+        <div id="git-commit-dropdown" class="sc-dropdown" style="display: none;">
+          <button class="sc-dropdown-item" data-action="commit">Commit</button>
+          <button class="sc-dropdown-item" data-action="commit-push">Commit &amp; Push</button>
+          <button class="sc-dropdown-item" data-action="amend">Amend Last Commit</button>
+        </div>
+      </div>
+
+      <!-- Content — scrollable file list -->
+      <div id="github-content"></div>
+    </div>
+
+    <!-- Saved Prompts Panel -->
+    <div id="saved-prompts-panel">
+      <div id="saved-prompts-header" class="panel-header">
+        <button id="saved-prompts-collapse-btn" class="btn panel-collapse-btn" data-size="icon-sm" data-variant="ghost" data-tint="accent" title="Collapse panel">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+        <h3 class="panel-title" data-color="accent">Saved Prompts</h3>
+        <div class="panel-actions">
+          <button id="saved-prompts-add-btn" class="btn" data-size="sm" data-variant="solid" data-tint="accent" tabindex="-1">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add
+          </button>
+          <div id="saved-prompts-scope-dropdown" class="panel-header-dropdown">
+            <button class="panel-header-dropdown-trigger" type="button" aria-haspopup="listbox" aria-expanded="false" title="Select prompt scope">
+              <span class="panel-header-dropdown-label" data-dropdown-label>All</span>
+              <svg class="panel-header-dropdown-arrow" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            <div class="panel-header-dropdown-menu" role="listbox" aria-label="Prompt scopes">
+              <button type="button" class="panel-header-dropdown-item active" data-dropdown-item data-value="all" aria-selected="true">All</button>
+              <button type="button" class="panel-header-dropdown-item" data-dropdown-item data-value="global" aria-selected="false">Global</button>
+              <button type="button" class="panel-header-dropdown-item" data-dropdown-item data-value="project" aria-selected="false">Project</button>
+            </div>
+          </div>
+          <button id="saved-prompts-close" class="btn btn-close panel-close-btn" data-size="icon-sm" data-variant="ghost" tabindex="-1" aria-label="Close panel">✕</button>
+        </div>
+      </div>
+      <div class="saved-prompts-toolbar">
+        <input type="text" id="saved-prompts-search" class="saved-prompts-search-input" placeholder="Search prompts..." />
+      </div>
+      <div id="saved-prompts-categories"></div>
+      <div id="saved-prompts-content">
+        <!-- Saved prompts will be populated here -->
+      </div>
+    </div>
+
+    <!-- Saved Prompt Add/Edit Modal -->
+    <div id="saved-prompt-modal" class="modal-overlay">
+      <div class="modal-container">
+        <div class="modal-header">
+          <h3 id="saved-prompt-modal-title">Add Saved Prompt</h3>
+          <button
+            class="btn btn-close"
+            id="saved-prompt-modal-close"
+            data-size="icon-sm"
+            data-variant="danger"
+            title="Close"
+            aria-label="Close"
+          >&#10005;</button>
+        </div>
+        <form id="saved-prompt-form">
+          <div class="modal-body">
+            <div class="modal-field">
+              <label for="saved-prompt-title-input">Title</label>
+              <input type="text" id="saved-prompt-title-input" placeholder="e.g. Fix bug prompt" required autocomplete="off" />
+            </div>
+            <div class="modal-field">
+              <label for="saved-prompt-content-input">Content</label>
+              <textarea id="saved-prompt-content-input" rows="6" placeholder="Enter prompt content..." required></textarea>
+            </div>
+            <div class="modal-field">
+              <label for="saved-prompt-category-input">Category</label>
+              <input type="text" id="saved-prompt-category-input" list="saved-prompt-categories-list" placeholder="e.g. debug, git, refactor" autocomplete="off" />
+              <datalist id="saved-prompt-categories-list">
+                <option value="general">
+                <option value="git">
+                <option value="debug">
+                <option value="refactor">
+                <option value="testing">
+                <option value="deploy">
+              </datalist>
+            </div>
+            <div class="modal-field">
+              <label for="saved-prompt-scope-input">Scope</label>
+              <select id="saved-prompt-scope-input">
+                <option value="global">Global</option>
+                <option value="project">Project</option>
+              </select>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="modal-btn modal-btn-cancel" id="saved-prompt-cancel-btn">Cancel</button>
+            <button type="submit" class="modal-btn modal-btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Create Branch Modal -->
+    <div id="create-branch-modal" class="modal-overlay">
+      <div class="modal-container">
+        <div class="modal-header">
+          <h3>Create New Branch</h3>
+          <button
+            class="btn btn-close"
+            id="create-branch-modal-close"
+            data-size="icon-sm"
+            data-variant="danger"
+            title="Close"
+            aria-label="Close"
+          >✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-field">
+            <label for="new-branch-name">Branch name</label>
+            <input type="text" id="new-branch-name" placeholder="feature/my-new-feature" autocomplete="off" />
+          </div>
+          <div class="modal-field">
+            <label for="base-branch-select">Base branch</label>
+            <select id="base-branch-select">
+              <option value="">Loading...</option>
+            </select>
+          </div>
+          <div class="modal-field modal-checkbox-field">
+            <label class="modal-checkbox-label">
+              <input type="checkbox" id="switch-to-branch" checked />
+              <span class="checkbox-custom"></span>
+              <span>Switch to new branch</span>
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="modal-btn modal-btn-cancel" id="create-branch-cancel">Cancel</button>
+          <button class="modal-btn modal-btn-primary" id="create-branch-confirm">Create</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Git Diff Modal -->
+    <div id="git-diff-modal" class="modal-overlay">
+      <div class="diff-modal-container">
+        <div class="diff-modal-header">
+          <div class="diff-modal-title">
+            <span class="diff-modal-filename"></span>
+            <span class="diff-modal-status-badge"></span>
+          </div>
+          <div class="diff-modal-actions">
+            <div class="diff-view-toggle" role="tablist" aria-label="Diff view mode">
+              <button class="diff-view-btn active" data-diff-view="split" role="tab" aria-selected="true">Split</button>
+              <button class="diff-view-btn" data-diff-view="unified" role="tab" aria-selected="false">Unified</button>
+            </div>
+            <button class="diff-modal-edit-btn" title="Edit file">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Edit
+            </button>
+            <button
+              class="btn btn-close diff-modal-close-btn"
+              data-size="icon-sm"
+              data-variant="danger"
+              title="Close"
+              aria-label="Close"
+            >✕</button>
+          </div>
+        </div>
+        <div class="diff-modal-toolbar">
+          <div class="diff-toolbar-search">
+            <input type="text" class="diff-search-input" placeholder="Search in diff..." />
+            <label class="diff-checkbox-label">
+              <input type="checkbox" class="diff-hide-context-checkbox" />
+              <span>Hide context</span>
+            </label>
+          </div>
+          <div class="diff-hunk-controls">
+            <label class="diff-hunk-label" for="diff-hunk-select">Hunk</label>
+            <select id="diff-hunk-select" class="diff-hunk-select"></select>
+            <button class="diff-hunk-action stage" title="Stage selected hunk">Stage</button>
+            <button class="diff-hunk-action unstage" title="Unstage selected hunk">Unstage</button>
+            <button class="diff-hunk-action discard" title="Discard selected hunk">Discard</button>
+          </div>
+        </div>
+        <div class="diff-modal-body">
+          <!-- Diff content will be populated here -->
+        </div>
+        <div class="diff-modal-footer">
+          <span class="diff-modal-path"></span>
+          <span class="diff-modal-stats"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Git Conflict Resolve Modal -->
+    <div id="git-conflict-modal" class="modal-overlay">
+      <div class="conflict-modal-container">
+        <div class="conflict-modal-header">
+          <div class="conflict-modal-title">
+            <span class="conflict-modal-filename"></span>
+            <span class="conflict-modal-path"></span>
+          </div>
+          <button
+            class="btn btn-close conflict-modal-close-btn"
+            data-size="icon-sm"
+            data-variant="danger"
+            title="Close"
+            aria-label="Close"
+          >✕</button>
+        </div>
+        <div class="conflict-modal-body">
+          <div class="conflict-side-grid">
+            <div class="conflict-side">
+              <div class="conflict-side-title">Base</div>
+              <textarea class="conflict-base-input" readonly></textarea>
+              <button class="conflict-use-base-btn">Use Base</button>
+            </div>
+            <div class="conflict-side">
+              <div class="conflict-side-title">Ours</div>
+              <textarea class="conflict-ours-input" readonly></textarea>
+              <button class="conflict-use-ours-btn">Use Ours</button>
+            </div>
+            <div class="conflict-side">
+              <div class="conflict-side-title">Theirs</div>
+              <textarea class="conflict-theirs-input" readonly></textarea>
+              <button class="conflict-use-theirs-btn">Use Theirs</button>
+            </div>
+          </div>
+          <div class="conflict-resolved-wrap">
+            <label for="conflict-resolved-input">Resolved Content</label>
+            <textarea id="conflict-resolved-input" class="conflict-resolved-input"></textarea>
+          </div>
+        </div>
+        <div class="conflict-modal-footer">
+          <button class="modal-btn modal-btn-cancel conflict-cancel-btn">Cancel</button>
+          <button class="modal-btn modal-btn-primary conflict-mark-resolved-btn">Mark Resolved</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Editor Overlay -->
+  <div id="editor-overlay">
+    <div id="editor-container">
+      <div id="editor-header">
+        <div id="editor-title">
+          <span id="editor-filename">filename.js</span>
+          <span id="editor-ext" class="file-ext">JS</span>
+        </div>
+        <div id="editor-actions">
+          <button id="btn-editor-save" class="btn" data-size="sm" data-variant="primary">Save</button>
+          <button
+            id="btn-editor-close"
+            class="btn btn-close"
+            data-size="icon-sm"
+            data-variant="danger"
+            title="Close"
+            aria-label="Close editor"
+          >✕</button>
+        </div>
+      </div>
+      <div id="editor-content">
+        <textarea id="editor-textarea" spellcheck="false"></textarea>
+      </div>
+      <div id="editor-footer">
+        <span id="editor-status">Ready</span>
+        <span id="editor-path"></span>
+      </div>
+    </div>
+  </div>
+
+  <script src="dist/renderer.js"></script>
+</body>
+</html>

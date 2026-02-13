@@ -1,0 +1,60 @@
+/* ==========================================================================
+   Local Fonts - Geist & Geist Mono
+   Downloaded from Vercel's Geist font package for offline/local use.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Geist - UI Font
+   -------------------------------------------------------------------------- */
+
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url(Geist-Light.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(Geist-Regular.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(Geist-Medium.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Geist';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url(Geist-SemiBold.woff2) format('woff2');
+}
+
+/* --------------------------------------------------------------------------
+   Geist Mono - Code / Terminal Font
+   -------------------------------------------------------------------------- */
+
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url(GeistMono-Regular.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Geist Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url(GeistMono-Medium.woff2) format('woff2');
+}

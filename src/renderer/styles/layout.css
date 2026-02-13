@@ -1,0 +1,271 @@
+/* ==================== SIDEBAR ==================== */
+#sidebar {
+  width: 260px;
+  min-width: 180px;
+  max-width: 500px;
+  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+  border-right: 1px solid var(--border-subtle);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-lg);
+  position: relative;
+  flex-shrink: 0;
+}
+
+#sidebar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(180deg, var(--accent-glow) 0%, transparent 50%, var(--accent-glow) 100%);
+  pointer-events: none;
+}
+
+/* Sidebar resize handle */
+#sidebar-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 100;
+  background: transparent;
+  transition: background var(--transition-fast);
+}
+
+#sidebar-resize-handle:hover,
+#sidebar-resize-handle.dragging {
+  background: var(--accent-primary);
+}
+
+#sidebar-resize-handle::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 2px;
+  height: 40px;
+  background: var(--border-default);
+  border-radius: 1px;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+#sidebar-resize-handle:hover::before,
+#sidebar-resize-handle.dragging::before {
+  opacity: 1;
+  background: var(--accent-primary);
+}
+
+body.sidebar-resizing {
+  cursor: col-resize !important;
+  user-select: none;
+}
+
+body.sidebar-resizing * {
+  cursor: col-resize !important;
+}
+
+#project-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xs);
+}
+
+/* File Explorer Header */
+.file-explorer-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: var(--space-sm) 0 var(--space-sm) 0;
+}
+
+.file-explorer-title span {
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+#file-tree {
+  flex: 1;
+  overflow-y: auto;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+
+/* ==================== PROJECTS SECTION ==================== */
+#projects-section {
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-lg);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+#projects-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--space-sm);
+  gap: var(--space-xs);
+}
+
+#projects-header span {
+  flex: 1;
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+#projects-header #btn-add-project {
+  margin-left: auto;
+}
+
+/* Collapse toggle button */
+.collapse-toggle {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  font-size: 10px;
+  line-height: 1;
+  width: 14px;
+  text-align: center;
+  transition: color var(--transition-fast);
+}
+
+.collapse-toggle:hover {
+  color: var(--text-primary);
+}
+
+/* Collapsed state */
+#projects-section.collapsed .collapse-toggle {
+  transform: none;
+}
+
+#projects-section.collapsed #projects-collapsible {
+  display: none;
+}
+
+#projects-list {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+
+.project-item {
+  padding: 6px var(--space-md);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-md);
+  margin-bottom: 2px;
+  color: var(--text-secondary);
+  transition: all var(--transition-fast);
+  border: 1px solid transparent;
+}
+
+.project-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.project-item.active {
+  background: var(--accent-subtle);
+  color: var(--accent-primary);
+  border-color: transparent;
+}
+
+.project-item.focused,
+.project-item:focus-visible {
+  outline: 1px solid var(--accent-primary);
+  outline-offset: -1px;
+  background: var(--bg-elevated);
+}
+
+.project-item .project-icon {
+  margin-right: var(--space-sm);
+  opacity: 0.7;
+  display: flex;
+  align-items: center;
+  color: var(--text-secondary);
+  transition: color var(--transition-fast), opacity var(--transition-fast);
+}
+
+.project-item .project-icon svg path {
+  fill: transparent;
+  transition: fill var(--transition-fast), stroke var(--transition-fast);
+}
+
+.project-item.active .project-icon {
+  color: var(--accent-primary);
+  opacity: 1;
+}
+
+.project-item.active .project-icon svg path {
+  fill: color-mix(in srgb, var(--accent-primary) 16%, transparent);
+}
+
+.project-item.dragging {
+  opacity: 0.6;
+}
+
+.project-item .project-name {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.project-item .project-remove-btn {
+  opacity: 0;
+  visibility: hidden;
+  margin-left: var(--space-xs);
+  transition: all var(--transition-fast);
+}
+
+.project-item:hover .project-remove-btn {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* `.btn.btn-close` defines hover styling */
+
+.no-projects-message {
+  color: var(--text-muted);
+  font-size: 12px;
+  padding: var(--space-lg);
+  text-align: center;
+  font-style: italic;
+}
+
+/* ==================== MAIN CONTENT ==================== */
+
+#main-content {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  background: var(--bg-deep);
+}
+
+#terminal-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  padding: var(--space-md) var(--space-md) var(--space-sm) var(--space-md);
+  min-width: 400px;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+  margin: var(--space-sm) 0 var(--space-sm) var(--space-sm);
+}

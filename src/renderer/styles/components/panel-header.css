@@ -1,0 +1,188 @@
+/* ==================== UNIFIED PANEL HEADER ==================== */
+
+/*
+ * Standard panel header structure:
+ * <div class="panel-header">
+ *   <button class="btn panel-collapse-btn" data-size="icon-sm" data-variant="ghost">...</button>
+ *   <h3 class="panel-title" data-color="accent">Panel Name</h3>
+ *   <div class="panel-actions">
+ *     <button class="btn" data-size="sm" data-variant="solid">+ Add</button>
+ *     <button class="btn btn-close panel-close-btn" data-size="icon-sm" data-variant="ghost">✕</button>
+ *   </div>
+ * </div>
+ */
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  padding: var(--space-lg);
+  border-bottom: 1px solid var(--border-subtle);
+  gap: var(--space-xs);
+}
+
+/* Panel title with colored dot */
+.panel-title {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.2px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: 1;
+  min-width: 0;
+}
+
+.panel-title::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Color variants for the dot */
+.panel-title[data-color="accent"]::before {
+  background: var(--accent-primary);
+}
+
+.panel-title[data-color="info"]::before {
+  background: var(--info);
+}
+
+.panel-title[data-color="success"]::before {
+  background: var(--success);
+}
+
+.panel-title[data-color="warning"]::before {
+  background: var(--warning);
+}
+
+.panel-title[data-color="error"]::before {
+  background: var(--error);
+}
+
+/* No dot variant */
+.panel-title:not([data-color])::before {
+  display: none;
+}
+
+/* Actions container (pushed to the right) */
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* Close button - always red tint on hover */
+.panel-close-btn:hover {
+  color: var(--error) !important;
+  background: var(--error-subtle) !important;
+}
+
+/* Collapse button */
+.panel-collapse-btn svg {
+  transition: transform var(--transition-fast);
+}
+
+/* Shared header dropdown (Plugins / Source Control / Saved Prompts) */
+.panel-header-dropdown {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.panel-header-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  height: var(--panel-header-control-height);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  padding: 0 var(--panel-header-control-padding-x);
+  font-size: var(--panel-header-control-font-size);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+/* Keep panel-header text actions aligned with dropdown trigger height. */
+.panel-header .btn[data-size="sm"] {
+  height: var(--panel-header-control-height);
+  font-size: var(--panel-header-control-font-size);
+  padding: 0 var(--panel-header-control-padding-x);
+}
+
+.panel-header-dropdown-trigger:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-default);
+}
+
+.panel-header-dropdown.open .panel-header-dropdown-trigger {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.panel-header-dropdown-label {
+  min-width: 52px;
+  max-width: 96px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-align: left;
+}
+
+.panel-header-dropdown-arrow {
+  opacity: 0.65;
+  transition: transform var(--transition-fast);
+}
+
+.panel-header-dropdown.open .panel-header-dropdown-arrow {
+  transform: rotate(180deg);
+}
+
+.panel-header-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 150px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+  z-index: var(--z-dropdown);
+}
+
+.panel-header-dropdown.open .panel-header-dropdown-menu {
+  display: block;
+}
+
+.panel-header-dropdown-item {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  text-align: left;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 7px 10px;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.panel-header-dropdown-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.panel-header-dropdown-item.active {
+  color: var(--accent-primary);
+  background: var(--accent-subtle);
+}
