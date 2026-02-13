@@ -676,26 +676,15 @@
   color: var(--text-tertiary);
 }
 
-.git-auto-stage-toggle {
+.btn.git-auto-stage-btn {
   border: 1px solid var(--border-subtle);
-  background: var(--bg-primary);
-  color: var(--text-tertiary);
-  border-radius: var(--radius-sm);
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 1;
-  padding: 5px 8px;
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  white-space: nowrap;
 }
 
-.git-auto-stage-toggle:hover {
+.btn.git-auto-stage-btn:hover {
   border-color: var(--border-default);
-  color: var(--text-secondary);
 }
 
-.git-auto-stage-toggle.enabled {
+.btn.git-auto-stage-btn.is-on {
   color: var(--success);
   border-color: color-mix(in srgb, var(--success) 35%, var(--border-subtle));
   background: var(--diff-add-subtle);

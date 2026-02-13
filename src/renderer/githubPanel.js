@@ -412,12 +412,11 @@ function persistAutoStagePreference() {
 function syncAutoStageToggle() {
   const toggle = document.getElementById('git-auto-stage-toggle');
   if (!toggle) return;
-  toggle.classList.toggle('enabled', _autoStageBeforeCommit);
-  toggle.textContent = _autoStageBeforeCommit ? 'Auto-stage on' : 'Auto-stage off';
+  toggle.classList.toggle('is-on', _autoStageBeforeCommit);
   toggle.setAttribute('aria-pressed', _autoStageBeforeCommit ? 'true' : 'false');
   toggle.title = _autoStageBeforeCommit
-    ? 'Automatically stage all local changes before commit'
-    : 'Only commit already staged changes';
+    ? 'Auto-stage: on (stage all local changes before commit)'
+    : 'Auto-stage: off (only commit already staged changes)';
 }
 
 /**

@@ -190,8 +190,21 @@
         <div class="git-commit-toolbar">
           <div class="git-commit-toolbar-left">
             <span id="git-staged-count"></span>
-            <button id="git-auto-stage-toggle" class="git-auto-stage-toggle" type="button" aria-pressed="true" title="Automatically stage all local changes before commit">
-              Auto-stage on
+            <button
+              id="git-auto-stage-toggle"
+              class="btn git-auto-stage-btn"
+              data-size="icon-sm"
+              data-variant="ghost"
+              type="button"
+              aria-pressed="true"
+              aria-label="Toggle auto-stage before commit"
+              title="Auto-stage: on"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 3l7 4v10l-7 4-7-4V7l7-4z"/>
+                <path d="M12 3v18"/>
+                <path d="M19 7l-7 4-7-4"/>
+              </svg>
             </button>
           </div>
           <div class="git-commit-toolbar-right">
