@@ -260,13 +260,12 @@ See [**CONTRIBUTING.md**](CONTRIBUTING.md) for detailed guidelines.
 
 Thanks to everyone who has contributed to VibeConsole.
 
-<p align="center">
+<p>
   <a href="https://github.com/nesdesignco/vibeconsole/graphs/contributors">
-    <img src="https://contrib.rocks/image?repo=nesdesignco/vibeconsole" width="900" alt="VibeConsole contributors">
+    <img src="docs/assets/github-mark.svg" alt="GitHub" style="width: 16px; height: 16px; vertical-align: -2px;" />
+    <strong>View contributors on GitHub</strong>
   </a>
 </p>
-
-View the full list on the [GitHub contributors page](https://github.com/nesdesignco/vibeconsole/graphs/contributors).
 
 ## 📄 License
 
