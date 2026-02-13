@@ -140,6 +140,7 @@
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 250ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 400ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-panel: 320ms cubic-bezier(0.22, 1, 0.36, 1);
 
   /* Typography */
   --font-sans: 'Geist', -apple-system, BlinkMacSystemFont, sans-serif;

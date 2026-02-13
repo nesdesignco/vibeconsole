@@ -526,7 +526,6 @@ function renderBranches() {
 function renderBranchItem(branch, currentBranch) {
   const isCurrent = branch.name === currentBranch;
   const canDelete = !isCurrent && !branch.isRemote;
-  const canSwitch = !isCurrent;
 
   return `
     <div class="git-branch-item ${isCurrent ? 'current' : ''}" data-branch="${escapeAttr(branch.name)}">
@@ -541,7 +540,6 @@ function renderBranchItem(branch, currentBranch) {
         </div>
       </div>
       <div class="git-branch-actions">
-        ${canSwitch ? `<button class="git-branch-action-btn checkout" title="Switch to branch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>` : ''}
         ${canDelete ? `<button class="git-branch-action-btn delete" title="Delete branch"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>` : ''}
       </div>
     </div>
@@ -552,11 +550,15 @@ function renderBranchItem(branch, currentBranch) {
  * Attach branch event listeners
  */
 function attachBranchEventListeners() {
-  // Checkout buttons
-  contentElement.querySelectorAll('.git-branch-action-btn.checkout').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const branchName = btn.closest('.git-branch-item').dataset.branch;
+  // Make branch switching discoverable: clicking the row switches branches.
+  // (Previously only the small arrow button would trigger checkout.)
+  contentElement.querySelectorAll('.git-branch-item').forEach(item => {
+    item.addEventListener('click', async (e) => {
+      const target = e.target;
+      if (target && typeof target.closest === 'function' && target.closest('button')) return;
+      if (item.classList.contains('current')) return;
+      const branchName = item.dataset.branch;
+      if (!branchName) return;
       await handleSwitchBranch(branchName);
     });
   });
@@ -574,20 +576,49 @@ function attachBranchEventListeners() {
 /**
  * Handle branch switch
  */
-async function handleSwitchBranch(branchName) {
+async function handleSwitchBranch(branchName, { allowAutoStash = true } = {}) {
   const state = require('./state');
   const projectPath = state.getProjectPath();
 
   try {
     const result = await ipcRenderer.invoke(IPC.SWITCH_GIT_BRANCH, { projectPath, branchName });
 
-    if (result.error === 'uncommitted_changes') {
-      showToast('Commit or stash changes first', 'error');
-      return;
-    }
-
     if (result.error) {
-      showToast('Operation failed', 'error');
+      const raw = (typeof result.message === 'string' && result.message.trim())
+        ? result.message.trim()
+        : (typeof result.error === 'string' && result.error.trim())
+          ? result.error.trim()
+          : '';
+      const compact = raw.replace(/\s+/g, ' ').trim();
+
+      const shouldOfferStash = allowAutoStash && (
+        result.error === 'uncommitted_changes' ||
+        /commit(\s+or\s+stash|\s+your\s+changes\s+or\s+stash\s+them)|stash\s+them\s+before\s+you\s+switch|would\s+be\s+overwritten\s+by\s+checkout|untracked\s+working\s+tree\s+files\s+would\s+be\s+overwritten/i.test(raw)
+      );
+
+      if (shouldOfferStash) {
+        const ok = confirm(
+          `Local changes are blocking the branch switch.\n\nStash changes (including untracked files) and switch to "${branchName}"?`
+        );
+        if (ok) {
+          const stashResult = await ipcRenderer.invoke(IPC.STASH_CHANGES, {
+            projectPath,
+            message: `Auto-stash before switching to ${branchName}`,
+            includeUntracked: true
+          });
+
+          if (stashResult?.error) {
+            showToast(String(stashResult.error), 'error');
+            return;
+          }
+
+          await handleSwitchBranch(branchName, { allowAutoStash: false });
+          return;
+        }
+      }
+
+      const message = compact && compact.length > 260 ? (compact.slice(0, 257) + '...') : (compact || 'Operation failed');
+      showToast(message, 'error');
       return;
     }
 

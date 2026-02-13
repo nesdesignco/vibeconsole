@@ -1249,7 +1249,7 @@ async function gitAheadBehindCached(projectPath, options = {}) {
 /**
  * Stash changes (optionally a single file, with optional message)
  */
-async function stashChanges(projectPath, filePath, message) {
+async function stashChanges(projectPath, filePath, message, includeUntracked = false) {
   if (!projectPath) {
     return { error: 'Missing parameters' };
   }
@@ -1260,6 +1260,9 @@ async function stashChanges(projectPath, filePath, message) {
 
   try {
     const args = ['stash', 'push'];
+    if (includeUntracked) {
+      args.push('--include-untracked');
+    }
     if (message) {
       args.push('-m', message);
     }
@@ -1468,8 +1471,8 @@ function setupIPC(ipcMain) {
     return invalidateOnSuccess(projectPath, result, { status: true, aheadBehind: true, activity: true });
   });
 
-  ipcMain.handle(IPC.STASH_CHANGES, async (event, { projectPath, filePath, message }) => {
-    const result = await stashChanges(projectPath, filePath, message);
+  ipcMain.handle(IPC.STASH_CHANGES, async (event, { projectPath, filePath, message, includeUntracked }) => {
+    const result = await stashChanges(projectPath, filePath, message, includeUntracked === true);
     return invalidateOnSuccess(projectPath, result, { status: true, aheadBehind: false });
   });
 

@@ -113,27 +113,31 @@ async function switchBranch(projectPath, branchName) {
     return { error: 'Invalid branch name' };
   }
 
-  // Check for uncommitted changes
-  const status = await isWorkingTreeClean(projectPath);
-  if (!status.clean && !status.error) {
-    return {
-      error: 'uncommitted_changes',
-      message: 'You have uncommitted changes',
-      changes: status.changes
-    };
-  }
-
   try {
     // Handle remote branches - create local tracking branch
     let targetBranch = branchName;
     if (branchName.startsWith('origin/')) {
-      targetBranch = branchName.replace('origin/', '');
+      const localName = branchName.replace('origin/', '');
+      // If local branch doesn't exist, check out remote branch with tracking.
+      let localExists = true;
+      try {
+        await execFileGit(['show-ref', '--verify', '--quiet', `refs/heads/${localName}`], projectPath);
+      } catch {
+        localExists = false;
+      }
+
+      if (!localExists) {
+        await execFileGit(['checkout', '--track', branchName], projectPath);
+        return { error: null, branch: localName };
+      }
+
+      targetBranch = localName;
     }
 
     await execFileGit(['checkout', targetBranch], projectPath);
     return { error: null, branch: targetBranch };
   } catch (err) {
-    return { error: err.error || err.message };
+    return { error: err.stderr || err.error || err.message };
   }
 }
 

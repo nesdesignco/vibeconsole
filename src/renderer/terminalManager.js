@@ -551,10 +551,16 @@ class TerminalManager {
           if (shouldForceBottom) {
             this._savedScrollState.delete(terminalId);
             instance.terminal.scrollToBottom();
+            // When terminals are re-parented (project switches / view changes), some
+            // environments can end up with the DOM scrollbar thumb at the top while
+            // xterm's internal buffer is at the bottom. Force-sync the viewport to
+            // avoid "snap to top" on the next wheel/scroll interaction.
+            this._forceViewportScrollToBottom(instance);
             this._forceBottomOnProjectSwitch = false;
           } else if (!this._restoreScrollState(terminalId)) {
             // Restore saved scroll position, or scroll to bottom for new terminals
             instance.terminal.scrollToBottom();
+            this._forceViewportScrollToBottom(instance);
             // If we had a saved scroll position but the buffer isn't populated yet,
             // retry briefly to avoid snapping to the top.
             if (this._savedScrollState.has(terminalId)) {
@@ -722,6 +728,7 @@ class TerminalManager {
           this._sendResize(id);
           if (wasAtBottom) {
             instance.terminal.scrollToBottom();
+            this._forceViewportScrollToBottom(instance);
           } else {
             const newBaseY = instance.terminal.buffer.active.baseY;
             instance.terminal.scrollToLine(Math.min(viewportYBefore, newBaseY));
@@ -747,6 +754,7 @@ class TerminalManager {
       this._sendResize(terminalId);
       if (wasAtBottom) {
         instance.terminal.scrollToBottom();
+        this._forceViewportScrollToBottom(instance);
       } else {
         const newBaseY = instance.terminal.buffer.active.baseY;
         instance.terminal.scrollToLine(Math.min(viewportYBefore, newBaseY));
@@ -820,6 +828,7 @@ class TerminalManager {
 
     if (saved.wasAtBottom) {
       instance.terminal.scrollToBottom();
+      this._forceViewportScrollToBottom(instance);
       this._savedScrollState.delete(terminalId);
     } else {
       const newBaseY = instance.terminal.buffer.active.baseY;
@@ -836,6 +845,19 @@ class TerminalManager {
   // Private methods
   _isInDOM(instance) {
     return instance.element && instance.element.isConnected;
+  }
+
+  _forceViewportScrollToBottom(instance) {
+    try {
+      const root = instance?.element;
+      if (!root || typeof root.querySelector !== 'function') return false;
+      const viewport = root.querySelector('.xterm-viewport');
+      if (!viewport) return false;
+      viewport.scrollTop = viewport.scrollHeight;
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   _sendResize(terminalId) {
