@@ -3,6 +3,7 @@
   "productName": "VibeConsole",
   "version": "1.0.0",
   "description": "Vibe Console - Project Management IDE for Claude Code",
+  "author": "Nes <contact@nesdesign.co>",
   "main": "src/main/index.js",
   "scripts": {
     "postinstall": "electron-rebuild",
