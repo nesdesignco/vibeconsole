@@ -128,7 +128,10 @@ const IPC = {
   UPDATE_DOWNLOAD_PROGRESS: 'update-download-progress',
   UPDATE_DOWNLOADED: 'update-downloaded',
   UPDATE_ERROR: 'update-error',
-  INSTALL_UPDATE: 'install-update'
+  INSTALL_UPDATE: 'install-update',
+
+  // External URLs
+  OPEN_EXTERNAL_URL: 'open-external-url'
 };
 
 module.exports = { IPC };

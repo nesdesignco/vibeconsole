@@ -100,7 +100,8 @@ const allowedChannels = new Set([
   'update-download-progress',
   'update-downloaded',
   'update-error',
-  'install-update'
+  'install-update',
+  'open-external-url'
 ]);
 
 function isAllowedChannel(channel) {

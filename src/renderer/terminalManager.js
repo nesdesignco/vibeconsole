@@ -6,6 +6,7 @@
 const { ipcRenderer, clipboard } = require('./electronBridge');
 const { Terminal } = require('xterm');
 const { FitAddon } = require('xterm-addon-fit');
+const { WebLinksAddon } = require('xterm-addon-web-links');
 const { IPC } = require('../shared/ipcChannels');
 const { shellQuote } = require('./shellEscape');
 
@@ -289,6 +290,11 @@ class TerminalManager {
 
     const fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
+
+    const webLinksAddon = new WebLinksAddon((_event, uri) => {
+      ipcRenderer.send(IPC.OPEN_EXTERNAL_URL, uri);
+    });
+    terminal.loadAddon(webLinksAddon);
 
     // Create container element
     const element = document.createElement('div');

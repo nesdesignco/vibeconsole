@@ -177,6 +177,11 @@ function setupAllIPC() {
       }
     }
   });
+  // Open external URLs from renderer (e.g. clickable terminal links)
+  ipcMain.on(IPC.OPEN_EXTERNAL_URL, (_event, url) => {
+    openExternalSafely(url);
+  });
+
   gitBranchesManager.setupIPC(ipcMain);
   gitChangesManager.setupIPC(ipcMain);
   savedPromptsManager.setupIPC(ipcMain);
