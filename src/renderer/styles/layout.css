@@ -1,7 +1,7 @@
 /* ==================== SIDEBAR ==================== */
 #sidebar {
   width: 260px;
-  min-width: 180px;
+  min-width: 260px;
   max-width: 500px;
   background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
   border-right: 1px solid var(--border-subtle);

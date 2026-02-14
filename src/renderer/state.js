@@ -92,17 +92,69 @@ function selectProjectFolder() {
 }
 
 /**
+ * Show a custom prompt dialog (window.prompt is unreliable in Electron sandbox)
+ */
+function showPromptDialog(message) {
+  return new Promise((resolve) => {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10000;display:flex;align-items:center;justify-content:center;';
+
+    const box = document.createElement('div');
+    box.style.cssText = 'background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-lg);padding:20px;min-width:320px;max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,0.4);';
+
+    const label = document.createElement('div');
+    label.textContent = message;
+    label.style.cssText = 'color:var(--text-primary);font-size:13px;margin-bottom:12px;';
+
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.style.cssText = 'width:100%;box-sizing:border-box;padding:8px 10px;background:var(--bg-primary);color:var(--text-primary);border:1px solid var(--border-default);border-radius:var(--radius-md);font-size:13px;outline:none;';
+    input.addEventListener('focus', () => { input.style.borderColor = 'var(--accent-primary)'; });
+    input.addEventListener('blur', () => { input.style.borderColor = 'var(--border-default)'; });
+
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;margin-top:14px;';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.textContent = 'Cancel';
+    cancelBtn.className = 'btn';
+    cancelBtn.setAttribute('data-variant', 'ghost');
+
+    const okBtn = document.createElement('button');
+    okBtn.textContent = 'Create';
+    okBtn.className = 'btn';
+    okBtn.setAttribute('data-variant', 'primary');
+
+    const cleanup = (value) => {
+      overlay.remove();
+      resolve(value);
+    };
+
+    cancelBtn.addEventListener('click', () => cleanup(null));
+    okBtn.addEventListener('click', () => cleanup(input.value));
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') cleanup(input.value);
+      if (e.key === 'Escape') cleanup(null);
+    });
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) cleanup(null); });
+
+    actions.append(cancelBtn, okBtn);
+    box.append(label, input, actions);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    input.focus();
+  });
+}
+
+/**
  * Request new project creation
  */
 async function createNewProject() {
-  const rawName = window.prompt('New project name');
+  const rawName = await showPromptDialog('New project name');
   if (rawName === null) return; // User canceled
 
   const projectName = rawName.trim();
-  if (!projectName) {
-    window.alert('Project name cannot be empty.');
-    return;
-  }
+  if (!projectName) return;
 
   try {
     const result = await ipcRenderer.invoke(IPC.CREATE_NEW_PROJECT, { projectName });
