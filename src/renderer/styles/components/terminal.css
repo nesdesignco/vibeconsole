@@ -49,26 +49,39 @@
   gap: var(--space-xs);
 }
 
-.toolbar-right button {
-  background: transparent;
+.toolbar-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
   border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--text-tertiary);
   cursor: pointer;
-  padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius-sm);
-  font-size: 14px;
   transition: all var(--transition-fast);
+  position: relative;
+  flex-shrink: 0;
 }
 
-.toolbar-right button:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+.toolbar-btn:hover {
+  color: var(--accent-primary);
 }
 
-.toolbar-right button:disabled {
+.toolbar-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;
 }
+
+.toolbar-btn svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+
 
 /* Bottom row - terminal tabs */
 .terminal-tab-bar {
@@ -100,7 +113,8 @@
 .terminal-tab {
   display: flex;
   align-items: center;
-  padding: var(--space-xs) var(--space-sm);
+  height: 28px;
+  padding: 0 var(--space-sm);
   background: transparent;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -167,7 +181,7 @@
   width: 24px;
   height: 24px;
   border-radius: var(--radius-sm);
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1;
   display: flex;
   align-items: center;
@@ -193,10 +207,11 @@
   position: relative;
   z-index: calc(var(--z-dropdown) + 1);
   display: none;
+  height: 28px;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-subtle);
   color: var(--text-secondary);
-  padding: var(--space-xs) var(--space-sm);
+  padding: 0 var(--space-sm);
   border-radius: var(--radius-sm);
   cursor: pointer;
   font-family: var(--font-sans);
@@ -216,6 +231,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
+  height: 100%;
 }
 
 .grid-layout-dropdown-arrow {
@@ -643,38 +659,33 @@
 }
 
 /* ==================== UPGRADE BUTTON ==================== */
-.btn-upgrade {
-  position: relative;
+.toolbar-btn.btn-upgrade {
   background: var(--accent-subtle);
   border: 1px solid var(--accent-primary) !important;
   color: var(--accent-primary) !important;
-  padding: var(--space-xs) var(--space-sm);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: all var(--transition-fast);
 }
 
-.btn-upgrade:hover {
+.toolbar-btn.btn-upgrade:hover {
   background: var(--accent-primary) !important;
   color: var(--bg-deep) !important;
 }
 
-.btn-upgrade.downloading {
+.toolbar-btn.btn-upgrade.downloading {
   opacity: 0.8;
   cursor: wait;
 }
 
-.btn-upgrade.downloading svg {
+.toolbar-btn.btn-upgrade.downloading svg {
   animation: spin 1s linear infinite;
 }
 
-.btn-upgrade.ready {
+.toolbar-btn.btn-upgrade.ready {
   background: var(--success-subtle) !important;
   border-color: var(--success) !important;
   color: var(--success) !important;
 }
 
-.btn-upgrade.ready:hover {
+.toolbar-btn.btn-upgrade.ready:hover {
   background: var(--success) !important;
   color: var(--bg-deep) !important;
 }
@@ -699,6 +710,6 @@
   box-shadow: 0 1px 3px var(--overlay-subtle);
 }
 
-.btn-upgrade.ready .upgrade-badge {
+.toolbar-btn.btn-upgrade.ready .upgrade-badge {
   background: var(--success);
 }

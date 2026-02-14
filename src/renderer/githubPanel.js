@@ -1503,9 +1503,9 @@ function renderChanges(gen) {
           Working Tree
           <span class="git-changes-count">${workingTree.length}</span>
           <div class="git-changes-section-actions">
-            <button class="git-section-action-btn" data-action="stage-all" title="Stage all">+</button>
-            <button class="git-section-action-btn discard" data-action="discard-all" title="Discard all unstaged changes"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
-            <button class="git-section-action-btn stash" data-action="stash-all" title="Stash all changes"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg></button>
+            <button class="git-section-action-btn discard" data-action="discard-all" title="Discard all unstaged changes"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
+            <button class="git-section-action-btn stash" data-action="stash-all" title="Stash all changes"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg></button>
+            <button class="git-section-action-btn stage" data-action="stage-all" title="Stage all">+</button>
           </div>
         </h4>
         <div class="git-changes-section-body">
@@ -1525,7 +1525,7 @@ function renderChanges(gen) {
           Staged Changes
           <span class="git-changes-count">${staged.length}</span>
           <div class="git-changes-section-actions">
-            <button class="git-section-action-btn" data-action="unstage-all" title="Unstage all">−</button>
+            <button class="git-section-action-btn unstage" data-action="unstage-all" title="Unstage all">−</button>
           </div>
         </h4>
         <div class="git-changes-section-body">

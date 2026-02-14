@@ -60,6 +60,17 @@
   padding: 0;
 }
 
+/* ==================== EMBEDDED BUTTONS (no outer container) ==================== */
+
+/* For buttons nested inside another interactive container (tabs, list items, etc.)
+ * Strips the fixed sizing so the button blends into the parent. */
+.btn[data-embedded] {
+  width: auto;
+  height: auto;
+  padding: 3px;
+  border-radius: var(--radius-xs);
+}
+
 /* ==================== CLOSE (X) BUTTON ==================== */
 
 /* Shared "X" button component. Use together with `.btn` and `data-size="icon-sm"`. */

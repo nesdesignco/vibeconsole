@@ -125,8 +125,7 @@ function createProjectItem(project, index) {
   // Remove button (visible on hover)
   const removeBtn = document.createElement('button');
   removeBtn.className = 'btn btn-close project-remove-btn';
-  removeBtn.dataset.size = 'icon-sm';
-  removeBtn.dataset.variant = 'ghost';
+  removeBtn.dataset.embedded = '';
   removeBtn.title = 'Remove from list';
   removeBtn.setAttribute('aria-label', 'Remove from list');
   removeBtn.textContent = '✕';

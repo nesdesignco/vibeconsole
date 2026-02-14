@@ -81,7 +81,7 @@ class TerminalGrid {
               <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
             </svg>
           </button>
-          <button class="btn btn-close btn-grid-close" data-size="icon-sm" data-variant="ghost" title="Close" aria-label="Close terminal">✕</button>
+          <button class="btn btn-close btn-grid-close" data-embedded title="Close" aria-label="Close terminal">✕</button>
         </div>
       </div>
       <div class="grid-cell-content"></div>

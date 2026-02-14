@@ -18,6 +18,8 @@
   padding: var(--space-lg);
   border-bottom: 1px solid var(--border-subtle);
   gap: var(--space-xs);
+  position: relative;
+  z-index: 2;
 }
 
 /* Panel title with colored dot */
@@ -77,10 +79,16 @@
   flex-shrink: 0;
 }
 
-/* Close button - always red tint on hover */
+/* Icon buttons in panel actions - no container bg, color-only hover */
+.panel-actions .btn[data-variant="ghost"]:hover {
+  background: transparent;
+  color: var(--accent-primary);
+}
+
+/* Close button - red color only, no background */
 .panel-close-btn:hover {
   color: var(--error) !important;
-  background: var(--error-subtle) !important;
+  background: transparent !important;
 }
 
 /* Collapse button */

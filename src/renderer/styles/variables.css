@@ -119,7 +119,7 @@
   --btn-font-lg: 13px;
 
   /* Panel Header Controls */
-  --panel-header-control-height: var(--btn-height-md);
+  --panel-header-control-height: var(--btn-height-sm);
   --panel-header-control-font-size: var(--btn-font-sm);
   --panel-header-control-padding-x: 8px;
 

@@ -113,7 +113,7 @@ body.sidebar-resizing * {
   display: flex;
   align-items: center;
   margin-bottom: var(--space-sm);
-  gap: var(--space-xs);
+  gap: var(--space-sm);
 }
 
 #projects-header span {
@@ -127,6 +127,31 @@ body.sidebar-resizing * {
 
 #projects-header #btn-add-project {
   margin-left: auto;
+}
+
+.project-header-btn {
+  width: auto !important;
+  height: auto !important;
+  padding: 2px !important;
+}
+
+.project-header-btn#btn-add-project {
+  font-size: 18px;
+  font-weight: 300;
+}
+
+.project-header-btn svg {
+  width: 12.6px;
+  height: 12.6px;
+}
+
+.project-header-btn:hover {
+  background: transparent !important;
+  color: var(--accent-primary) !important;
+}
+
+.project-header-btn#btn-add-project:hover {
+  color: var(--success) !important;
 }
 
 /* Collapse toggle button */

@@ -162,7 +162,12 @@ class TerminalTabBar {
           </div>
         </div>
         <div class="toolbar-right">
-          <button class="btn-view-toggle" title="Toggle Grid View">⊞</button>
+          <button class="toolbar-btn btn-view-toggle" title="Toggle Grid View">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/>
+              <path d="M3 12h18M12 3v18"/>
+            </svg>
+          </button>
           <div class="grid-layout-dropdown" title="Grid Layout">
             <div class="grid-layout-dropdown-label">
               <span>2×2</span>
@@ -179,24 +184,24 @@ class TerminalTabBar {
               <div class="grid-layout-dropdown-item" data-value="3x3">3×3</div>
             </div>
           </div>
-          <button class="btn-plugins-toggle" title="Plugins (Ctrl+Shift+P)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <button class="toolbar-btn btn-plugins-toggle" title="Plugins (Ctrl+Shift+P)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.315 8.685a.98.98 0 0 1 .837-.276c.47.07.802.48.968.925a2.501 2.501 0 1 0 3.214-3.214c-.446-.166-.855-.497-.925-.968a.979.979 0 0 1 .276-.837l1.61-1.61a2.404 2.404 0 0 1 1.705-.707c.617 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 1 1 3.237 3.237c-.464.18-.894.527-.967 1.02Z"/>
             </svg>
           </button>
-          <button class="btn-github-toggle" title="GitHub" style="position: relative;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <button class="toolbar-btn btn-github-toggle" title="GitHub">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
             </svg>
             <span class="git-changes-badge" style="display: none;"></span>
           </button>
-          <button class="btn-saved-prompts-toggle" title="Saved Prompts (Ctrl+Shift+S)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <button class="toolbar-btn btn-saved-prompts-toggle" title="Saved Prompts (Ctrl+Shift+S)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
             </svg>
           </button>
-          <button class="btn-upgrade" title="Update available" style="display: none;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <button class="toolbar-btn btn-upgrade" title="Update available" style="display: none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 5v14M19 12l-7 7-7-7"/>
             </svg>
             <span class="upgrade-badge"></span>
@@ -252,14 +257,16 @@ class TerminalTabBar {
       tabsContainer.innerHTML = state.terminals.map(t => `
         <div class="terminal-tab ${t.isActive ? 'active' : ''}" data-terminal-id="${escapeAttr(t.id)}">
           <span class="tab-name">${escapeHtml(t.customName || t.name)}</span>
-          <button class="btn btn-close tab-close" data-size="icon-sm" data-variant="ghost" data-terminal-id="${escapeAttr(t.id)}" title="Close" aria-label="Close terminal">✕</button>
+          <button class="btn btn-close tab-close" data-embedded data-terminal-id="${escapeAttr(t.id)}" title="Close" aria-label="Close terminal">✕</button>
         </div>
       `).join('');
     }
 
     // Update view toggle button
     const toggleBtn = this.element.querySelector('.btn-view-toggle');
-    toggleBtn.textContent = state.viewMode === 'tabs' ? '⊞' : '☐';
+    toggleBtn.innerHTML = state.viewMode === 'tabs'
+      ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 12h18M12 3v18"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>';
     toggleBtn.title = state.viewMode === 'tabs' ? 'Switch to Grid View' : 'Switch to Tab View';
 
     // Show/hide grid layout dropdown
@@ -687,7 +694,7 @@ class TerminalTabBar {
     ipcRenderer.on(IPC.UPDATE_AVAILABLE, (event, data) => {
       updateState = 'available';
       btn.style.display = '';
-      btn.className = 'btn-upgrade';
+      btn.className = 'toolbar-btn btn-upgrade';
       btn.title = `Update available: ${data.version}`;
       btn.disabled = false;
       badge.textContent = data.version.replace(/^v/, '');
@@ -699,7 +706,7 @@ class TerminalTabBar {
     // Download progress
     ipcRenderer.on(IPC.UPDATE_DOWNLOAD_PROGRESS, (event, data) => {
       updateState = 'downloading';
-      btn.className = 'btn-upgrade downloading';
+      btn.className = 'toolbar-btn btn-upgrade downloading';
       btn.title = `Downloading update... ${data.percent}%`;
       btn.disabled = true;
       badge.textContent = `${data.percent}%`;
@@ -708,7 +715,7 @@ class TerminalTabBar {
     // Download complete - switch to ready state
     ipcRenderer.on(IPC.UPDATE_DOWNLOADED, () => {
       updateState = 'ready';
-      btn.className = 'btn-upgrade ready';
+      btn.className = 'toolbar-btn btn-upgrade ready';
       btn.title = 'Update ready - Click to restart & install';
       btn.disabled = false;
       badge.textContent = '✓';
@@ -720,7 +727,7 @@ class TerminalTabBar {
     ipcRenderer.on(IPC.UPDATE_ERROR, () => {
       if (updateState === 'downloading') {
         updateState = 'available';
-        btn.className = 'btn-upgrade';
+        btn.className = 'toolbar-btn btn-upgrade';
         btn.title = 'Download failed - Click to retry';
         btn.disabled = false;
         badge.textContent = '!';
@@ -733,7 +740,7 @@ class TerminalTabBar {
       if (updateState === 'available') {
         ipcRenderer.send(IPC.DOWNLOAD_UPDATE);
         updateState = 'downloading';
-        btn.className = 'btn-upgrade downloading';
+        btn.className = 'toolbar-btn btn-upgrade downloading';
         btn.title = 'Downloading update...';
         btn.disabled = true;
         badge.textContent = '0%';

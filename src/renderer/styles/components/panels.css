@@ -740,7 +740,7 @@
 .git-commit-toolbar-left {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 
@@ -1253,22 +1253,6 @@
   color: var(--text-primary);
 }
 
-.modal-close {
-  background: transparent;
-  border: none;
-  color: var(--text-tertiary);
-  font-size: 16px;
-  cursor: pointer;
-  padding: var(--space-xs);
-  border-radius: var(--radius-sm);
-  transition: all var(--transition-fast);
-}
-
-.modal-close:hover {
-  color: var(--error);
-  background: var(--error-bg);
-}
-
 .modal-body {
   padding: var(--space-lg);
 }
@@ -1435,14 +1419,14 @@
 /* ==================== GIT CHANGES BADGE ==================== */
 .git-changes-badge {
   position: absolute;
-  top: -4px;
-  right: -4px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
+  top: -3px;
+  right: -3px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
   background: var(--error);
   color: var(--white);
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 700;
   border-radius: 8px;
   display: flex;
@@ -1806,13 +1790,19 @@
 }
 
 .git-changes-count {
-  margin-left: auto;
-  background: var(--bg-hover);
-  color: var(--text-tertiary);
-  padding: 1px 6px;
+  margin-left: 4px;
+  background: var(--error);
+  color: var(--white);
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
   border-radius: 8px;
-  font-size: 10px;
-  font-weight: 500;
+  font-size: 8px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .git-change-item {
@@ -1948,36 +1938,49 @@
 
 .git-section-action-btn {
   background: transparent;
-  border: none;
-  color: var(--text-tertiary);
-  width: 20px;
-  height: 20px;
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  width: 22px;
+  height: 22px;
   border-radius: var(--radius-sm);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1;
   transition: all var(--transition-fast);
   padding: 0;
 }
 
-.git-section-action-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+.git-section-action-btn.stage:hover {
+  background: var(--diff-add-subtle);
+  border-color: var(--success);
+  color: var(--success);
 }
 
 .git-section-action-btn.discard:hover {
+  background: var(--diff-remove-subtle);
+  border-color: var(--error);
   color: var(--error);
 }
 
 .git-section-action-btn.stash:hover {
+  background: var(--info-glow);
+  border-color: var(--info);
   color: var(--info);
 }
 
+.git-section-action-btn.unstage:hover {
+  background: var(--diff-remove-subtle);
+  border-color: var(--error);
+  color: var(--error);
+}
+
 .git-section-action-btn.undo:hover {
+  background: var(--warning-subtle);
+  border-color: var(--warning);
   color: var(--warning);
 }
 

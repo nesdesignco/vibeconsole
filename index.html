@@ -17,9 +17,9 @@
       <div id="projects-header">
         <button id="projects-collapse-toggle" class="collapse-toggle" tabindex="-1" title="Toggle projects list">▾</button>
         <span>Projects</span>
-        <button id="btn-add-project" class="btn" data-size="icon-sm" data-variant="ghost" tabindex="-1" title="Add Project">+</button>
-        <button id="btn-create-project" class="btn" data-size="icon-sm" data-variant="ghost" tabindex="-1" title="Create New Project">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg>
+        <button id="btn-add-project" class="btn project-header-btn" data-variant="ghost" tabindex="-1" title="Add Project">+</button>
+        <button id="btn-create-project" class="btn project-header-btn" data-variant="ghost" tabindex="-1" title="Create New Project">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         </button>
       </div>
       <div id="projects-collapsible">
@@ -47,7 +47,7 @@
       <div class="file-explorer-title">
         <span>Files</span>
         <button id="btn-refresh-tree" class="btn" data-size="icon-sm" data-variant="ghost" tabindex="-1" title="Refresh">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
           </svg>
         </button>
@@ -102,8 +102,8 @@
               <button type="button" class="panel-header-dropdown-item" data-dropdown-item data-value="enabled" aria-selected="false">Enabled</button>
             </div>
           </div>
-          <button id="plugins-refresh-btn" class="btn" data-size="icon" data-variant="ghost" data-tint="accent" tabindex="-1" title="Refresh plugin list">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <button id="plugins-refresh-btn" class="btn" data-size="icon-sm" data-variant="ghost" data-tint="accent" tabindex="-1" title="Refresh plugin list">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
             </svg>
           </button>
@@ -139,7 +139,7 @@
             </div>
           </div>
           <button id="github-refresh-btn" class="btn" data-size="icon-sm" data-variant="ghost" data-tint="accent" tabindex="-1" title="Refresh">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
             </svg>
           </button>
@@ -189,7 +189,6 @@
         </div>
         <div class="git-commit-toolbar">
           <div class="git-commit-toolbar-left">
-            <span id="git-staged-count"></span>
             <button
               id="git-auto-stage-toggle"
               class="btn git-auto-stage-btn"
@@ -206,6 +205,7 @@
                 <path d="M19 7l-7 4-7-4"/>
               </svg>
             </button>
+            <span id="git-staged-count"></span>
           </div>
           <div class="git-commit-toolbar-right">
             <button id="git-fetch-btn" class="btn" data-size="sm" data-variant="ghost" type="button" title="Fetch from remote">
