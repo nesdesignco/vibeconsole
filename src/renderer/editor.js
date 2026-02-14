@@ -19,6 +19,7 @@ let originalContent = '';
 let isModified = false;
 let onFileTreeRefreshCallback = null;
 let openedFromSource = null; // Track where the file was opened from ('fileTree', 'terminal', etc.)
+let pendingLineNav = null; // { line, col } to navigate to after file loads
 
 /**
  * Initialize editor module
@@ -40,9 +41,13 @@ function init(onRefreshFileTree) {
  * Open file in editor
  * @param {string} filePath - Path to the file
  * @param {string} source - Where the file was opened from ('fileTree', 'terminal', etc.)
+ * @param {Object} [options] - Optional settings
+ * @param {number} [options.line] - Line number to navigate to (1-based)
+ * @param {number} [options.col] - Column number to navigate to (1-based)
  */
-function openFile(filePath, source = 'terminal') {
+function openFile(filePath, source = 'terminal', options) {
   openedFromSource = source;
+  pendingLineNav = (options && options.line) ? { line: options.line, col: options.col } : null;
   ipcRenderer.send(IPC.READ_FILE, { filePath, projectPath: state.getProjectPath() });
 }
 
@@ -112,6 +117,43 @@ function checkModified() {
   } else {
     updateStatus('Ready', '');
   }
+}
+
+/**
+ * Navigate textarea to a specific line and column
+ * @param {number} line - 1-based line number
+ * @param {number} [col] - 1-based column number
+ */
+function scrollToLine(line, col) {
+  if (!editorTextarea || !editorTextarea.value) return;
+
+  const text = editorTextarea.value;
+  const lines = text.split('\n');
+  const targetLine = Math.max(1, Math.min(line, lines.length));
+  const targetCol = Math.max(1, col || 1);
+
+  // Calculate character offset to the target line
+  let offset = 0;
+  for (let i = 0; i < targetLine - 1; i++) {
+    offset += lines[i].length + 1; // +1 for newline
+  }
+  // Add column offset (clamped to line length)
+  const lineLength = lines[targetLine - 1] ? lines[targetLine - 1].length : 0;
+  offset += Math.min(targetCol - 1, lineLength);
+
+  // Set cursor position
+  editorTextarea.setSelectionRange(offset, offset);
+
+  // Scroll the line into view — estimate line height from textarea
+  const style = window.getComputedStyle(editorTextarea);
+  const lineHeight = parseFloat(style.lineHeight) || parseFloat(style.fontSize) * 1.2 || 20;
+  const visibleLines = Math.floor(editorTextarea.clientHeight / lineHeight);
+  // Center the target line in the visible area
+  const scrollLine = Math.max(0, targetLine - Math.floor(visibleLines / 2));
+  editorTextarea.scrollTop = scrollLine * lineHeight;
+
+  // Update status bar
+  updateStatus(`Line ${targetLine}, Col ${targetCol}`, '');
 }
 
 /**
@@ -221,8 +263,14 @@ function setupIPC() {
       // Show overlay
       editorOverlay.classList.add('visible');
 
-      // Focus textarea
-      if (editorTextarea) editorTextarea.focus();
+      // Focus textarea and navigate to pending line
+      if (editorTextarea) {
+        editorTextarea.focus();
+        if (pendingLineNav) {
+          scrollToLine(pendingLineNav.line, pendingLineNav.col);
+          pendingLineNav = null;
+        }
+      }
     } else {
       console.error('Error opening file:', result.error);
     }

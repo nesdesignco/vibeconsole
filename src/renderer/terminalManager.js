@@ -9,6 +9,7 @@ const { FitAddon } = require('xterm-addon-fit');
 const { WebLinksAddon } = require('xterm-addon-web-links');
 const { IPC } = require('../shared/ipcChannels');
 const { shellQuote } = require('./shellEscape');
+const { registerFilePathLinks } = require('./filePathLinker');
 
 // Terminal theme (VS Code dark)
 const terminalTheme = {
@@ -55,6 +56,7 @@ class TerminalManager {
     this.maxTerminals = 9;
     this.terminalCounter = 0;
     this.onStateChange = null;
+    this.onFilePathActivate = null; // callback(filePath, line, col) for file path links
     this.currentProjectPath = null; // Current active project (null = global)
     this._setupIPC();
   }
@@ -295,6 +297,13 @@ class TerminalManager {
       ipcRenderer.send(IPC.OPEN_EXTERNAL_URL, uri);
     });
     terminal.loadAddon(webLinksAddon);
+
+    // File path link provider (e.g. src/renderer/editor.js:42 → open in editor)
+    registerFilePathLinks(terminal, (filePath, line, col) => {
+      if (this.onFilePathActivate) {
+        this.onFilePathActivate(filePath, line, col);
+      }
+    });
 
     // Create container element
     const element = document.createElement('div');

@@ -14,7 +14,7 @@ const editor = require('./editor');
 const sidebarResize = require('./sidebarResize');
 const aiToolSelector = require('./aiToolSelector');
 const savedPromptsPanel = require('./savedPromptsPanel');
-const { ipcRenderer } = require('./electronBridge');
+const { ipcRenderer, pathApi } = require('./electronBridge');
 const { IPC } = require('../shared/ipcChannels');
 let _rendererInitialized = false;
 
@@ -99,6 +99,23 @@ function init() {
   fileTreeUI.setOnFileClick((filePath, source) => {
     editor.openFile(filePath, source);
   });
+
+  // Connect terminal file path links to editor
+  const manager = terminal.getTerminal();
+  if (manager) {
+    manager.onFilePathActivate = (filePath, line, col) => {
+      const projectPath = state.getProjectPath();
+      if (!projectPath) return;
+
+      // Resolve path: strip leading ./ then join with project path if relative
+      let resolved = filePath.replace(/^\.\//, '');
+      if (!resolved.startsWith('/')) {
+        resolved = pathApi.join(projectPath, resolved);
+      }
+
+      editor.openFile(resolved, 'terminal', { line, col });
+    };
+  }
 
   // Initialize history panel with terminal resize callback
   try {
