@@ -489,6 +489,10 @@
           <span id="editor-ext" class="file-ext">JS</span>
         </div>
         <div id="editor-actions">
+          <div id="editor-view-toggles" class="editor-view-toggles" style="display: none;">
+            <button id="btn-editor-view-preview" class="btn" data-size="sm" data-variant="ghost" type="button">Preview</button>
+            <button id="btn-editor-view-text" class="btn" data-size="sm" data-variant="ghost" type="button">Edit</button>
+          </div>
           <button id="btn-editor-save" class="btn" data-size="sm" data-variant="primary">Save</button>
           <button
             id="btn-editor-close"
@@ -501,6 +505,9 @@
         </div>
       </div>
       <div id="editor-content">
+        <div id="editor-preview" style="display: none;">
+          <img id="editor-image" alt="File preview" />
+        </div>
         <textarea id="editor-textarea" spellcheck="false"></textarea>
       </div>
       <div id="editor-footer">

@@ -29,6 +29,8 @@ const allowedChannels = new Set([
   'remove-project-from-workspace',
   'read-file',
   'file-content',
+  'read-file-data-url',
+  'file-data-url',
   'write-file',
   'file-saved',
   'terminal-create',

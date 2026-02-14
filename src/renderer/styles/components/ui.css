@@ -229,12 +229,45 @@ body {
   gap: var(--space-sm);
 }
 
+.editor-view-toggles {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.editor-view-toggles .btn {
+  border-radius: 0;
+}
+
+.editor-view-toggles .btn + .btn {
+  border-left: 1px solid var(--border-subtle);
+}
+
 #editor-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   background: var(--bg-primary);
+}
+
+#editor-preview {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  padding: var(--space-xl);
+}
+
+#editor-image {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
 }
 
 #editor-textarea {

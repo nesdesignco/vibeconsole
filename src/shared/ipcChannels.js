@@ -40,6 +40,8 @@ const IPC = {
   // File Editor
   READ_FILE: 'read-file',
   FILE_CONTENT: 'file-content',
+  READ_FILE_DATA_URL: 'read-file-data-url',
+  FILE_DATA_URL: 'file-data-url',
   WRITE_FILE: 'write-file',
   FILE_SAVED: 'file-saved',
 

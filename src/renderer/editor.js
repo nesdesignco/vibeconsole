@@ -13,6 +13,12 @@ let editorFilename = null;
 let editorExt = null;
 let editorPath = null;
 let editorStatus = null;
+let editorPreview = null;
+let editorImage = null;
+let editorViewToggles = null;
+let btnViewPreview = null;
+let btnViewText = null;
+let btnSave = null;
 
 let currentEditingFile = null;
 let originalContent = '';
@@ -20,6 +26,8 @@ let isModified = false;
 let onFileTreeRefreshCallback = null;
 let openedFromSource = null; // Track where the file was opened from ('fileTree', 'terminal', etc.)
 let pendingLineNav = null; // { line, col } to navigate to after file loads
+let pendingOpenFilePath = null;
+let currentMode = 'text'; // 'text' | 'image'
 
 /**
  * Initialize editor module
@@ -31,10 +39,57 @@ function init(onRefreshFileTree) {
   editorExt = document.getElementById('editor-ext');
   editorPath = document.getElementById('editor-path');
   editorStatus = document.getElementById('editor-status');
+  editorPreview = document.getElementById('editor-preview');
+  editorImage = document.getElementById('editor-image');
+  editorViewToggles = document.getElementById('editor-view-toggles');
+  btnViewPreview = document.getElementById('btn-editor-view-preview');
+  btnViewText = document.getElementById('btn-editor-view-text');
+  btnSave = document.getElementById('btn-editor-save');
   onFileTreeRefreshCallback = onRefreshFileTree;
 
   setupEventHandlers();
   setupIPC();
+}
+
+function getExtensionFromPath(filePath) {
+  const base = ((filePath || '').replace(/\\/g, '/')).split('/').pop() || '';
+  const idx = base.lastIndexOf('.');
+  if (idx === -1) return '';
+  return base.slice(idx + 1).toLowerCase();
+}
+
+function isImageExt(extension) {
+  return new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico', 'svg']).has((extension || '').toLowerCase());
+}
+
+function setViewTogglesVisible(visible) {
+  if (!editorViewToggles) return;
+  editorViewToggles.style.display = visible ? 'flex' : 'none';
+}
+
+function setActiveToggle(mode) {
+  if (!btnViewPreview || !btnViewText) return;
+  const activeBg = 'var(--bg-secondary)';
+  const inactiveBg = 'transparent';
+  if (mode === 'image') {
+    btnViewPreview.style.background = activeBg;
+    btnViewText.style.background = inactiveBg;
+  } else {
+    btnViewPreview.style.background = inactiveBg;
+    btnViewText.style.background = activeBg;
+  }
+}
+
+function setMode(mode) {
+  currentMode = mode;
+  if (editorTextarea) editorTextarea.style.display = (mode === 'text') ? 'block' : 'none';
+  if (editorPreview) editorPreview.style.display = (mode === 'image') ? 'flex' : 'none';
+  if (btnSave) {
+    const enableSave = (mode === 'text');
+    btnSave.disabled = !enableSave;
+    btnSave.style.display = enableSave ? '' : 'none';
+  }
+  setActiveToggle(mode);
 }
 
 /**
@@ -48,7 +103,29 @@ function init(onRefreshFileTree) {
 function openFile(filePath, source = 'terminal', options) {
   openedFromSource = source;
   pendingLineNav = (options && options.line) ? { line: options.line, col: options.col } : null;
-  ipcRenderer.send(IPC.READ_FILE, { filePath, projectPath: state.getProjectPath() });
+  pendingOpenFilePath = filePath;
+
+  const extension = getExtensionFromPath(filePath);
+  const projectPath = state.getProjectPath();
+
+  if (extension === 'svg') {
+    setViewTogglesVisible(true);
+    setMode('image'); // default to preview
+    ipcRenderer.send(IPC.READ_FILE, { filePath, projectPath });
+    ipcRenderer.send(IPC.READ_FILE_DATA_URL, { filePath, projectPath });
+    return;
+  }
+
+  if (isImageExt(extension)) {
+    setViewTogglesVisible(false);
+    setMode('image');
+    ipcRenderer.send(IPC.READ_FILE_DATA_URL, { filePath, projectPath });
+    return;
+  }
+
+  setViewTogglesVisible(false);
+  setMode('text');
+  ipcRenderer.send(IPC.READ_FILE, { filePath, projectPath });
 }
 
 /**
@@ -74,6 +151,11 @@ function closeEditor() {
   originalContent = '';
   isModified = false;
   openedFromSource = null;
+  pendingOpenFilePath = null;
+  pendingLineNav = null;
+  setViewTogglesVisible(false);
+  setMode('text');
+  if (editorImage) editorImage.src = '';
 }
 
 /**
@@ -81,6 +163,7 @@ function closeEditor() {
  */
 function saveFile() {
   if (!currentEditingFile) return;
+  if (currentMode !== 'text') return;
 
   const content = editorTextarea.value;
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -167,9 +250,21 @@ function setupEventHandlers() {
   }
 
   // Save button
-  const saveBtn = document.getElementById('btn-editor-save');
-  if (saveBtn) {
-    saveBtn.addEventListener('click', saveFile);
+  if (btnSave) {
+    btnSave.addEventListener('click', saveFile);
+  }
+
+  // View toggles (SVG)
+  if (btnViewPreview) {
+    btnViewPreview.addEventListener('click', () => {
+      setMode('image');
+    });
+  }
+  if (btnViewText) {
+    btnViewText.addEventListener('click', () => {
+      setMode('text');
+      if (editorTextarea) editorTextarea.focus();
+    });
   }
 
   // Track modifications
@@ -248,6 +343,7 @@ function setupEventHandlers() {
 function setupIPC() {
   // Receive file content
   ipcRenderer.on(IPC.FILE_CONTENT, (event, result) => {
+    if (!result || !result.filePath || (pendingOpenFilePath && result.filePath !== pendingOpenFilePath)) return;
     if (result.success) {
       currentEditingFile = result.filePath;
       originalContent = result.content;
@@ -265,7 +361,7 @@ function setupIPC() {
 
       // Focus textarea and navigate to pending line
       if (editorTextarea) {
-        editorTextarea.focus();
+        if (currentMode === 'text') editorTextarea.focus();
         if (pendingLineNav) {
           scrollToLine(pendingLineNav.line, pendingLineNav.col);
           pendingLineNav = null;
@@ -273,6 +369,24 @@ function setupIPC() {
       }
     } else {
       console.error('Error opening file:', result.error);
+    }
+  });
+
+  ipcRenderer.on(IPC.FILE_DATA_URL, (event, result) => {
+    if (!result || !result.filePath || (pendingOpenFilePath && result.filePath !== pendingOpenFilePath)) return;
+    if (result.success) {
+      currentEditingFile = result.filePath;
+
+      if (editorFilename) editorFilename.textContent = result.fileName;
+      if (editorExt) editorExt.textContent = result.extension.toUpperCase() || 'FILE';
+      if (editorPath) editorPath.textContent = result.filePath;
+
+      if (editorImage) editorImage.src = result.dataUrl;
+      updateStatus(`Preview (${result.mime || 'image'}, ${result.sizeBytes || 0} bytes)`, '');
+
+      editorOverlay.classList.add('visible');
+    } else {
+      console.error('Error opening file preview:', result.error);
     }
   });
 

@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "description": "Claude Code IDE - Module structure and IPC communication map",
-  "lastUpdated": "2026-02-13",
+  "lastUpdated": "2026-02-14",
   "architecture": {
     "type": "electron",
     "mainProcess": "src/main/index.js",
@@ -1010,30 +1010,60 @@
       ],
       "functions": {
         "init": {
-          "line": 26,
+          "line": 35,
           "params": [
             "onRefreshFileTree"
           ],
           "purpose": "Initialize editor module"
         },
+        "getExtensionFromPath": {
+          "line": 54,
+          "params": [
+            "filePath"
+          ]
+        },
+        "isImageExt": {
+          "line": 61,
+          "params": [
+            "extension"
+          ]
+        },
+        "setViewTogglesVisible": {
+          "line": 65,
+          "params": [
+            "visible"
+          ]
+        },
+        "setActiveToggle": {
+          "line": 70,
+          "params": [
+            "mode"
+          ]
+        },
+        "setMode": {
+          "line": 83,
+          "params": [
+            "mode"
+          ]
+        },
         "openFile": {
-          "line": 44,
+          "line": 103,
           "params": [
             "filePath",
-            "source = 'terminal'"
-          ],
-          "purpose": "Open file in editor"
+            "source = 'terminal'",
+            "options"
+          ]
         },
         "closeEditor": {
-          "line": 52,
+          "line": 134,
           "purpose": "Close editor"
         },
         "saveFile": {
-          "line": 77,
+          "line": 164,
           "purpose": "Save file"
         },
         "updateStatus": {
-          "line": 96,
+          "line": 184,
           "params": [
             "status",
             "className = ''"
@@ -1041,32 +1071,44 @@
           "purpose": "Update editor status"
         },
         "checkModified": {
-          "line": 106,
+          "line": 194,
           "purpose": "Check if content is modified"
         },
+        "scrollToLine": {
+          "line": 210,
+          "params": [
+            "line",
+            "col"
+          ],
+          "purpose": "Navigate textarea to a specific line and column"
+        },
         "setupEventHandlers": {
-          "line": 120,
+          "line": 245,
           "purpose": "Setup event handlers"
         },
         "setupIPC": {
-          "line": 206,
+          "line": 343,
           "purpose": "Setup IPC listeners"
         },
         "isEditorOpen": {
-          "line": 258,
+          "line": 420,
           "purpose": "Check if editor is open"
         },
         "getCurrentFile": {
-          "line": 265,
+          "line": 427,
           "purpose": "Get currently editing file path"
         }
       },
       "ipc": {
         "listens": [
           "FILE_CONTENT",
+          "FILE_DATA_URL",
           "FILE_SAVED"
         ],
         "emits": [
+          "READ_FILE",
+          "READ_FILE_DATA_URL",
+          "READ_FILE_DATA_URL",
           "READ_FILE",
           "WRITE_FILE"
         ]
@@ -1299,6 +1341,7 @@
       "exports": [
         "init",
         "readFile",
+        "readFileAsDataUrl",
         "writeFile",
         "setupIPC"
       ],
@@ -1309,22 +1352,34 @@
         "shared/pathValidation"
       ],
       "functions": {
+        "getMimeTypeForExtension": {
+          "line": 13,
+          "params": [
+            "extension"
+          ]
+        },
         "init": {
-          "line": 16,
+          "line": 30,
           "params": [
             "_window"
           ],
           "purpose": "Initialize file editor module"
         },
         "readFile": {
-          "line": 23,
+          "line": 37,
           "params": [
             "filePath"
           ],
           "purpose": "Read file contents"
         },
+        "readFileAsDataUrl": {
+          "line": 55,
+          "params": [
+            "filePath"
+          ]
+        },
         "writeFile": {
-          "line": 44,
+          "line": 89,
           "params": [
             "filePath",
             "content"
@@ -1332,14 +1387,14 @@
           "purpose": "Write file contents"
         },
         "getFileExtension": {
-          "line": 63,
+          "line": 108,
           "params": [
             "filePath"
           ],
           "purpose": "Get file extension"
         },
         "safeSend": {
-          "line": 67,
+          "line": 112,
           "params": [
             "sender",
             "channel",
@@ -1347,7 +1402,7 @@
           ]
         },
         "setupIPC": {
-          "line": 74,
+          "line": 119,
           "params": [
             "ipcMain"
           ],
@@ -1357,6 +1412,7 @@
       "ipc": {
         "listens": [
           "READ_FILE",
+          "READ_FILE_DATA_URL",
           "WRITE_FILE"
         ],
         "emits": []
@@ -2565,7 +2621,7 @@
           "purpose": "Switch to a branch"
         },
         "createBranch": {
-          "line": 143,
+          "line": 155,
           "params": [
             "projectPath",
             "branchName",
@@ -2575,7 +2631,7 @@
           "purpose": "Create a new branch"
         },
         "deleteBranch": {
-          "line": 177,
+          "line": 189,
           "params": [
             "projectPath",
             "branchName",
@@ -2584,14 +2640,14 @@
           "purpose": "Delete a branch"
         },
         "loadWorktrees": {
-          "line": 197,
+          "line": 209,
           "params": [
             "projectPath"
           ],
           "purpose": "Load worktrees"
         },
         "addWorktree": {
-          "line": 239,
+          "line": 251,
           "params": [
             "projectPath",
             "worktreePath",
@@ -2601,7 +2657,7 @@
           "purpose": "Add a worktree"
         },
         "removeWorktree": {
-          "line": 270,
+          "line": 282,
           "params": [
             "projectPath",
             "worktreePath",
@@ -2610,7 +2666,7 @@
           "purpose": "Remove a worktree"
         },
         "setupIPC": {
-          "line": 289,
+          "line": 301,
           "params": [
             "ipcMain"
           ],
@@ -3779,7 +3835,7 @@
       ],
       "functions": {
         "isAllowedChannel": {
-          "line": 104,
+          "line": 109,
           "params": [
             "channel"
           ]

@@ -10,6 +10,20 @@ const { IPC } = require('../shared/ipcChannels');
 const { isPathWithinProject } = require('../shared/pathValidation');
 const MAX_EDITOR_FILE_BYTES = 10 * 1024 * 1024; // 10MB
 
+function getMimeTypeForExtension(extension) {
+  switch ((extension || '').toLowerCase()) {
+    case 'png': return 'image/png';
+    case 'jpg':
+    case 'jpeg': return 'image/jpeg';
+    case 'gif': return 'image/gif';
+    case 'webp': return 'image/webp';
+    case 'bmp': return 'image/bmp';
+    case 'ico': return 'image/x-icon';
+    case 'svg': return 'image/svg+xml';
+    default: return null;
+  }
+}
+
 /**
  * Initialize file editor module
  */
@@ -33,6 +47,37 @@ async function readFile(filePath) {
 
     const content = await fsp.readFile(filePath, 'utf8');
     return { success: true, content, filePath };
+  } catch (err) {
+    return { success: false, error: err.message, filePath };
+  }
+}
+
+async function readFileAsDataUrl(filePath) {
+  try {
+    const stats = await fsp.stat(filePath);
+    if (stats.size > MAX_EDITOR_FILE_BYTES) {
+      return {
+        success: false,
+        error: `File too large to open (max ${Math.floor(MAX_EDITOR_FILE_BYTES / (1024 * 1024))}MB)`,
+        filePath
+      };
+    }
+
+    const extension = getFileExtension(filePath);
+    const mime = getMimeTypeForExtension(extension);
+    if (!mime) {
+      return { success: false, error: 'Unsupported preview type', filePath };
+    }
+
+    const buffer = await fsp.readFile(filePath);
+    const dataUrl = `data:${mime};base64,${buffer.toString('base64')}`;
+    return {
+      success: true,
+      dataUrl,
+      mime,
+      sizeBytes: buffer.length,
+      filePath
+    };
   } catch (err) {
     return { success: false, error: err.message, filePath };
   }
@@ -83,6 +128,17 @@ function setupIPC(ipcMain) {
     safeSend(event.sender, IPC.FILE_CONTENT, result);
   });
 
+  ipcMain.on(IPC.READ_FILE_DATA_URL, async (event, { filePath, projectPath }) => {
+    if (!projectPath || !isPathWithinProject(filePath, projectPath)) {
+      safeSend(event.sender, IPC.FILE_DATA_URL, { success: false, error: 'Path is outside project directory', filePath });
+      return;
+    }
+    const result = await readFileAsDataUrl(filePath);
+    result.extension = getFileExtension(filePath);
+    result.fileName = path.basename(filePath);
+    safeSend(event.sender, IPC.FILE_DATA_URL, result);
+  });
+
   ipcMain.on(IPC.WRITE_FILE, async (event, { filePath, content, projectPath }) => {
     if (!projectPath || !isPathWithinProject(filePath, projectPath)) {
       safeSend(event.sender, IPC.FILE_SAVED, { success: false, error: 'Path is outside project directory', filePath });
@@ -100,6 +156,7 @@ function setupIPC(ipcMain) {
 module.exports = {
   init,
   readFile,
+  readFileAsDataUrl,
   writeFile,
   setupIPC
 };

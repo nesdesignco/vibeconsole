@@ -114,6 +114,14 @@ async function switchBranch(projectPath, branchName) {
   }
 
   try {
+    const status = await isWorkingTreeClean(projectPath);
+    if (status && status.error) {
+      return { error: status.error };
+    }
+    if (status && status.clean === false && Array.isArray(status.changes) && status.changes.length > 0) {
+      return { error: 'uncommitted_changes', changes: status.changes };
+    }
+
     // Handle remote branches - create local tracking branch
     let targetBranch = branchName;
     if (branchName.startsWith('origin/')) {
