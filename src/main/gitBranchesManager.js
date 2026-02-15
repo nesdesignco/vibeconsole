@@ -3,8 +3,8 @@
  * Handles git branch and worktree operations
  */
 
-const { execFile } = require('child_process');
 const { IPC } = require('../shared/ipcChannels');
+const { execFileGit } = require('./gitExecUtils');
 
 let mainWindow = null;
 
@@ -28,21 +28,6 @@ function isValidBranchName(name) {
  */
 function init(window) {
   mainWindow = window;
-}
-
-/**
- * Execute git command safely using execFile (prevents argument injection)
- */
-function execFileGit(args, projectPath) {
-  return new Promise((resolve, reject) => {
-    execFile('git', args, { cwd: projectPath, timeout: 10000 }, (error, stdout, stderr) => {
-      if (error) {
-        reject({ error: error.message, stderr });
-      } else {
-        resolve({ stdout: stdout.trim(), stderr: stderr.trim() });
-      }
-    });
-  });
 }
 
 /**

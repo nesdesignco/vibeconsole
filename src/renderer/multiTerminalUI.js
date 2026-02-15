@@ -15,6 +15,7 @@ class MultiTerminalUI {
     this.contentContainer = null;
     this.initialized = false;
     this.autoCreateInitialTerminal = true; // Flag to control initial terminal creation
+    this._creatingTerminal = false; // Guard against concurrent terminal creation
     this._renderScheduled = false; // Debounce flag for render
     this._pendingState = null; // Pending state for debounced render
     this._mountedTerminalId = null; // Track currently mounted terminal to avoid unnecessary re-mounts
@@ -80,18 +81,29 @@ class MultiTerminalUI {
    * @param {string|null} [options.aiTool] - AI tool id associated with this terminal
    */
   async createTerminalForCurrentProject(options = {}) {
-    const projectPath = this.manager.getCurrentProject();
-    const terminalId = await this.manager.createTerminal({
-      ...options,
-      projectPath
-    });
-
-    if (terminalId) {
-      this.manager.setViewMode('tabs');
-      this.manager.setActiveTerminal(terminalId);
+    if (this._creatingTerminal) {
+      return null;
     }
+    this._creatingTerminal = true;
+    try {
+      const projectPath = this.manager.getCurrentProject();
+      const terminalId = await this.manager.createTerminal({
+        ...options,
+        projectPath
+      });
 
-    return terminalId;
+      if (terminalId) {
+        this.manager.setViewMode('tabs');
+        this.manager.setActiveTerminal(terminalId);
+      }
+
+      return terminalId;
+    } catch (err) {
+      console.error('Failed to create terminal:', err);
+      return null;
+    } finally {
+      this._creatingTerminal = false;
+    }
   }
 
   /**
@@ -227,7 +239,9 @@ class MultiTerminalUI {
       // Ctrl/Cmd+Shift+T - New terminal for current project
       if (modKey && e.shiftKey && key === 't') {
         e.preventDefault();
-        this.createTerminalForCurrentProject();
+        this.createTerminalForCurrentProject().catch(err => {
+          console.error('Terminal creation failed:', err);
+        });
       }
 
       // Ctrl/Cmd+Shift+W - Close current terminal

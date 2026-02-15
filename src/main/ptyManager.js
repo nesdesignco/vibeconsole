@@ -6,6 +6,7 @@
 const pty = require('node-pty');
 const { IPC } = require('../shared/ipcChannels');
 const promptLogger = require('./promptLogger');
+const { buildAugmentedPath } = require('../shared/pathUtils');
 
 // Store multiple PTY instances
 const ptyInstances = new Map(); // Map<terminalId, {pty, cwd, projectPath}>
@@ -20,6 +21,13 @@ let cachedShells = null;
 function init(window) {
   mainWindow = window;
   cachedShells = null;
+
+  // Pre-warm shell cache so first terminal creation doesn't block on execSync
+  try {
+    getAvailableShells();
+  } catch (err) {
+    console.warn('Failed to pre-warm shell cache:', err.message);
+  }
 }
 
 /**
@@ -162,11 +170,6 @@ function createTerminal(workingDir = null, projectPath = null, shellPath = null)
     }
   }
 
-  // Augment PATH for Finder-launched apps (macOS doesn't inherit shell PATH)
-  const augmentedPath = process.env.PATH || '';
-  const extraPaths = ['/usr/local/bin', '/opt/homebrew/bin', '/usr/local/sbin'];
-  const fullPath = [...new Set([...augmentedPath.split(':'), ...extraPaths])].join(':');
-
   let ptyProcess;
   try {
     ptyProcess = pty.spawn(shell, shellArgs, {
@@ -176,7 +179,7 @@ function createTerminal(workingDir = null, projectPath = null, shellPath = null)
       cwd: cwd,
       env: {
         ...process.env,
-        PATH: fullPath,
+        PATH: buildAugmentedPath(),
         TERM: 'xterm-256color',
         COLORTERM: 'truecolor'
       }
@@ -313,7 +316,7 @@ function setupIPC(ipcMain) {
   });
 
   // Create new terminal
-  ipcMain.handle(IPC.TERMINAL_CREATE, (event, data) => {
+  ipcMain.handle(IPC.TERMINAL_CREATE, async (event, data) => {
     try {
       // Support both old format (string) and new format (object)
       let workingDir = null;
@@ -329,6 +332,10 @@ function setupIPC(ipcMain) {
         projectPath = data.projectPath;
         shellPath = data.shell;
       }
+
+      // Yield to event loop before spawning so back-to-back requests
+      // don't starve other IPC handlers
+      await new Promise(resolve => setImmediate(resolve));
 
       const terminalId = createTerminal(workingDir, projectPath, shellPath);
       return { terminalId, success: true };

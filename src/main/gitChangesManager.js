@@ -3,13 +3,28 @@
  * Handles git status, diff, stage, and unstage operations
  */
 
-const { execFile, spawn } = require('child_process');
 const fs = require('fs');
-const os = require('os');
 const path = require('path');
 const { shell } = require('electron');
 const { IPC } = require('../shared/ipcChannels');
 const { isRelativePathWithinProject } = require('../shared/pathValidation');
+
+// Shared utilities
+const {
+  execFileGit,
+  formatGitError,
+  execGitWithStdin,
+  execFileCmd,
+  parseStatusLine,
+  isUnmergedStatus,
+  parseCommitList,
+  extractHunkPatches,
+  formatLocalDate
+} = require('./gitExecUtils');
+
+// Domain operations
+const gitStashOps = require('./gitStashOps');
+const gitCommitOps = require('./gitCommitOps');
 
 const ACTIVITY_LOOKBACK_DAYS = 365;
 const ACTIVITY_CACHE_TTL_MS = 30000;
@@ -20,291 +35,13 @@ const repoStatusCache = new Map();
 const repoStatusInFlight = new Map();
 const aheadBehindCache = new Map();
 const aheadBehindInFlight = new Map();
-const commandPathCache = new Map();
-
-function buildAugmentedPath() {
-  const delimiter = path.delimiter || ':';
-  const currentPath = process.env.PATH || '';
-  const homeDir = (typeof os.homedir === 'function' ? os.homedir() : '') || process.env.HOME || process.env.USERPROFILE || '';
-
-  // Finder-launched apps on macOS won't inherit shell PATH. Include common
-  // package manager bins (brew, npm, etc.) and user-local bins.
-  const extraPaths = [
-    '/usr/local/bin',
-    '/opt/homebrew/bin',
-    '/usr/local/sbin',
-    homeDir ? path.join(homeDir, 'bin') : null,
-    homeDir ? path.join(homeDir, '.local/bin') : null,
-    homeDir ? path.join(homeDir, '.npm-global/bin') : null,
-    homeDir ? path.join(homeDir, '.yarn/bin') : null,
-    homeDir ? path.join(homeDir, '.bun/bin') : null,
-    homeDir ? path.join(homeDir, '.cargo/bin') : null,
-    homeDir ? path.join(homeDir, '.asdf/bin') : null,
-    homeDir ? path.join(homeDir, '.asdf/shims') : null,
-    homeDir ? path.join(homeDir, '.pyenv/bin') : null,
-    homeDir ? path.join(homeDir, '.pyenv/shims') : null
-  ].filter(Boolean);
-
-  const parts = [...currentPath.split(delimiter), ...extraPaths]
-    .map((p) => String(p || '').trim())
-    .filter(Boolean);
-
-  return [...new Set(parts)].join(delimiter);
-}
-
-function buildExecEnv() {
-  return {
-    ...process.env,
-    PATH: buildAugmentedPath()
-  };
-}
-
-function isExecutableFile(filePath) {
-  try {
-    fs.accessSync(filePath, fs.constants.X_OK);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function resolveCommandPath(cmd, envPath) {
-  const command = String(cmd || '').trim();
-  if (!command) return null;
-  if (path.isAbsolute(command) || command.includes(path.sep)) return command;
-  const cacheKey = `${command}::${envPath || ''}`;
-  if (commandPathCache.has(cacheKey)) return commandPathCache.get(cacheKey);
-
-  const delimiter = path.delimiter || ':';
-  const pathEntries = String(envPath || '').split(delimiter).filter(Boolean);
-  const isWin = process.platform === 'win32';
-  const extCandidates = isWin
-    ? (process.env.PATHEXT || '.COM;.EXE;.BAT;.CMD')
-      .split(';')
-      .map(ext => ext.toLowerCase())
-    : [''];
-  const commandLower = command.toLowerCase();
-
-  for (const entry of pathEntries) {
-    if (!entry) continue;
-    if (isWin) {
-      const hasExt = extCandidates.some(ext => ext && commandLower.endsWith(ext));
-      const candidates = hasExt
-        ? [path.join(entry, command)]
-        : extCandidates.map(ext => path.join(entry, `${command}${ext}`));
-      for (const candidate of candidates) {
-        if (isExecutableFile(candidate)) {
-          commandPathCache.set(cacheKey, candidate);
-          return candidate;
-        }
-      }
-      continue;
-    }
-
-    const candidate = path.join(entry, command);
-    if (isExecutableFile(candidate)) {
-      commandPathCache.set(cacheKey, candidate);
-      return candidate;
-    }
-  }
-
-  commandPathCache.set(cacheKey, null);
-  return null;
-}
-
-/**
- * Validate stash ref format (e.g. stash@{0})
- */
-function isValidStashRef(ref) {
-  return /^stash@\{\d+\}$/.test(ref);
-}
 
 /**
  * Initialize manager
  */
 function init(_window) {
   // Window reference reserved for future use
-}
-
-/**
- * Execute git command safely using execFile (prevents argument injection)
- */
-function execFileGit(args, projectPath, maxBuffer = 1024 * 1024, timeout = 10000) {
-  return new Promise((resolve, reject) => {
-    const env = buildExecEnv();
-    const gitCmd = resolveCommandPath('git', env.PATH) || 'git';
-    execFile(gitCmd, args, { cwd: projectPath, timeout, maxBuffer, env }, (error, stdout, stderr) => {
-      if (error) {
-        reject({ error: error.message, stderr });
-      } else {
-        // Keep leading whitespace intact; some porcelain outputs rely on it.
-        const safeStdout = (stdout || '').replace(/\s+$/, '');
-        const safeStderr = (stderr || '').replace(/\s+$/, '');
-        resolve({ stdout: safeStdout, stderr: safeStderr });
-      }
-    });
-  });
-}
-
-function formatGitError(err, fallback) {
-  const rawStderr = String(err && err.stderr ? err.stderr : '').trim();
-  const rawError = String(err && err.error ? err.error : (err && err.message ? err.message : '')).trim();
-  const raw = rawStderr || rawError;
-  if (!raw) return fallback;
-
-  const lines = raw.split('\n').map(l => String(l || '').trim()).filter(Boolean);
-  const preferred = lines.find(l => /^fatal: /i.test(l) || /^error: /i.test(l) || /^CONFLICT/i.test(l)) || lines[0];
-  const cleaned = preferred
-    .replace(/^fatal:\s*/i, '')
-    .replace(/^error:\s*/i, '')
-    .replace(/^hint:\s*/i, '')
-    .trim();
-
-  // Keep toasts readable; detailed instructions usually follow on later lines.
-  if (cleaned.length > 200) return `${cleaned.slice(0, 197)}...`;
-  return cleaned || fallback;
-}
-
-/**
- * Execute git with stdin payload (used for hunk-level patch operations).
- */
-function execGitWithStdin(args, input, projectPath, timeout = 10000) {
-  return new Promise((resolve, reject) => {
-    const env = buildExecEnv();
-    const gitCmd = resolveCommandPath('git', env.PATH) || 'git';
-    const child = spawn(gitCmd, args, { cwd: projectPath, stdio: ['pipe', 'pipe', 'pipe'], env });
-    let stdout = '';
-    let stderr = '';
-    let finished = false;
-    const timer = setTimeout(() => {
-      if (!finished) child.kill('SIGTERM');
-    }, timeout);
-
-    child.stdout.on('data', (chunk) => { stdout += chunk.toString(); });
-    child.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
-    child.on('error', (err) => {
-      clearTimeout(timer);
-      reject({ error: err.message, stderr });
-    });
-    child.on('close', (code) => {
-      clearTimeout(timer);
-      finished = true;
-      if (code === 0) {
-        resolve({
-          stdout: (stdout || '').replace(/\s+$/, ''),
-          stderr: (stderr || '').replace(/\s+$/, '')
-        });
-      } else {
-        reject({ error: `git exited with code ${code}`, stderr: stderr.trim() || stdout.trim() });
-      }
-    });
-
-    child.stdin.write(input || '');
-    child.stdin.end();
-  });
-}
-
-/**
- * Execute a non-git command safely using execFile
- */
-function execFileCmd(cmd, args, projectPath, maxBuffer = 1024 * 1024, timeout = 10000) {
-  return new Promise((resolve, reject) => {
-    const env = buildExecEnv();
-    const resolvedCmd = resolveCommandPath(cmd, env.PATH);
-    if (!resolvedCmd) {
-      reject({ error: `Command not found: ${cmd}`, stderr: '' });
-      return;
-    }
-    execFile(resolvedCmd, args, { cwd: projectPath, timeout, maxBuffer, env }, (error, stdout, stderr) => {
-      if (error) {
-        reject({ error: error.message, stderr });
-      } else {
-        resolve({
-          stdout: (stdout || '').replace(/\s+$/, ''),
-          stderr: (stderr || '').replace(/\s+$/, '')
-        });
-      }
-    });
-  });
-}
-
-/**
- * Parse git status --porcelain output
- * Format: XY PATH or XY OLDPATH -> PATH (for renames)
- * X = staged status, Y = unstaged status
- */
-function parseStatusLine(line) {
-  if (!line || line.length < 4) return null;
-
-  const x = line[0]; // staged status
-  const y = line[1]; // unstaged status
-  const rest = line.substring(3);
-
-  // Handle renames: "R  old -> new"
-  let filePath = rest;
-  let oldPath = null;
-  const arrowIdx = rest.indexOf(' -> ');
-  if (arrowIdx !== -1) {
-    oldPath = rest.substring(0, arrowIdx);
-    filePath = rest.substring(arrowIdx + 4);
-  }
-
-  return { x, y, path: filePath, oldPath };
-}
-
-/**
- * True for unmerged/conflict states from git status XY codes.
- * See git status short format: DD, AU, UD, UA, DU, AA, UU.
- */
-function isUnmergedStatus(x, y) {
-  const pair = `${x}${y}`;
-  return ['DD', 'AU', 'UD', 'UA', 'DU', 'AA', 'UU'].includes(pair);
-}
-
-/**
- * Parse commit list from a null-delimited git log format.
- */
-function parseCommitList(stdout) {
-  const commits = [];
-  if (!stdout) return commits;
-  stdout.split('\n').filter(Boolean).forEach(line => {
-    const parts = line.split('\0');
-    if (parts.length >= 5) {
-      commits.push({
-        hash: parts[0],
-        shortHash: parts[1],
-        message: parts[2],
-        author: parts[3],
-        relativeTime: parts[4]
-      });
-    }
-  });
-  return commits;
-}
-
-/**
- * Load recent commits from HEAD (used when no upstream/tracking branch is configured).
- */
-async function loadLocalCommits(projectPath, maxCount = 20) {
-  try {
-    const count = Math.max(1, Math.min(Number(maxCount) || 20, 50));
-    const { stdout } = await execFileGit(
-      ['log', `--max-count=${count}`, '--pretty=format:%H%x00%h%x00%s%x00%an%x00%ar'],
-      projectPath,
-      2 * 1024 * 1024,
-      15000
-    );
-    return parseCommitList(stdout);
-  } catch {
-    return [];
-  }
-}
-
-function formatLocalDate(date) {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  return `${y}-${m}-${d}`;
+  gitCommitOps.init({ invalidateActivityCache });
 }
 
 function getActivityCacheKey(projectPath, days) {
@@ -347,6 +84,24 @@ function invalidateRepoCaches(projectPath, options = {}) {
   if (status) invalidateRepoStatusCache(projectPath);
   if (aheadBehind) invalidateAheadBehindCache(projectPath);
   if (activity) invalidateActivityCache(projectPath);
+}
+
+/**
+ * Load recent commits from HEAD (used when no upstream/tracking branch is configured).
+ */
+async function loadLocalCommits(projectPath, maxCount = 20) {
+  try {
+    const count = Math.max(1, Math.min(Number(maxCount) || 20, 50));
+    const { stdout } = await execFileGit(
+      ['log', `--max-count=${count}`, '--pretty=format:%H%x00%h%x00%s%x00%an%x00%ar'],
+      projectPath,
+      2 * 1024 * 1024,
+      15000
+    );
+    return parseCommitList(stdout);
+  } catch {
+    return [];
+  }
 }
 
 /**
@@ -530,57 +285,6 @@ async function gitPull(projectPath, branch, noUpstream) {
   } catch (err) {
     return { error: formatGitError(err, 'Pull failed') };
   }
-}
-
-/**
- * Parse hunk header line for labels.
- */
-function parseHunkHeaderLine(line) {
-  const match = line.match(/@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/);
-  if (!match) return null;
-  return {
-    oldStart: parseInt(match[1], 10),
-    oldCount: parseInt(match[2] || '1', 10),
-    newStart: parseInt(match[3], 10),
-    newCount: parseInt(match[4] || '1', 10)
-  };
-}
-
-/**
- * Extract standalone hunk patches from a unified diff.
- */
-function extractHunkPatches(diffText) {
-  const lines = String(diffText || '').split('\n');
-  const prefix = [];
-  let i = 0;
-  while (i < lines.length && !lines[i].startsWith('@@')) {
-    if (lines[i] !== '') prefix.push(lines[i]);
-    i++;
-  }
-
-  const hunks = [];
-  while (i < lines.length) {
-    if (!lines[i].startsWith('@@')) {
-      i++;
-      continue;
-    }
-
-    const header = lines[i];
-    const body = [header];
-    i++;
-    while (i < lines.length && !lines[i].startsWith('@@')) {
-      if (lines[i] !== '') body.push(lines[i]);
-      i++;
-    }
-
-    hunks.push({
-      header,
-      meta: parseHunkHeaderLine(header),
-      patch: `${[...prefix, ...body].join('\n')}\n`
-    });
-  }
-
-  return hunks;
 }
 
 /**
@@ -1053,142 +757,6 @@ async function unstageAll(projectPath) {
 }
 
 /**
- * Undo last commit (soft reset, keeps changes staged)
- */
-async function undoLastCommit(projectPath) {
-  if (!projectPath) {
-    return { error: 'Missing parameters' };
-  }
-
-  try {
-    // Check that HEAD~1 exists (not initial commit)
-    await execFileGit(['rev-parse', 'HEAD~1'], projectPath);
-    await execFileGit(['reset', '--soft', 'HEAD~1'], projectPath);
-    invalidateActivityCache(projectPath);
-    return { error: null };
-  } catch (err) {
-    if (err.stderr && err.stderr.includes('unknown revision')) {
-      // Initial commit: delete the current branch ref to return to an unborn branch,
-      // leaving index intact (files remain staged).
-      try {
-        const { stdout: branch } = await execFileGit(['branch', '--show-current'], projectPath);
-        const name = String(branch || '').trim();
-        if (!name) return { error: 'Cannot undo: detached HEAD' };
-        // Basic refname sanity check (keep it conservative).
-        if (!/^[A-Za-z0-9._/-]+$/.test(name)) return { error: 'Cannot undo: invalid branch name' };
-        await execFileGit(['update-ref', '-d', `refs/heads/${name}`], projectPath);
-        invalidateActivityCache(projectPath);
-        return { error: null };
-      } catch (inner) {
-        return { error: inner.error || 'Failed to undo initial commit' };
-      }
-    }
-    return { error: err.error || 'Failed to undo commit' };
-  }
-}
-
-/**
- * Revert a specific commit (creates a new revert commit)
- */
-async function revertCommit(projectPath, commitHash) {
-  if (!projectPath || !commitHash) {
-    return { error: 'Missing parameters' };
-  }
-
-  // Validate commit hash
-  if (!/^[a-f0-9]+$/i.test(commitHash)) {
-    return { error: 'Invalid commit hash' };
-  }
-
-  try {
-    // If this is a merge commit, git requires a mainline parent. Most GUIs use -m 1.
-    let args = ['revert', '--no-edit'];
-    try {
-      const { stdout } = await execFileGit(['rev-list', '--parents', '-n', '1', commitHash], projectPath);
-      const parts = String(stdout || '').trim().split(/\s+/).filter(Boolean);
-      const parentCount = Math.max(0, parts.length - 1);
-      if (parentCount > 1) args = ['revert', '--no-edit', '-m', '1'];
-    } catch {
-      // If the metadata lookup fails, fall back to a normal revert and let git report the error.
-    }
-
-    await execFileGit([...args, commitHash], projectPath);
-    invalidateActivityCache(projectPath);
-    return { error: null };
-  } catch (err) {
-    return { error: formatGitError(err, 'Failed to revert commit') };
-  }
-}
-
-/**
- * Create a git commit with the given message
- */
-async function gitCommit(projectPath, message) {
-  if (!projectPath) return { error: 'Missing project path' };
-  if (!message || !message.trim()) return { error: 'Commit message cannot be empty' };
-  if (message.length > 10000) return { error: 'Commit message too long' };
-
-  try {
-    // Avoid buffering huge staged file lists in large repos.
-    const { stdout: staged } = await execFileGit(
-      ['diff', '--cached', '--name-only'],
-      projectPath,
-      10 * 1024 * 1024,
-      60000
-    );
-    if (!staged) return { error: 'Nothing staged to commit' };
-
-    const trimmed = message.trim();
-    const splitIdx = trimmed.indexOf('\n\n');
-    const summary = splitIdx === -1 ? trimmed : trimmed.slice(0, splitIdx).trim();
-    const body = splitIdx === -1 ? '' : trimmed.slice(splitIdx + 2).trim();
-    const args = body ? ['commit', '-m', summary, '-m', body] : ['commit', '-m', summary];
-
-    // Hooks can be slow; keep the UI responsive but don't time out too aggressively.
-    await execFileGit(args, projectPath, 10 * 1024 * 1024, 5 * 60 * 1000);
-    invalidateActivityCache(projectPath);
-    return { error: null };
-  } catch (err) {
-    const stderr = err.stderr || '';
-    if (stderr.includes('nothing to commit')) return { error: 'Nothing to commit' };
-    if (stderr.includes('empty ident')) return { error: 'Git user name/email not configured' };
-    if (stderr.includes('hook') || (err.error && err.error.includes('hook'))) return { error: 'Pre-commit hook failed' };
-    return { error: err.error || 'Commit failed' };
-  }
-}
-
-/**
- * Amend the last commit, optionally with a new message
- */
-async function gitCommitAmend(projectPath, message) {
-  if (!projectPath) return { error: 'Missing project path' };
-  if (message && message.length > 10000) return { error: 'Commit message too long' };
-
-  try {
-    let args;
-    if (message && message.trim()) {
-      const trimmed = message.trim();
-      const splitIdx = trimmed.indexOf('\n\n');
-      const summary = splitIdx === -1 ? trimmed : trimmed.slice(0, splitIdx).trim();
-      const body = splitIdx === -1 ? '' : trimmed.slice(splitIdx + 2).trim();
-      args = body
-        ? ['commit', '--amend', '-m', summary, '-m', body]
-        : ['commit', '--amend', '-m', summary];
-    } else {
-      args = ['commit', '--amend', '--no-edit'];
-    }
-
-    await execFileGit(args, projectPath, 10 * 1024 * 1024, 5 * 60 * 1000);
-    invalidateActivityCache(projectPath);
-    return { error: null };
-  } catch (err) {
-    const stderr = err.stderr || '';
-    if (stderr.includes('hook') || (err.error && err.error.includes('hook'))) return { error: 'Pre-commit hook failed' };
-    return { error: err.error || 'Amend failed' };
-  }
-}
-
-/**
  * Get ahead/behind count relative to upstream tracking branch
  */
 async function gitAheadBehind(projectPath) {
@@ -1244,154 +812,6 @@ async function gitAheadBehindCached(projectPath, options = {}) {
 
   aheadBehindInFlight.set(key, promise);
   return promise;
-}
-
-/**
- * Stash changes (optionally a single file, with optional message)
- */
-async function stashChanges(projectPath, filePath, message, includeUntracked = false) {
-  if (!projectPath) {
-    return { error: 'Missing parameters' };
-  }
-
-  if (filePath && !isRelativePathWithinProject(projectPath, filePath)) {
-    return { error: 'Path is outside project directory' };
-  }
-
-  try {
-    const args = ['stash', 'push'];
-    if (includeUntracked) {
-      args.push('--include-untracked');
-    }
-    if (message) {
-      args.push('-m', message);
-    }
-    if (filePath) {
-      args.push('--', filePath);
-    }
-    await execFileGit(args, projectPath);
-    return { error: null };
-  } catch (err) {
-    return { error: err.error || 'Failed to stash changes' };
-  }
-}
-
-/**
- * List stashes
- */
-async function stashList(projectPath) {
-  if (!projectPath) {
-    return { error: 'Missing parameters', stashes: [] };
-  }
-
-  try {
-    const { stdout } = await execFileGit(
-      ['stash', 'list', '--pretty=format:%gd%x00%s%x00%ar'],
-      projectPath
-    );
-
-    const stashes = [];
-    if (stdout) {
-      stdout.split('\n').filter(Boolean).forEach(line => {
-        const parts = line.split('\0');
-        if (parts.length >= 3) {
-          stashes.push({
-            ref: parts[0],
-            message: parts[1],
-            relativeTime: parts[2]
-          });
-        }
-      });
-    }
-
-    return { error: null, stashes };
-  } catch (err) {
-    return { error: err.error || 'Failed to list stashes', stashes: [] };
-  }
-}
-
-/**
- * Apply a stash (keeps it in the stash list)
- */
-async function stashApply(projectPath, stashRef) {
-  if (!projectPath || !stashRef) {
-    return { error: 'Missing parameters' };
-  }
-  if (!isValidStashRef(stashRef)) {
-    return { error: 'Invalid stash reference' };
-  }
-
-  try {
-    const result = await execFileGit(['stash', 'apply', stashRef], projectPath);
-    const hasConflicts = result.stderr && result.stderr.includes('CONFLICT');
-    return { error: null, conflicts: hasConflicts };
-  } catch (err) {
-    if (err.stderr && err.stderr.includes('CONFLICT')) {
-      return { error: null, conflicts: true };
-    }
-    return { error: err.error || 'Failed to apply stash' };
-  }
-}
-
-/**
- * Pop a stash (apply and remove from stash list)
- */
-async function stashPop(projectPath, stashRef) {
-  if (!projectPath || !stashRef) {
-    return { error: 'Missing parameters' };
-  }
-  if (!isValidStashRef(stashRef)) {
-    return { error: 'Invalid stash reference' };
-  }
-
-  try {
-    const result = await execFileGit(['stash', 'pop', stashRef], projectPath);
-    const hasConflicts = result.stderr && result.stderr.includes('CONFLICT');
-    return { error: null, conflicts: hasConflicts };
-  } catch (err) {
-    if (err.stderr && err.stderr.includes('CONFLICT')) {
-      return { error: null, conflicts: true, kept: true };
-    }
-    return { error: err.error || 'Failed to pop stash' };
-  }
-}
-
-/**
- * Drop a stash
- */
-async function stashDrop(projectPath, stashRef) {
-  if (!projectPath || !stashRef) {
-    return { error: 'Missing parameters' };
-  }
-  if (!isValidStashRef(stashRef)) {
-    return { error: 'Invalid stash reference' };
-  }
-
-  try {
-    await execFileGit(['stash', 'drop', stashRef], projectPath);
-    return { error: null };
-  } catch (err) {
-    return { error: err.error || 'Failed to drop stash' };
-  }
-}
-
-/**
- * Show stash diff
- */
-async function stashShow(projectPath, stashRef) {
-  if (!projectPath || !stashRef) {
-    return { error: 'Missing parameters', diff: '' };
-  }
-  if (!isValidStashRef(stashRef)) {
-    return { error: 'Invalid stash reference', diff: '' };
-  }
-
-  try {
-    const { stdout } = await execFileGit(['stash', 'show', '-p', stashRef], projectPath, 5 * 1024 * 1024);
-    return { error: null, diff: stdout || '(No diff available)' };
-  } catch (err) {
-    return { error: err.error || 'Failed to show stash', diff: '' };
-  }
 }
 
 /**
@@ -1462,50 +882,50 @@ function setupIPC(ipcMain) {
   });
 
   ipcMain.handle(IPC.UNDO_LAST_COMMIT, async (event, projectPath) => {
-    const result = await undoLastCommit(projectPath);
+    const result = await gitCommitOps.undoLastCommit(projectPath);
     return invalidateOnSuccess(projectPath, result, { status: true, aheadBehind: true, activity: true });
   });
 
   ipcMain.handle(IPC.REVERT_COMMIT, async (event, { projectPath, commitHash }) => {
-    const result = await revertCommit(projectPath, commitHash);
+    const result = await gitCommitOps.revertCommit(projectPath, commitHash);
     return invalidateOnSuccess(projectPath, result, { status: true, aheadBehind: true, activity: true });
   });
 
   ipcMain.handle(IPC.STASH_CHANGES, async (event, { projectPath, filePath, message, includeUntracked }) => {
-    const result = await stashChanges(projectPath, filePath, message, includeUntracked === true);
+    const result = await gitStashOps.stashChanges(projectPath, filePath, message, includeUntracked === true);
     return invalidateOnSuccess(projectPath, result, { status: true, aheadBehind: false });
   });
 
   ipcMain.handle(IPC.STASH_LIST, async (event, projectPath) => {
-    return await stashList(projectPath);
+    return await gitStashOps.stashList(projectPath);
   });
 
   ipcMain.handle(IPC.STASH_APPLY, async (event, { projectPath, stashRef }) => {
-    const result = await stashApply(projectPath, stashRef);
+    const result = await gitStashOps.stashApply(projectPath, stashRef);
     return invalidateOnSuccess(projectPath, result, { status: true, aheadBehind: false });
   });
 
   ipcMain.handle(IPC.STASH_POP, async (event, { projectPath, stashRef }) => {
-    const result = await stashPop(projectPath, stashRef);
+    const result = await gitStashOps.stashPop(projectPath, stashRef);
     return invalidateOnSuccess(projectPath, result, { status: true, aheadBehind: false });
   });
 
   ipcMain.handle(IPC.STASH_DROP, async (event, { projectPath, stashRef }) => {
-    const result = await stashDrop(projectPath, stashRef);
+    const result = await gitStashOps.stashDrop(projectPath, stashRef);
     return invalidateOnSuccess(projectPath, result, { status: true, aheadBehind: false });
   });
 
   ipcMain.handle(IPC.STASH_SHOW, async (event, { projectPath, stashRef }) => {
-    return await stashShow(projectPath, stashRef);
+    return await gitStashOps.stashShow(projectPath, stashRef);
   });
 
   ipcMain.handle(IPC.GIT_COMMIT, async (event, { projectPath, message }) => {
-    const result = await gitCommit(projectPath, message);
+    const result = await gitCommitOps.gitCommit(projectPath, message);
     return invalidateOnSuccess(projectPath, result, { status: true, aheadBehind: true, activity: true });
   });
 
   ipcMain.handle(IPC.GIT_COMMIT_AMEND, async (event, { projectPath, message }) => {
-    const result = await gitCommitAmend(projectPath, message);
+    const result = await gitCommitOps.gitCommitAmend(projectPath, message);
     return invalidateOnSuccess(projectPath, result, { status: true, aheadBehind: true, activity: true });
   });
 
@@ -1548,16 +968,18 @@ module.exports = {
   discardAllUnstaged,
   stageAll,
   unstageAll,
-  undoLastCommit,
-  revertCommit,
-  stashChanges,
-  stashList,
-  stashApply,
-  stashPop,
-  stashDrop,
-  stashShow,
-  gitCommit,
-  gitCommitAmend,
+  // Re-exported from gitCommitOps
+  undoLastCommit: gitCommitOps.undoLastCommit,
+  revertCommit: gitCommitOps.revertCommit,
+  gitCommit: gitCommitOps.gitCommit,
+  gitCommitAmend: gitCommitOps.gitCommitAmend,
+  // Re-exported from gitStashOps
+  stashChanges: gitStashOps.stashChanges,
+  stashList: gitStashOps.stashList,
+  stashApply: gitStashOps.stashApply,
+  stashPop: gitStashOps.stashPop,
+  stashDrop: gitStashOps.stashDrop,
+  stashShow: gitStashOps.stashShow,
   gitAheadBehind,
   setupIPC
 };
