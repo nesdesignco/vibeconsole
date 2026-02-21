@@ -8,6 +8,7 @@ const { Terminal } = require('xterm');
 const { FitAddon } = require('xterm-addon-fit');
 const { WebLinksAddon } = require('xterm-addon-web-links');
 const { IPC } = require('../shared/ipcChannels');
+const { writeClipboardText } = require('./clipboardWrite');
 const { shellQuote } = require('./shellEscape');
 const { registerFilePathLinks } = require('./filePathLinker');
 
@@ -400,7 +401,7 @@ class TerminalManager {
       terminal.paste(normalizedText);
       return true;
     };
-    const pasteFromSystemClipboard = () => pasteClipboardText(clipboard.readText());
+    const pasteFromSystemClipboard = () => pasteClipboardText(clipboard?.readText() ?? '');
 
     const state = {
       id: terminalId,
@@ -436,7 +437,7 @@ class TerminalManager {
         const isCopyShortcut = isCopyMeta || isCopyCtrlShift || isCopyCtrl;
 
         if (isCopyShortcut && terminal.hasSelection()) {
-          clipboard.writeText(terminal.getSelection());
+          writeClipboardText(terminal.getSelection());
           terminal.clearSelection();
           return false;
         }

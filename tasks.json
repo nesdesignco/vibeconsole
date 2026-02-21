@@ -1,2 +1,47 @@
-[]
-
+[
+  {
+    "id": "refactor-github-panel-modularize-2026-02-17",
+    "title": "Modularize GitHub panel internals",
+    "description": "Refactor `src/renderer/githubPanel.js` by extracting repeated state initialization and render helpers into dedicated modules under `src/renderer/githubPanel/`. Keep the public module API unchanged and preserve existing runtime behavior. Update project structure documentation after the new modules are added.",
+    "userRequest": "User said: tamam 1 ve 2 yi planla ama çok emin ol %100 doğru yapılmalı",
+    "acceptanceCriteria": "Task is complete when `githubPanel.js` delegates shared responsibilities to smaller modules, app behavior is unchanged, lint/tests pass, and STRUCTURE.json reflects the new files.",
+    "notes": "Executed with safety-first approach: behavior-preserving extraction only, no contract changes to exported API.",
+    "status": "completed",
+    "priority": "high",
+    "category": "refactor",
+    "context": "2026-02-17 session; user requested planning and implementation for refactor items #1 and #2.",
+    "createdAt": "2026-02-17T00:00:00Z",
+    "updatedAt": "2026-02-17T00:00:00Z",
+    "completedAt": "2026-02-17T00:00:00Z"
+  },
+  {
+    "id": "refactor-github-panel-event-delegation-2026-02-17",
+    "title": "Replace Git panel per-node listeners",
+    "description": "Replace repeated per-render event listener attachment in the Git changes/stash UI with delegated click handling bound once to the panel content root. Route all UI actions through dataset/class-based dispatch while preserving existing action handlers and side effects. Remove old attach functions that re-bound listeners after each render.",
+    "userRequest": "User said: tamam 1 ve 2 yi planla ama çok emin ol %100 doğru yapılmalı",
+    "acceptanceCriteria": "Task is complete when changes/stash interactions still work, listeners are no longer re-bound each render, and lint/tests pass without regressions.",
+    "notes": "Delegation implemented via `src/renderer/githubPanel/delegatedEvents.js` and wired from `githubPanel.js`.",
+    "status": "completed",
+    "priority": "high",
+    "category": "refactor",
+    "context": "2026-02-17 session; item #2 from user-approved refactor plan.",
+    "createdAt": "2026-02-17T00:00:00Z",
+    "updatedAt": "2026-02-17T00:00:00Z",
+    "completedAt": "2026-02-17T00:00:00Z"
+  },
+  {
+    "id": "refactor-terminal-tabbar-listener-lifecycle-2026-02-17",
+    "title": "Harden TerminalTabBar listener lifecycle",
+    "description": "Refactor `src/renderer/terminalTabBar.js` to manage IPC and state subscriptions with explicit cleanup hooks so destroyed tab bars do not retain active listeners. Introduce a local listener registry helper and ensure `destroy()` releases IPC listeners, project-change subscriptions, and detached menu/root DOM nodes. Update state subscription API in `src/renderer/state.js` to return an unsubscribe function without breaking existing callers.",
+    "userRequest": "User said: tmm devam et refactore edilcek bişiy varsa",
+    "acceptanceCriteria": "Task is complete when TerminalTabBar listeners/subscriptions are removed on destroy, no behavior regressions are introduced, and lint/tests pass.",
+    "notes": "Applied as low-risk hardening pass after GitHub panel refactor to reduce memory leak and duplicate-event risk in long-running sessions.",
+    "status": "completed",
+    "priority": "high",
+    "category": "refactor",
+    "context": "2026-02-17 session; follow-up professionalization request.",
+    "createdAt": "2026-02-17T00:00:00Z",
+    "updatedAt": "2026-02-17T00:00:00Z",
+    "completedAt": "2026-02-17T00:00:00Z"
+  }
+]

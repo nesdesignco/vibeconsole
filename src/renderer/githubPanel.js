@@ -6,30 +6,20 @@
 const { ipcRenderer, pathApi } = require('./electronBridge');
 const { IPC } = require('../shared/ipcChannels');
 const { createPanelHeaderDropdown } = require('./panelHeaderDropdown');
+const { withSpinner } = require('./spinnerButton');
+const { createToast } = require('./toast');
+const { createPanelVisibility } = require('./panelVisibility');
 const gitDiffViewer = require('./gitDiffViewer');
 const gitActivityHeatmap = require('./gitActivityHeatmap');
 const gitConflictResolver = require('./gitConflictResolver');
 const gitBranchesTab = require('./gitBranchesTab');
 const gitWorktreesTab = require('./gitWorktreesTab');
+const { createEmptyChangesData } = require('./githubPanel/state');
+const { renderCommitItem, renderChangeItem } = require('./githubPanel/renderers');
+const { bindDelegatedEvents } = require('./githubPanel/delegatedEvents');
 
-let isVisible = false;
 let gitAutoRefreshInterval = null;
-let changesData = {
-  conflicts: [],
-  staged: [],
-  unstaged: [],
-  untracked: [],
-  totalCount: 0,
-  unpushedCommits: [],
-  outgoingCommits: [],
-  incomingCommits: [],
-  localCommits: [],
-  commitGraphByHash: {},
-  activity: [],
-  activityTotal: 0,
-  hasUpstream: false,
-  trackingBranch: null
-};
+let changesData = createEmptyChangesData();
 let currentTab = 'changes'; // changes, branches, worktrees
 let operationInProgress = false;
 let _commitMessage = '';
@@ -64,6 +54,8 @@ let branchesActionsElement = null;
 let activitySlotElement = null;
 let branchBarElement = null;
 let tabDropdownControl = null;
+let _toast = null;
+let _panel = null;
 
 const GIT_CHANGES_COUNT_EVENT = 'vibe:git-changes-count';
 const AUTO_STAGE_STORAGE_KEY = 'vibe.git.autoStageBeforeCommit';
@@ -84,7 +76,17 @@ function init() {
     return;
   }
 
+  _toast = createToast(panelElement);
+  _panel = createPanelVisibility(panelElement, {
+    onShow: () => {
+      setTab('changes');
+      updateSyncStatus();
+      handleFetch({ silent: true, auto: true });
+    }
+  });
+
   setupEventListeners();
+  setupContentDelegation();
   setupIPCListeners();
   loadAutoStagePreference();
   setupCommitArea();
@@ -108,22 +110,7 @@ function init() {
   // Reset changesData when project changes
   const state = require('./state');
   state.onProjectChange(() => {
-    changesData = {
-      conflicts: [],
-      staged: [],
-      unstaged: [],
-      untracked: [],
-      totalCount: 0,
-      unpushedCommits: [],
-      outgoingCommits: [],
-      incomingCommits: [],
-      localCommits: [],
-      commitGraphByHash: {},
-      activity: [],
-      activityTotal: 0,
-      hasUpstream: false,
-      trackingBranch: null
-    };
+    changesData = createEmptyChangesData();
     _hasChangesData = false;
     _lastChangesHash = null;
     gitBranchesTab.resetData();
@@ -133,7 +120,7 @@ function init() {
     clearActivitySlot();
     publishGitChangesCount(0);
     setupGitWatcher();
-    if (isVisible) setTab(currentTab);
+    if (_panel && _panel.isVisible()) setTab(currentTab);
   });
 }
 
@@ -148,7 +135,7 @@ function setupGitWatcher() {
 
   // Periodic refresh to avoid direct fs.watch dependency in renderer.
   gitAutoRefreshInterval = setInterval(() => {
-    if (!isVisible || operationInProgress) return;
+    if (!(_panel && _panel.isVisible()) || operationInProgress) return;
     if (Date.now() < _watcherCooldownUntil) return;
 
     if (currentTab === 'changes') {
@@ -199,6 +186,52 @@ function setupEventListeners() {
 
 }
 
+function setupContentDelegation() {
+  bindDelegatedEvents(contentElement, {
+    onToggleSection: toggleSection,
+    onOpenFileDiff: (filePath, diffType) => gitDiffViewer.showDiffModal(filePath, diffType),
+    onOpenConflict: (filePath) => gitConflictResolver.showConflictModal(filePath),
+    onOpenCommitDiff: (hash) => gitDiffViewer.showCommitDiffModal(hash),
+    onOpenStashDiff: (ref) => gitDiffViewer.showStashDiffModal(ref),
+    onChangeAction: async (classList, filePath, diffType) => {
+      if (!classList) return;
+      if (classList.contains('stage') && filePath) {
+        await handleStageFile(filePath);
+      } else if (classList.contains('unstage') && filePath) {
+        await handleUnstageFile(filePath);
+      } else if (classList.contains('discard') && filePath && diffType) {
+        await handleDiscardFile(filePath, diffType);
+      } else if (classList.contains('stash-file') && filePath) {
+        await handleStashFile(filePath);
+      }
+    },
+    onCommitAction: async (classList, hash) => {
+      if (classList?.contains('revert') && hash) {
+        await handleRevertCommit(hash);
+      }
+    },
+    onSectionAction: async (action) => {
+      switch (action) {
+        case 'stage-all': await handleStageAll(); break;
+        case 'unstage-all': await handleUnstageAll(); break;
+        case 'discard-all': await handleDiscardAllUnstaged(); break;
+        case 'stash-all': await handleStashAll(); break;
+        case 'undo-last-commit': await handleUndoLastCommit(); break;
+      }
+    },
+    onStashAction: async (classList, stashRef) => {
+      if (!classList || !stashRef) return;
+      if (classList.contains('apply')) {
+        await handleStashApply(stashRef);
+      } else if (classList.contains('pop')) {
+        await handleStashPop(stashRef);
+      } else if (classList.contains('drop')) {
+        await handleStashDrop(stashRef);
+      }
+    }
+  });
+}
+
 /**
  * Setup IPC listeners
  */
@@ -214,12 +247,7 @@ function setupIPCListeners() {
 async function refreshIssues() {
   const refreshBtn = document.getElementById('github-refresh-btn');
 
-  try {
-    if (refreshBtn) {
-      refreshBtn.classList.add('spinning');
-      refreshBtn.disabled = true;
-    }
-
+  await withSpinner(refreshBtn, async () => {
     if (currentTab === 'changes') {
       await loadChanges(true);
       showToast('Changes refreshed', 'success');
@@ -230,47 +258,12 @@ async function refreshIssues() {
       await gitWorktreesTab.loadWorktrees();
       showToast('Worktrees refreshed', 'success');
     }
-  } finally {
-    if (refreshBtn) {
-      refreshBtn.classList.remove('spinning');
-      refreshBtn.disabled = false;
-    }
-  }
+  });
 }
 
-/**
- * Show GitHub panel
- */
-function show() {
-  if (panelElement) {
-    panelElement.classList.add('visible');
-    isVisible = true;
-    setTab('changes');
-    updateSyncStatus();
-    handleFetch({ silent: true, auto: true });
-  }
-}
-
-/**
- * Hide GitHub panel
- */
-function hide() {
-  if (panelElement) {
-    panelElement.classList.remove('visible');
-    isVisible = false;
-  }
-}
-
-/**
- * Toggle GitHub panel visibility
- */
-function toggle() {
-  if (isVisible) {
-    hide();
-  } else {
-    show();
-  }
-}
+function show() { if (_panel) _panel.show(); }
+function hide() { if (_panel) _panel.hide(); }
+function toggle() { if (_panel) _panel.toggle(); }
 
 /**
  * Set active tab
@@ -353,33 +346,10 @@ function renderError(message) {
 }
 
 /**
- * Show toast notification
+ * Show toast notification (delegates to shared toast utility)
  */
 function showToast(message, type = 'info') {
-  const existingToast = document.querySelector('.github-toast');
-  if (existingToast) {
-    existingToast.remove();
-  }
-
-  const toast = document.createElement('div');
-  toast.className = `github-toast github-toast-${type}`;
-  toast.innerHTML = `
-    <span class="toast-icon">${getToastIcon(type)}</span>
-    <span class="toast-message">${escapeHtml(message)}</span>
-  `;
-
-  if (panelElement) {
-    panelElement.appendChild(toast);
-  }
-
-  requestAnimationFrame(() => {
-    toast.classList.add('visible');
-  });
-
-  setTimeout(() => {
-    toast.classList.remove('visible');
-    setTimeout(() => toast.remove(), 300);
-  }, 2000);
+  if (_toast) _toast.show(message, type);
 }
 
 function publishGitChangesCount(count) {
@@ -416,20 +386,6 @@ function syncAutoStageToggle() {
   toggle.title = _autoStageBeforeCommit
     ? 'Auto-stage: on (stage all local changes before commit)'
     : 'Auto-stage: off (only commit already staged changes)';
-}
-
-/**
- * Get toast icon based on type
- */
-function getToastIcon(type) {
-  switch (type) {
-    case 'success':
-      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
-    case 'error':
-      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
-    default:
-      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
-  }
 }
 
 const { escapeHtml, escapeAttr } = require('./escapeHtml');
@@ -620,7 +576,6 @@ function renderChanges(gen) {
       </div>
     `;
     contentElement.innerHTML = html;
-    attachChangesEventListeners();
     loadStashSection(gen);
     updateCommitArea();
     return;
@@ -637,7 +592,7 @@ function renderChanges(gen) {
           <span class="git-changes-count">${conflicts.length}</span>
         </h4>
         <div class="git-changes-section-body">
-          ${conflicts.map(file => renderChangeItem(file, 'conflict')).join('')}
+          ${conflicts.map(file => renderChangeItem(file, 'conflict', pathApi)).join('')}
         </div>
       </div>
     `;
@@ -659,7 +614,7 @@ function renderChanges(gen) {
           </div>
         </h4>
         <div class="git-changes-section-body">
-          ${workingTree.map(file => renderChangeItem(file, file.diffType)).join('')}
+          ${workingTree.map(file => renderChangeItem(file, file.diffType, pathApi)).join('')}
         </div>
       </div>
     `;
@@ -679,7 +634,7 @@ function renderChanges(gen) {
           </div>
         </h4>
         <div class="git-changes-section-body">
-          ${staged.map(file => renderChangeItem(file, 'staged')).join('')}
+          ${staged.map(file => renderChangeItem(file, 'staged', pathApi)).join('')}
         </div>
       </div>
     `;
@@ -755,81 +710,9 @@ function renderChanges(gen) {
   }
 
   contentElement.innerHTML = html;
-  attachChangesEventListeners();
 
   loadStashSection(gen);
   updateCommitArea();
-}
-
-/**
- * Render a single commit item
- */
-function renderCommitItem(commit, options = { kind: 'outgoing' }) {
-  const isOutgoing = options.kind !== 'incoming';
-  const graphLane = typeof commit.graph === 'string' && commit.graph.length > 0 ? commit.graph : '*';
-  const actions = isOutgoing ? `
-      <div class="git-commit-actions">
-        <button class="git-commit-action-btn revert" data-hash="${escapeAttr(commit.hash)}" title="Revert this commit"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10h10a5 5 0 0 1 0 10H14"/><polyline points="3 10 7 6"/><polyline points="3 10 7 14"/></svg></button>
-      </div>
-  ` : '';
-  return `
-    <div class="git-commit-item ${isOutgoing ? 'outgoing' : 'incoming'}" data-hash="${escapeAttr(commit.hash)}">
-      <span class="git-commit-graph">${escapeHtml(graphLane)}</span>
-      <span class="git-commit-hash">${escapeHtml(commit.shortHash)}</span>
-      <span class="git-commit-message">${escapeHtml(commit.message)}</span>
-      <span class="git-commit-meta">${escapeHtml(commit.author)} &middot; ${escapeHtml(commit.relativeTime)}</span>
-      ${actions}
-    </div>
-  `;
-}
-
-/**
- * Render a single change item
- */
-function renderChangeItem(file, diffType) {
-  const fileName = pathApi.basename(file.path);
-  const dirName = pathApi.dirname(file.path);
-  const dirPath = dirName && dirName !== '.' ? `${dirName}${pathApi.sep}` : '';
-  const statusClass = diffType === 'conflict'
-    ? 'conflict'
-    : file.status === 'M'
-      ? 'modified'
-      : file.status === 'A'
-        ? 'added'
-        : file.status === 'D'
-          ? 'deleted'
-          : file.status === 'R'
-            ? 'renamed'
-            : 'untracked';
-
-  const discardBtn = diffType === 'conflict'
-    ? ''
-    : `<button class="git-change-action-btn discard" data-path="${escapeAttr(file.path)}" data-diff-type="${diffType}" title="Discard changes"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>`;
-
-  const stashBtn = diffType === 'unstaged'
-    ? `<button class="git-change-action-btn stash-file" data-path="${escapeAttr(file.path)}" title="Stash file"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8"/><path d="M1 3h22v5H1z"/><path d="M10 12h4"/></svg></button>`
-    : '';
-
-  const stageBtn = diffType === 'unstaged' || diffType === 'untracked' || diffType === 'conflict'
-    ? `<button class="git-change-action-btn stage" data-path="${escapeAttr(file.path)}" title="Stage file">+</button>`
-    : '';
-  const unstageBtn = diffType === 'staged'
-    ? `<button class="git-change-action-btn unstage" data-path="${escapeAttr(file.path)}" title="Unstage file">−</button>`
-    : '';
-
-  return `
-    <div class="git-change-item" data-path="${escapeAttr(file.path)}" data-diff-type="${diffType}">
-      <span class="git-change-status ${statusClass}">${escapeHtml(file.status)}</span>
-      <div class="git-change-file">
-        <span class="git-change-filename">${escapeHtml(fileName)}</span>
-        ${dirPath ? `<span class="git-change-dir">${escapeHtml(dirPath)}</span>` : ''}
-        ${file.oldPath ? `<span class="git-change-dir">renamed from ${escapeHtml(file.oldPath)}</span>` : ''}
-      </div>
-      <div class="git-change-actions">
-        ${discardBtn}${stashBtn}${stageBtn}${unstageBtn}
-      </div>
-    </div>
-  `;
 }
 
 /**
@@ -843,103 +726,6 @@ function toggleSection(sectionId) {
   }
   const el = contentElement.querySelector(`[data-section="${sectionId}"]`);
   if (el) el.classList.toggle('collapsed');
-}
-
-/**
- * Attach event listeners for changes
- */
-function attachChangesEventListeners() {
-  // Section collapse/expand toggle
-  contentElement.querySelectorAll('[data-section-toggle]').forEach(title => {
-    title.addEventListener('click', (e) => {
-      if (e.target.closest('.git-section-action-btn')) return;
-      toggleSection(title.dataset.sectionToggle);
-    });
-  });
-
-  // Click on file -> open diff modal
-  contentElement.querySelectorAll('.git-change-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-      if (e.target.closest('.git-change-action-btn')) return;
-      const filePath = item.dataset.path;
-      const diffType = item.dataset.diffType;
-      if (diffType === 'conflict') {
-        gitConflictResolver.showConflictModal(filePath);
-      } else {
-        gitDiffViewer.showDiffModal(filePath, diffType);
-      }
-    });
-  });
-
-  // Click on commit -> open commit diff modal
-  contentElement.querySelectorAll('.git-commit-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-      if (e.target.closest('.git-commit-action-btn')) return;
-      const hash = item.dataset.hash;
-      gitDiffViewer.showCommitDiffModal(hash);
-    });
-  });
-
-  // Stage buttons
-  contentElement.querySelectorAll('.git-change-action-btn.stage').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const filePath = btn.dataset.path;
-      await handleStageFile(filePath);
-    });
-  });
-
-  // Unstage buttons
-  contentElement.querySelectorAll('.git-change-action-btn.unstage').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const filePath = btn.dataset.path;
-      await handleUnstageFile(filePath);
-    });
-  });
-
-  // Discard buttons (per-file)
-  contentElement.querySelectorAll('.git-change-action-btn.discard').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const filePath = btn.dataset.path;
-      const diffType = btn.dataset.diffType;
-      await handleDiscardFile(filePath, diffType);
-    });
-  });
-
-  // Stash file buttons
-  contentElement.querySelectorAll('.git-change-action-btn.stash-file').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const filePath = btn.dataset.path;
-      await handleStashFile(filePath);
-    });
-  });
-
-  // Revert commit buttons
-  contentElement.querySelectorAll('.git-commit-action-btn.revert').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const hash = btn.dataset.hash;
-      await handleRevertCommit(hash);
-    });
-  });
-
-  // Section-level action buttons
-  contentElement.querySelectorAll('.git-section-action-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const action = btn.dataset.action;
-      switch (action) {
-        case 'stage-all': await handleStageAll(); break;
-        case 'unstage-all': await handleUnstageAll(); break;
-        case 'discard-all': await handleDiscardAllUnstaged(); break;
-        case 'stash-all': await handleStashAll(); break;
-        case 'undo-last-commit': await handleUndoLastCommit(); break;
-      }
-    });
-  });
 }
 
 /**
@@ -1325,62 +1111,9 @@ async function loadStashSection(gen) {
     const stashContainer = document.createElement('div');
     stashContainer.innerHTML = stashHtml;
     contentElement.appendChild(stashContainer.firstElementChild);
-
-    // Attach stash event listeners
-    attachStashEventListeners();
   } catch {
     // Silently fail - stash section is optional
   }
-}
-
-/**
- * Attach event listeners for stash section
- */
-function attachStashEventListeners() {
-  const stashSection = contentElement.querySelector('.git-stash-section');
-  if (!stashSection) return;
-
-  // Section toggle for stash section
-  const stashTitle = stashSection.querySelector('[data-section-toggle]');
-  if (stashTitle) {
-    stashTitle.addEventListener('click', (e) => {
-      if (e.target.closest('.git-section-action-btn')) return;
-      toggleSection(stashTitle.dataset.sectionToggle);
-    });
-  }
-
-  // Click on stash item -> show diff
-  stashSection.querySelectorAll('.git-stash-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-      if (e.target.closest('.git-stash-action-btn')) return;
-      const ref = item.dataset.ref;
-      gitDiffViewer.showStashDiffModal(ref);
-    });
-  });
-
-  // Apply buttons
-  stashSection.querySelectorAll('.git-stash-action-btn.apply').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      await handleStashApply(btn.dataset.ref);
-    });
-  });
-
-  // Pop buttons
-  stashSection.querySelectorAll('.git-stash-action-btn.pop').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      await handleStashPop(btn.dataset.ref);
-    });
-  });
-
-  // Drop buttons
-  stashSection.querySelectorAll('.git-stash-action-btn.drop').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      await handleStashDrop(btn.dataset.ref);
-    });
-  });
 }
 
 /**
@@ -1957,6 +1690,6 @@ module.exports = {
   hide,
   toggle,
   loadChanges,
-  isVisible: () => isVisible,
-  isChangesTabActive: () => isVisible && currentTab === 'changes'
+  isVisible: () => _panel ? _panel.isVisible() : false,
+  isChangesTabActive: () => (_panel ? _panel.isVisible() : false) && currentTab === 'changes'
 };

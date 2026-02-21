@@ -520,3 +520,52 @@ select:focus-visible {
 .file-item.dragging {
   opacity: 0.5;
 }
+
+/* ==================== SHARED TOAST ==================== */
+.vibe-toast {
+  position: absolute;
+  bottom: var(--space-lg);
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  transition: all var(--transition-normal);
+  z-index: var(--z-dropdown);
+  white-space: nowrap;
+}
+
+.vibe-toast.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.vibe-toast .toast-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vibe-toast .toast-message {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.vibe-toast-success .toast-icon {
+  color: var(--success);
+}
+
+.vibe-toast-info .toast-icon {
+  color: var(--info);
+}
+
+.vibe-toast-error .toast-icon {
+  color: var(--error);
+}

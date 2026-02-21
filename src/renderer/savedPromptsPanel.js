@@ -3,12 +3,13 @@
  * UI for managing and pasting saved prompts to terminal
  */
 
-const { ipcRenderer, clipboard } = require('./electronBridge');
+const { ipcRenderer } = require('./electronBridge');
 const { IPC } = require('../shared/ipcChannels');
 const state = require('./state');
 const { createPanelHeaderDropdown } = require('./panelHeaderDropdown');
-
-let isVisible = false;
+const { writeClipboardText } = require('./clipboardWrite');
+const { createToast } = require('./toast');
+const { createPanelVisibility } = require('./panelVisibility');
 let globalPrompts = [];
 let projectPrompts = [];
 let currentScope = 'all'; // all, global, project
@@ -25,6 +26,8 @@ let contentElement = null;
 let categoriesElement = null;
 let searchInput = null;
 let scopeDropdownControl = null;
+let _toast = null;
+let _panel = null;
 
 /**
  * Initialize saved prompts panel
@@ -40,6 +43,9 @@ function init() {
     return;
   }
 
+  _toast = createToast(panelElement);
+  _panel = createPanelVisibility(panelElement, { onShow: loadPrompts });
+
   setupEventListeners();
   setupIPCListeners();
   setupModalListeners();
@@ -48,7 +54,7 @@ function init() {
   state.onProjectChange(() => {
     projectPrompts = [];
     hidePromptModal(); // Close modal to prevent stale edits
-    if (isVisible) loadPrompts();
+    if (_panel && _panel.isVisible()) loadPrompts();
   });
 }
 
@@ -81,6 +87,34 @@ function setupEventListeners() {
     searchInput.addEventListener('input', (e) => {
       searchQuery = e.target.value.trim().toLowerCase();
       render();
+    });
+  }
+
+  if (contentElement) {
+    contentElement.addEventListener('click', (e) => {
+      const copyBtn = e.target.closest('.saved-prompt-copy-btn');
+      const favBtn = e.target.closest('.saved-prompt-fav-btn');
+      const editBtn = e.target.closest('.saved-prompt-edit-btn');
+      const deleteBtn = e.target.closest('.saved-prompt-delete-btn');
+      if (!copyBtn && !favBtn && !editBtn && !deleteBtn) return;
+
+      const item = e.target.closest('.saved-prompt-item');
+      if (!item) return;
+
+      const promptId = item.dataset.promptId;
+      const scope = item.dataset.scope;
+      if (!promptId || !scope) return;
+
+      e.stopPropagation();
+      if (copyBtn) {
+        copyToClipboard(promptId, scope);
+      } else if (favBtn) {
+        toggleFavorite(promptId, scope);
+      } else if (editBtn) {
+        showEditPromptModal(promptId, scope);
+      } else if (deleteBtn) {
+        deletePrompt(promptId, scope);
+      }
     });
   }
 }
@@ -116,37 +150,9 @@ function loadPrompts() {
   ipcRenderer.send(IPC.LOAD_SAVED_PROMPTS, projectPath || null);
 }
 
-/**
- * Show panel
- */
-function show() {
-  if (panelElement) {
-    panelElement.classList.add('visible');
-    isVisible = true;
-    loadPrompts();
-  }
-}
-
-/**
- * Hide panel
- */
-function hide() {
-  if (panelElement) {
-    panelElement.classList.remove('visible');
-    isVisible = false;
-  }
-}
-
-/**
- * Toggle panel visibility
- */
-function toggle() {
-  if (isVisible) {
-    hide();
-  } else {
-    show();
-  }
-}
+function show() { if (_panel) _panel.show(); }
+function hide() { if (_panel) _panel.hide(); }
+function toggle() { if (_panel) _panel.toggle(); }
 
 function setScope(scope, options = {}) {
   const { syncDropdown = true } = options;
@@ -220,36 +226,6 @@ function render() {
   }
 
   contentElement.innerHTML = prompts.map(p => renderPromptItem(p)).join('');
-
-  // Attach event listeners
-  contentElement.querySelectorAll('.saved-prompt-item').forEach(item => {
-    const promptId = item.dataset.promptId;
-    const scope = item.dataset.scope;
-
-    // Copy button
-    item.querySelector('.saved-prompt-copy-btn')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      copyToClipboard(promptId, scope);
-    });
-
-    // Favorite toggle
-    item.querySelector('.saved-prompt-fav-btn')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      toggleFavorite(promptId, scope);
-    });
-
-    // Edit button
-    item.querySelector('.saved-prompt-edit-btn')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      showEditPromptModal(promptId, scope);
-    });
-
-    // Delete button
-    item.querySelector('.saved-prompt-delete-btn')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      deletePrompt(promptId, scope);
-    });
-  });
 }
 
 /**
@@ -334,51 +310,6 @@ async function copyToClipboard(promptId, scope) {
       _copyLock = false;
     }, 300);
   }
-}
-
-async function writeClipboardText(text) {
-  const value = String(text ?? '');
-
-  if (clipboard && typeof clipboard.writeText === 'function') {
-    try {
-      await Promise.resolve(clipboard.writeText(value));
-      return true;
-    } catch (err) {
-      console.warn('Saved prompts copy failed via Electron clipboard API:', err?.message || err);
-    }
-  }
-
-  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(value);
-      return true;
-    } catch (err) {
-      console.warn('Saved prompts copy failed via Navigator clipboard API:', err?.message || err);
-    }
-  }
-
-  // Last-resort fallback for restricted environments.
-  const textarea = document.createElement('textarea');
-  textarea.value = value;
-  textarea.style.position = 'fixed';
-  textarea.style.opacity = '0';
-  textarea.style.pointerEvents = 'none';
-  try {
-    document.body.appendChild(textarea);
-    textarea.focus();
-    textarea.select();
-    const success = document.execCommand('copy');
-    if (success) return true;
-    console.warn('Saved prompts copy failed via execCommand fallback.');
-  } catch (err) {
-    console.warn('Saved prompts copy threw via execCommand fallback:', err?.message || err);
-  } finally {
-    if (textarea.parentNode) {
-      textarea.parentNode.removeChild(textarea);
-    }
-  }
-
-  return false;
 }
 
 /**
@@ -573,38 +504,10 @@ function setupModalListeners() {
 }
 
 /**
- * Show toast notification
+ * Show toast notification (delegates to shared toast utility)
  */
 function showToast(message, type = 'info') {
-  const existingToast = panelElement?.querySelector('.saved-prompts-toast');
-  if (existingToast) existingToast.remove();
-
-  const toast = document.createElement('div');
-  toast.className = `saved-prompts-toast saved-prompts-toast-${type}`;
-  toast.innerHTML = `
-    <span class="toast-icon">${getToastIcon(type)}</span>
-    <span class="toast-message">${escapeHtml(message)}</span>
-  `;
-
-  if (panelElement) panelElement.appendChild(toast);
-
-  requestAnimationFrame(() => toast.classList.add('visible'));
-
-  setTimeout(() => {
-    toast.classList.remove('visible');
-    setTimeout(() => toast.remove(), 300);
-  }, 2000);
-}
-
-function getToastIcon(type) {
-  switch (type) {
-    case 'success':
-      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
-    case 'error':
-      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
-    default:
-      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
-  }
+  if (_toast) _toast.show(message, type);
 }
 
 const { escapeHtml, escapeAttr } = require('./escapeHtml');
@@ -614,5 +517,5 @@ module.exports = {
   show,
   hide,
   toggle,
-  isVisible: () => isVisible
+  isVisible: () => _panel ? _panel.isVisible() : false
 };

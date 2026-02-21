@@ -3,17 +3,19 @@
  * Renders project list in sidebar
  */
 
-const { ipcRenderer, clipboard } = require('./electronBridge');
+const { ipcRenderer } = require('./electronBridge');
 const { IPC } = require('../shared/ipcChannels');
+const { writeClipboardText } = require('./clipboardWrite');
+const { createToast } = require('./toast');
+const { createContextMenu } = require('./contextMenu');
 
 let projectsListElement = null;
 let activeProjectPath = null;
 let onProjectSelectCallback = null;
 let projects = []; // Store projects list for navigation
 let focusedIndex = -1; // Currently focused project index
-let activeContextMenu = null;
-let contextMenuCleanupController = null;
-let activeProjectToast = null;
+const _contextMenu = createContextMenu();
+let _toast = null;
 
 /**
  * Initialize project list UI
@@ -21,6 +23,8 @@ let activeProjectToast = null;
 function init(containerId, onSelectCallback) {
   projectsListElement = document.getElementById(containerId);
   onProjectSelectCallback = onSelectCallback;
+  const projectsSection = document.getElementById('projects-section') || document.body;
+  _toast = createToast(projectsSection, { useIcons: false, displayTime: 1400, fadeTime: 180 });
   setupIPC();
   setupCollapseToggle();
 }
@@ -163,159 +167,32 @@ function createProjectItem(project, index) {
   return item;
 }
 
-function addContextMenuItem(menu, label, onClick) {
-  const item = document.createElement('div');
-  item.className = 'file-tree-context-menu-item';
-  item.textContent = label;
-  item.tabIndex = 0;
-  item.setAttribute('role', 'menuitem');
-
-  const runAction = (event) => {
-    if (event) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-    closeProjectContextMenu();
-    Promise.resolve(onClick()).catch((err) => {
-      console.error('Project context action failed:', err);
-    });
-  };
-
-  item.addEventListener('click', runAction);
-
-  item.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    runAction(e);
-  });
-
-  menu.appendChild(item);
-}
-
-function addContextMenuSeparator(menu) {
-  const separator = document.createElement('div');
-  separator.className = 'file-tree-context-menu-separator';
-  menu.appendChild(separator);
-}
-
 function showProjectContextMenu(x, y, project) {
-  closeProjectContextMenu();
+  _contextMenu.show(x, y, (menu) => {
+    menu.addItem('Copy Path', async () => {
+      const success = await writeClipboardText(project.path || '');
+      showProjectToast(success ? 'Path copied' : 'Failed to copy path', success ? 'success' : 'error');
+    });
 
-  const menu = document.createElement('div');
-  menu.className = 'file-tree-context-menu';
-  menu.setAttribute('role', 'menu');
+    menu.addItem('Copy Project Name', async () => {
+      const success = await writeClipboardText(project.name || '');
+      showProjectToast(success ? 'Project name copied' : 'Failed to copy name', success ? 'success' : 'error');
+    });
 
-  addContextMenuItem(menu, 'Copy Path', async () => {
-    const success = await writeClipboardText(project.path || '');
-    showProjectToast(success ? 'Path copied' : 'Failed to copy path', success ? 'success' : 'error');
+    menu.addSeparator();
+
+    menu.addItem('Remove from List', () => {
+      confirmRemoveProject(project.path, project.name);
+    });
   });
-
-  addContextMenuItem(menu, 'Copy Project Name', async () => {
-    const success = await writeClipboardText(project.name || '');
-    showProjectToast(success ? 'Project name copied' : 'Failed to copy name', success ? 'success' : 'error');
-  });
-
-  addContextMenuSeparator(menu);
-
-  addContextMenuItem(menu, 'Remove from List', () => {
-    confirmRemoveProject(project.path, project.name);
-  });
-
-  menu.style.left = `${x}px`;
-  menu.style.top = `${y}px`;
-  document.body.appendChild(menu);
-
-  // Keep menu inside viewport
-  const rect = menu.getBoundingClientRect();
-  if (rect.right > window.innerWidth) {
-    menu.style.left = `${window.innerWidth - rect.width - 4}px`;
-  }
-  if (rect.bottom > window.innerHeight) {
-    menu.style.top = `${window.innerHeight - rect.height - 4}px`;
-  }
-
-  activeContextMenu = menu;
-  contextMenuCleanupController = new AbortController();
-  const { signal } = contextMenuCleanupController;
-
-  document.addEventListener('pointerdown', (e) => {
-    const target = e.target instanceof Node ? e.target : null;
-    if (!target || !menu.contains(target)) {
-      closeProjectContextMenu();
-    }
-  }, { capture: true, signal });
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      closeProjectContextMenu();
-    }
-  }, { signal });
-
-  window.addEventListener('blur', closeProjectContextMenu, { signal });
-}
-
-async function writeClipboardText(text) {
-  const value = String(text || '');
-  if (!value) return false;
-
-  if (clipboard && typeof clipboard.writeText === 'function') {
-    try {
-      await Promise.resolve(clipboard.writeText(value));
-      return true;
-    } catch {
-      // Continue to navigator fallback.
-    }
-  }
-
-  if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(value);
-      return true;
-    } catch {
-      return false;
-    }
-  }
-
-  return false;
 }
 
 function showProjectToast(message, type = 'info') {
-  if (activeProjectToast) {
-    activeProjectToast.remove();
-    activeProjectToast = null;
-  }
-
-  const container = document.getElementById('projects-section') || document.body;
-  const toast = document.createElement('div');
-  toast.className = `project-context-toast ${type}`;
-  toast.textContent = message;
-  container.appendChild(toast);
-  activeProjectToast = toast;
-
-  requestAnimationFrame(() => {
-    toast.classList.add('visible');
-  });
-
-  setTimeout(() => {
-    toast.classList.remove('visible');
-    setTimeout(() => {
-      if (toast === activeProjectToast) {
-        activeProjectToast = null;
-      }
-      toast.remove();
-    }, 180);
-  }, 1400);
+  if (_toast) _toast.show(message, type);
 }
 
 function closeProjectContextMenu() {
-  if (contextMenuCleanupController) {
-    contextMenuCleanupController.abort();
-    contextMenuCleanupController = null;
-  }
-  if (activeContextMenu) {
-    activeContextMenu.remove();
-    activeContextMenu = null;
-  }
+  _contextMenu.close();
 }
 
 /**

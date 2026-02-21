@@ -7,8 +7,9 @@ const { ipcRenderer } = require('./electronBridge');
 const { IPC } = require('../shared/ipcChannels');
 const { shellQuote } = require('./shellEscape');
 const { createPanelHeaderDropdown } = require('./panelHeaderDropdown');
-
-let isVisible = false;
+const { withSpinner } = require('./spinnerButton');
+const { createToast } = require('./toast');
+const { createPanelVisibility } = require('./panelVisibility');
 let pluginsData = [];
 let currentFilter = 'all'; // all, installed, enabled
 
@@ -16,6 +17,8 @@ let currentFilter = 'all'; // all, installed, enabled
 let panelElement = null;
 let contentElement = null;
 let filterDropdownControl = null;
+let _toast = null;
+let _panel = null;
 
 /**
  * Initialize plugins panel
@@ -28,6 +31,9 @@ function init() {
     console.error('Plugins panel element not found');
     return;
   }
+
+  _toast = createToast(panelElement);
+  _panel = createPanelVisibility(panelElement, { onShow: loadPlugins });
 
   setupEventListeners();
   setupIPCListeners();
@@ -60,6 +66,25 @@ function setupEventListeners() {
   if (filterDropdown) {
     filterDropdownControl = createPanelHeaderDropdown(filterDropdown, {
       onChange: (filter) => setFilter(filter, { syncDropdown: false })
+    });
+  }
+
+  if (contentElement) {
+    contentElement.addEventListener('click', async (e) => {
+      const toggleBtn = e.target.closest('.plugin-toggle-btn');
+      if (toggleBtn) {
+        e.stopPropagation();
+        const pluginId = toggleBtn.dataset.pluginId;
+        if (pluginId) await togglePlugin(pluginId);
+        return;
+      }
+
+      const installBtn = e.target.closest('.plugin-install-btn');
+      if (installBtn) {
+        e.stopPropagation();
+        const pluginName = installBtn.dataset.pluginName;
+        if (pluginName) installPlugin(pluginName);
+      }
     });
   }
 }
@@ -108,65 +133,27 @@ async function loadPlugins() {
 async function refreshPlugins() {
   const refreshBtn = document.getElementById('plugins-refresh-btn');
 
-  try {
-    // Add spinning animation
-    if (refreshBtn) {
-      refreshBtn.classList.add('spinning');
-      refreshBtn.disabled = true;
-    }
+  await withSpinner(refreshBtn, async () => {
+    try {
+      const result = await ipcRenderer.invoke(IPC.REFRESH_PLUGINS);
 
-    const result = await ipcRenderer.invoke(IPC.REFRESH_PLUGINS);
-
-    if (result.error) {
+      if (result.error) {
+        showToast('Failed to refresh plugins', 'error');
+      } else {
+        pluginsData = result;
+        render();
+        showToast('Plugins refreshed', 'success');
+      }
+    } catch (err) {
+      console.error('Error refreshing plugins:', err);
       showToast('Failed to refresh plugins', 'error');
-    } else {
-      pluginsData = result;
-      render();
-      showToast('Plugins refreshed', 'success');
     }
-  } catch (err) {
-    console.error('Error refreshing plugins:', err);
-    showToast('Failed to refresh plugins', 'error');
-  } finally {
-    // Remove spinning animation
-    if (refreshBtn) {
-      refreshBtn.classList.remove('spinning');
-      refreshBtn.disabled = false;
-    }
-  }
+  });
 }
 
-/**
- * Show plugins panel
- */
-function show() {
-  if (panelElement) {
-    panelElement.classList.add('visible');
-    isVisible = true;
-    loadPlugins();
-  }
-}
-
-/**
- * Hide plugins panel
- */
-function hide() {
-  if (panelElement) {
-    panelElement.classList.remove('visible');
-    isVisible = false;
-  }
-}
-
-/**
- * Toggle plugins panel visibility
- */
-function toggle() {
-  if (isVisible) {
-    hide();
-  } else {
-    show();
-  }
-}
+function show() { if (_panel) _panel.show(); }
+function hide() { if (_panel) _panel.hide(); }
+function toggle() { if (_panel) _panel.toggle(); }
 
 /**
  * Set filter
@@ -221,24 +208,6 @@ function render() {
   }
 
   contentElement.innerHTML = plugins.map(plugin => renderPluginItem(plugin)).join('');
-
-  // Add event listeners to toggle buttons
-  contentElement.querySelectorAll('.plugin-toggle-btn').forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-      e.stopPropagation();
-      const pluginId = btn.dataset.pluginId;
-      await togglePlugin(pluginId);
-    });
-  });
-
-  // Add event listeners to install buttons
-  contentElement.querySelectorAll('.plugin-install-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const pluginName = btn.dataset.pluginName;
-      installPlugin(pluginName);
-    });
-  });
 }
 
 /**
@@ -277,7 +246,7 @@ function renderPluginItem(plugin) {
           </button>
         ` : `
           <button class="plugin-install-btn"
-                  data-plugin-name="${plugin.name}"
+                  data-plugin-name="${escapeAttr(plugin.name)}"
                   title="Install plugin">
             Install
           </button>
@@ -356,52 +325,10 @@ function installPlugin(pluginName) {
 }
 
 /**
- * Show toast notification
+ * Show toast notification (delegates to shared toast utility)
  */
 function showToast(message, type = 'info') {
-  // Remove existing toast
-  const existingToast = document.querySelector('.plugins-toast');
-  if (existingToast) {
-    existingToast.remove();
-  }
-
-  // Create toast element
-  const toast = document.createElement('div');
-  toast.className = `plugins-toast plugins-toast-${type}`;
-  toast.innerHTML = `
-    <span class="toast-icon">${getToastIcon(type)}</span>
-    <span class="toast-message">${escapeHtml(message)}</span>
-  `;
-
-  // Add to panel
-  if (panelElement) {
-    panelElement.appendChild(toast);
-  }
-
-  // Animate in
-  requestAnimationFrame(() => {
-    toast.classList.add('visible');
-  });
-
-  // Remove after delay
-  setTimeout(() => {
-    toast.classList.remove('visible');
-    setTimeout(() => toast.remove(), 300);
-  }, 2000);
-}
-
-/**
- * Get toast icon based on type
- */
-function getToastIcon(type) {
-  switch (type) {
-    case 'success':
-      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>';
-    case 'error':
-      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>';
-    default:
-      return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>';
-  }
+  if (_toast) _toast.show(message, type);
 }
 
 const { escapeHtml, escapeAttr } = require('./escapeHtml');
@@ -412,5 +339,5 @@ module.exports = {
   hide,
   toggle,
   loadPlugins,
-  isVisible: () => isVisible
+  isVisible: () => _panel ? _panel.isVisible() : false
 };

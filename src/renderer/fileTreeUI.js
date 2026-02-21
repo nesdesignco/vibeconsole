@@ -3,16 +3,17 @@
  * Renders collapsible file tree in sidebar
  */
 
-const { ipcRenderer, clipboard, pathApi } = require('./electronBridge');
+const { ipcRenderer, pathApi } = require('./electronBridge');
 const { IPC } = require('../shared/ipcChannels');
 const { shellQuote } = require('./shellEscape');
+const { writeClipboardText } = require('./clipboardWrite');
+const { createContextMenu } = require('./contextMenu');
 
 let fileTreeElement = null;
 let currentProjectPath = null;
 let onFileClickCallback = null;
 let focusedItem = null;
-let activeContextMenu = null;
-let contextMenuCleanupController = null;
+const _contextMenu = createContextMenu();
 
 /**
  * Initialize file tree UI
@@ -129,10 +130,10 @@ function renderFileTree(files, parentElement, indent = 0) {
 
         if (isExpanded) {
           childrenContainer.style.display = 'none';
-          arrow.style.transform = 'rotate(0deg)';
+          if (arrow) arrow.style.transform = 'rotate(0deg)';
         } else {
           childrenContainer.style.display = 'block';
-          arrow.style.transform = 'rotate(90deg)';
+          if (arrow) arrow.style.transform = 'rotate(90deg)';
         }
       });
     } else if (!file.isDirectory) {
@@ -374,141 +375,66 @@ function startRename(file) {
 }
 
 /**
- * Add a menu item helper
- */
-function addMenuItem(menu, label, onClick, options = {}) {
-  const item = document.createElement('div');
-  item.className = 'file-tree-context-menu-item' + (options.danger ? ' danger' : '');
-  item.textContent = label;
-  item.addEventListener('click', () => {
-    closeContextMenu();
-    onClick();
-  });
-  menu.appendChild(item);
-}
-
-/**
- * Add a separator to the menu
- */
-function addSeparator(menu) {
-  const sep = document.createElement('div');
-  sep.className = 'file-tree-context-menu-separator';
-  menu.appendChild(sep);
-}
-
-/**
  * Show context menu for a file item
  */
 function showContextMenu(x, y, file) {
-  closeContextMenu();
-
-  const menu = document.createElement('div');
-  menu.className = 'file-tree-context-menu';
-  menu.setAttribute('role', 'menu');
-
   const projectPath = currentProjectPath ? currentProjectPath() : null;
 
-  // -- New File / New Folder --
-  addMenuItem(menu, 'New File', () => showNewItemInput(file, false));
-  addMenuItem(menu, 'New Folder', () => showNewItemInput(file, true));
+  _contextMenu.show(x, y, (menu) => {
+    // -- New File / New Folder --
+    menu.addItem('New File', () => showNewItemInput(file, false));
+    menu.addItem('New Folder', () => showNewItemInput(file, true));
 
-  addSeparator(menu);
+    menu.addSeparator();
 
-  // -- cd to Directory --
-  const cdTarget = file.isDirectory ? file.path : pathApi.dirname(file.path);
-  addMenuItem(menu, 'cd to Directory', () => {
-    if (typeof window.terminalSendCommand === 'function') {
-      window.terminalSendCommand(`cd ${shellQuote(cdTarget)}`);
-    }
-  });
-
-  // -- Open in New Tab (files only) --
-  if (!file.isDirectory) {
-    addMenuItem(menu, 'Open in New Tab', () => {
-      if (onFileClickCallback) {
-        onFileClickCallback(file.path, 'fileTree');
+    // -- cd to Directory --
+    const cdTarget = file.isDirectory ? file.path : pathApi.dirname(file.path);
+    menu.addItem('cd to Directory', () => {
+      if (typeof window.terminalSendCommand === 'function') {
+        window.terminalSendCommand(`cd ${shellQuote(cdTarget)}`);
       }
     });
-  }
 
-  // -- Reveal in Finder --
-  addMenuItem(menu, 'Reveal in Finder', () => {
-    ipcRenderer.send(IPC.REVEAL_IN_FINDER, { filePath: file.path, projectPath });
-  });
-
-  addSeparator(menu);
-
-  // -- Rename --
-  addMenuItem(menu, 'Rename', () => startRename(file));
-
-  // -- Delete --
-  addMenuItem(menu, 'Delete', () => {
-    const itemType = file.isDirectory ? 'folder' : 'file';
-    if (window.confirm(`Move "${file.name}" (${itemType}) to trash?`)) {
-      ipcRenderer.send(IPC.DELETE_FILE, { filePath: file.path, projectPath });
+    // -- Open in New Tab (files only) --
+    if (!file.isDirectory) {
+      menu.addItem('Open in New Tab', () => {
+        if (onFileClickCallback) {
+          onFileClickCallback(file.path, 'fileTree');
+        }
+      });
     }
-  }, { danger: true });
 
-  addSeparator(menu);
+    // -- Reveal in Finder --
+    menu.addItem('Reveal in Finder', () => {
+      ipcRenderer.send(IPC.REVEAL_IN_FINDER, { filePath: file.path, projectPath });
+    });
 
-  // -- Copy Path --
-  addMenuItem(menu, 'Copy Path', () => {
-    clipboard.writeText(file.path);
+    menu.addSeparator();
+
+    // -- Rename --
+    menu.addItem('Rename', () => startRename(file));
+
+    // -- Delete --
+    menu.addItem('Delete', () => {
+      const itemType = file.isDirectory ? 'folder' : 'file';
+      if (window.confirm(`Move "${file.name}" (${itemType}) to trash?`)) {
+        ipcRenderer.send(IPC.DELETE_FILE, { filePath: file.path, projectPath });
+      }
+    }, { danger: true });
+
+    menu.addSeparator();
+
+    // -- Copy Path --
+    menu.addItem('Copy Path', () => {
+      writeClipboardText(file.path);
+    });
+
+    // -- Copy Relative Path --
+    menu.addItem('Copy Relative Path', () => {
+      const relativePath = projectPath ? pathApi.relative(projectPath, file.path) : file.path;
+      writeClipboardText(relativePath);
+    });
   });
-
-  // -- Copy Relative Path --
-  addMenuItem(menu, 'Copy Relative Path', () => {
-    const relativePath = projectPath ? pathApi.relative(projectPath, file.path) : file.path;
-    clipboard.writeText(relativePath);
-  });
-
-  // Position menu
-  menu.style.left = `${x}px`;
-  menu.style.top = `${y}px`;
-  document.body.appendChild(menu);
-
-  // Adjust if menu goes off screen
-  const rect = menu.getBoundingClientRect();
-  if (rect.right > window.innerWidth) {
-    menu.style.left = `${window.innerWidth - rect.width - 4}px`;
-  }
-  if (rect.bottom > window.innerHeight) {
-    menu.style.top = `${window.innerHeight - rect.height - 4}px`;
-  }
-
-  activeContextMenu = menu;
-  contextMenuCleanupController = new AbortController();
-  const { signal } = contextMenuCleanupController;
-
-  document.addEventListener('pointerdown', (e) => {
-    const target = e.target instanceof Node ? e.target : null;
-    if (!target || !menu.contains(target)) {
-      closeContextMenu();
-    }
-  }, { capture: true, signal });
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      closeContextMenu();
-    }
-  }, { signal });
-
-  window.addEventListener('blur', closeContextMenu, { signal });
-}
-
-/**
- * Close context menu if open
- */
-function closeContextMenu() {
-  if (contextMenuCleanupController) {
-    contextMenuCleanupController.abort();
-    contextMenuCleanupController = null;
-  }
-  if (activeContextMenu) {
-    activeContextMenu.remove();
-    activeContextMenu = null;
-  }
 }
 
 /**

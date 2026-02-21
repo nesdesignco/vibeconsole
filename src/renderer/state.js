@@ -61,6 +61,9 @@ function setProjectPath(path) {
  */
 function onProjectChange(callback) {
   onProjectChangeCallbacks.push(callback);
+  return () => {
+    onProjectChangeCallbacks = onProjectChangeCallbacks.filter((cb) => cb !== callback);
+  };
 }
 
 /**

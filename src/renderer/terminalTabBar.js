@@ -29,6 +29,8 @@ class TerminalTabBar {
     this._currentUsageTool = null; // Track which tool's usage is displayed
     this._usageRetryCount = 0; // Retry counter for failed usage loads
     this._usageRetryTimer = null; // Timer for retry scheduling
+    this._ipcCleanup = [];
+    this._stateCleanup = [];
     this._injectStyles();
     this._render();
     this._createContextMenu();
@@ -46,6 +48,21 @@ class TerminalTabBar {
       clearTimeout(this._usageRetryTimer);
       this._usageRetryTimer = null;
     }
+    this._ipcCleanup.forEach((cleanup) => cleanup());
+    this._ipcCleanup = [];
+    this._stateCleanup.forEach((cleanup) => cleanup());
+    this._stateCleanup = [];
+    this.contextMenu?.remove();
+    this.contextMenu = null;
+    this.shellMenu?.remove();
+    this.shellMenu = null;
+    this.element?.remove();
+    this.element = null;
+  }
+
+  _addIpcListener(channel, listener) {
+    ipcRenderer.on(channel, listener);
+    this._ipcCleanup.push(() => ipcRenderer.removeListener(channel, listener));
   }
 
   _injectStyles() {
@@ -337,6 +354,15 @@ class TerminalTabBar {
   }
 
   _setupEventHandlers() {
+    const toggleExclusivePanel = (targetPanel, otherPanels) => {
+      if (targetPanel.isVisible()) {
+        targetPanel.hide();
+        return;
+      }
+      otherPanels.forEach((panel) => panel.hide());
+      targetPanel.show();
+    };
+
     // Tab click - activate terminal
     this.element.addEventListener('click', (e) => {
       const tab = e.target.closest('.terminal-tab');
@@ -414,24 +440,12 @@ class TerminalTabBar {
 
     // Plugins toggle button
     this.element.querySelector('.btn-plugins-toggle').addEventListener('click', () => {
-      if (pluginsPanel.isVisible()) {
-        pluginsPanel.hide();
-      } else {
-        githubPanel.hide();
-        savedPromptsPanel.hide();
-        pluginsPanel.show();
-      }
+      toggleExclusivePanel(pluginsPanel, [githubPanel, savedPromptsPanel]);
     });
 
     // GitHub toggle button
     this.element.querySelector('.btn-github-toggle').addEventListener('click', () => {
-      if (githubPanel.isVisible()) {
-        githubPanel.hide();
-      } else {
-        pluginsPanel.hide();
-        savedPromptsPanel.hide();
-        githubPanel.show();
-      }
+      toggleExclusivePanel(githubPanel, [pluginsPanel, savedPromptsPanel]);
     });
 
     // Usage bars click to refresh
@@ -443,13 +457,7 @@ class TerminalTabBar {
 
     // Saved Prompts toggle button
     this.element.querySelector('.btn-saved-prompts-toggle').addEventListener('click', () => {
-      if (savedPromptsPanel.isVisible()) {
-        savedPromptsPanel.hide();
-      } else {
-        pluginsPanel.hide();
-        githubPanel.hide();
-        savedPromptsPanel.show();
-      }
+      toggleExclusivePanel(savedPromptsPanel, [pluginsPanel, githubPanel]);
     });
 
     // Setup usage bar IPC listener
@@ -467,7 +475,7 @@ class TerminalTabBar {
    */
   _setupUsageListener() {
     // Listen for generic AI usage data (routed by toolId)
-    ipcRenderer.on(IPC.AI_USAGE_DATA, (event, data) => {
+    this._addIpcListener(IPC.AI_USAGE_DATA, (event, data) => {
       // Only update if the data matches the currently displayed tool
       if (data.toolId === this._currentUsageTool) {
         // Only retry when there's no displayable data at all
@@ -661,10 +669,13 @@ class TerminalTabBar {
     }, { signal: this._abortController.signal });
 
     // Re-setup on project change
-    state.onProjectChange(() => {
+    const unsubscribe = state.onProjectChange(() => {
       this._updateGitChangesBadge(0);
       pollChanges();
     });
+    if (typeof unsubscribe === 'function') {
+      this._stateCleanup.push(unsubscribe);
+    }
   }
 
   /**
@@ -691,7 +702,7 @@ class TerminalTabBar {
     let updateState = 'idle'; // idle | available | downloading | ready
 
     // Update available - show button with version badge
-    ipcRenderer.on(IPC.UPDATE_AVAILABLE, (event, data) => {
+    this._addIpcListener(IPC.UPDATE_AVAILABLE, (event, data) => {
       updateState = 'available';
       btn.style.display = '';
       btn.className = 'toolbar-btn btn-upgrade';
@@ -704,7 +715,7 @@ class TerminalTabBar {
     });
 
     // Download progress
-    ipcRenderer.on(IPC.UPDATE_DOWNLOAD_PROGRESS, (event, data) => {
+    this._addIpcListener(IPC.UPDATE_DOWNLOAD_PROGRESS, (event, data) => {
       updateState = 'downloading';
       btn.className = 'toolbar-btn btn-upgrade downloading';
       btn.title = `Downloading update... ${data.percent}%`;
@@ -713,7 +724,7 @@ class TerminalTabBar {
     });
 
     // Download complete - switch to ready state
-    ipcRenderer.on(IPC.UPDATE_DOWNLOADED, () => {
+    this._addIpcListener(IPC.UPDATE_DOWNLOADED, () => {
       updateState = 'ready';
       btn.className = 'toolbar-btn btn-upgrade ready';
       btn.title = 'Update ready - Click to restart & install';
@@ -724,7 +735,7 @@ class TerminalTabBar {
     });
 
     // Error - revert to available state
-    ipcRenderer.on(IPC.UPDATE_ERROR, () => {
+    this._addIpcListener(IPC.UPDATE_ERROR, () => {
       if (updateState === 'downloading') {
         updateState = 'available';
         btn.className = 'toolbar-btn btn-upgrade';

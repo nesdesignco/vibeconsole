@@ -287,6 +287,15 @@ function setupButtonHandlers() {
  * Setup keyboard shortcuts
  */
 function setupKeyboardShortcuts() {
+  const toggleExclusivePanel = (targetPanel, otherPanels) => {
+    if (targetPanel.isVisible()) {
+      targetPanel.hide();
+      return;
+    }
+    otherPanels.forEach((panel) => panel.hide());
+    targetPanel.show();
+  };
+
   document.addEventListener('keydown', (e) => {
     const modKey = e.ctrlKey || e.metaKey; // Support both Ctrl (Windows/Linux) and Cmd (macOS)
     const key = e.key.toLowerCase(); // Normalize key to lowercase
@@ -299,24 +308,12 @@ function setupKeyboardShortcuts() {
     // Ctrl/Cmd+Shift+P - Toggle plugins panel
     if (modKey && e.shiftKey && key === 'p') {
       e.preventDefault();
-      if (pluginsPanel.isVisible()) {
-        pluginsPanel.hide();
-      } else {
-        githubPanel.hide();
-        savedPromptsPanel.hide();
-        pluginsPanel.show();
-      }
+      toggleExclusivePanel(pluginsPanel, [githubPanel, savedPromptsPanel]);
     }
     // Ctrl/Cmd+Shift+G - Toggle GitHub panel
     if (modKey && e.shiftKey && key === 'g') {
       e.preventDefault();
-      if (githubPanel.isVisible()) {
-        githubPanel.hide();
-      } else {
-        pluginsPanel.hide();
-        savedPromptsPanel.hide();
-        githubPanel.show();
-      }
+      toggleExclusivePanel(githubPanel, [pluginsPanel, savedPromptsPanel]);
     }
     // Ctrl/Cmd+B - Toggle sidebar
     if (modKey && !e.shiftKey && key === 'b') {
@@ -348,13 +345,7 @@ function setupKeyboardShortcuts() {
     // Ctrl/Cmd+Shift+S - Toggle saved prompts panel
     if (modKey && e.shiftKey && key === 's') {
       e.preventDefault();
-      if (savedPromptsPanel.isVisible()) {
-        savedPromptsPanel.hide();
-      } else {
-        pluginsPanel.hide();
-        githubPanel.hide();
-        savedPromptsPanel.show();
-      }
+      toggleExclusivePanel(savedPromptsPanel, [pluginsPanel, githubPanel]);
     }
   });
 }
