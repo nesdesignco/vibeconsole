@@ -54,12 +54,57 @@ class TerminalManager {
     this.activeTerminalId = null;
     this.viewMode = 'tabs'; // 'tabs' or 'grid'
     this.gridLayout = '2x2';
-    this.maxTerminals = 9;
+    this.maxTerminals = 10;
     this.terminalCounter = 0;
     this.onStateChange = null;
     this.onFilePathActivate = null; // callback(filePath, line, col) for file path links
     this.currentProjectPath = null; // Current active project (null = global)
     this._setupIPC();
+  }
+
+  _countTerminalsForProject(projectPath) {
+    return Array.from(this.terminals.values())
+      .filter((t) => t.state.projectPath === projectPath)
+      .length;
+  }
+
+  async _invokeWithTimeout(promise, timeoutMs, timeoutMessage) {
+    let timeoutId = null;
+    try {
+      return await Promise.race([
+        promise,
+        new Promise((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+        })
+      ]);
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId);
+    }
+  }
+
+  _pasteInChunks(terminal, rawText) {
+    const text = (rawText || '').replace(/\r\n/g, '\n');
+    if (!text) return false;
+
+    // Small payloads can go directly without noticeable jank.
+    const DIRECT_PASTE_LIMIT = 2048;
+    if (text.length <= DIRECT_PASTE_LIMIT) {
+      terminal.paste(text);
+      return true;
+    }
+
+    const CHUNK_SIZE = 1024;
+    let index = 0;
+
+    const pump = () => {
+      if (index >= text.length) return;
+      terminal.paste(text.slice(index, index + CHUNK_SIZE));
+      index += CHUNK_SIZE;
+      setTimeout(pump, 0);
+    };
+
+    pump();
+    return true;
   }
 
   _isAtOrNearBottom(terminal, thresholdLines = 1) {
@@ -234,24 +279,27 @@ class TerminalManager {
    * @param {string|null} [options.aiTool] - AI tool id associated with this terminal
    */
   async createTerminal(options = {}) {
-    if (this.terminals.size >= this.maxTerminals) {
-      console.error('Maximum terminal limit reached');
-      return null;
-    }
-
     // Use provided projectPath or current project
     const projectPath = options.projectPath !== undefined
       ? options.projectPath
       : this.currentProjectPath;
 
+    if (this._countTerminalsForProject(projectPath) >= this.maxTerminals) {
+      throw new Error(`Maximum terminal limit (${this.maxTerminals}) reached for this project`);
+    }
+
     // Working directory: use provided cwd, or project path, or home directory
     const workingDir = options.cwd || projectPath || null;
 
-    const response = await ipcRenderer.invoke(IPC.TERMINAL_CREATE, {
-      cwd: workingDir,
-      projectPath,
-      shell: options.shell || null
-    });
+    const response = await this._invokeWithTimeout(
+      ipcRenderer.invoke(IPC.TERMINAL_CREATE, {
+        cwd: workingDir,
+        projectPath,
+        shell: options.shell || null
+      }),
+      12000,
+      'Terminal creation timed out'
+    );
 
     if (response.success) {
       this._initializeTerminal(response.terminalId, {
@@ -374,7 +422,7 @@ class TerminalManager {
       // 1. Internal drag from file tree (custom MIME)
       const vibeconsoleFile = e.dataTransfer.getData('application/x-vibeconsole-file');
       if (vibeconsoleFile) {
-        terminal.paste(shellQuote(vibeconsoleFile) + ' ');
+        this._pasteInChunks(terminal, shellQuote(vibeconsoleFile) + ' ');
         return;
       }
 
@@ -382,24 +430,20 @@ class TerminalManager {
       const files = e.dataTransfer.files;
       if (files.length > 0) {
         const paths = Array.from(files).map(f => shellQuote(f.path));
-        terminal.paste(paths.join(' ') + ' ');
+        this._pasteInChunks(terminal, paths.join(' ') + ' ');
         return;
       }
 
       // 3. Fallback: plain text
       const text = e.dataTransfer.getData('text/plain');
       if (text) {
-        terminal.paste(text + ' ');
+        this._pasteInChunks(terminal, text + ' ');
       }
     });
 
     const isCodeMatch = (event, code) => event.code === code || event.key.toLowerCase() === code.slice(-1).toLowerCase();
-    const normalizePasteText = (text) => (text || '').replace(/\r\n/g, '\n');
     const pasteClipboardText = (text) => {
-      const normalizedText = normalizePasteText(text);
-      if (!normalizedText) return false;
-      terminal.paste(normalizedText);
-      return true;
+      return this._pasteInChunks(terminal, text);
     };
     const pasteFromSystemClipboard = () => pasteClipboardText(clipboard?.readText() ?? '');
 
@@ -472,8 +516,8 @@ class TerminalManager {
       if (modKey && event.shiftKey) {
         return false;
       }
-      // Ctrl/Cmd + 1-9 → pass to app
-      if (modKey && event.key >= '1' && event.key <= '9') {
+      // Ctrl/Cmd + 1-9/0 → pass to app (0 maps to terminal 10)
+      if (modKey && ((event.key >= '1' && event.key <= '9') || event.key === '0')) {
         return false;
       }
       // Ctrl/Cmd + K (Start Claude) → pass to app
@@ -510,6 +554,14 @@ class TerminalManager {
       }
       // Let terminal handle everything else
       return true;
+    });
+
+    // Intercept native paste (Cmd/Ctrl+V) so very large payloads are chunked.
+    element.addEventListener('paste', (e) => {
+      const text = e?.clipboardData?.getData('text/plain');
+      if (!text) return;
+      e.preventDefault();
+      pasteClipboardText(text);
     });
 
     // Right-click paste

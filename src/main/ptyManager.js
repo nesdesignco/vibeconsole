@@ -12,7 +12,8 @@ const { buildAugmentedPath } = require('../shared/pathUtils');
 const ptyInstances = new Map(); // Map<terminalId, {pty, cwd, projectPath}>
 let mainWindow = null;
 let terminalCounter = 0;
-const MAX_TERMINALS = 9;
+// Global PTY ceiling across all projects/workspaces.
+const MAX_TERMINALS = 50;
 let cachedShells = null;
 
 /**
@@ -352,7 +353,10 @@ function setupIPC(ipcMain) {
   // Input to specific terminal
   ipcMain.on(IPC.TERMINAL_INPUT_ID, (event, { terminalId, data }) => {
     writeToTerminal(terminalId, data);
-    promptLogger.logInput(data, terminalId);
+    // Keep terminal IO responsive under large paste bursts.
+    setImmediate(() => {
+      promptLogger.logInput(data, terminalId);
+    });
   });
 
   // Resize specific terminal

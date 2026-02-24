@@ -15,7 +15,7 @@ class MultiTerminalUI {
     this.contentContainer = null;
     this.initialized = false;
     this.autoCreateInitialTerminal = true; // Flag to control initial terminal creation
-    this._creatingTerminal = false; // Guard against concurrent terminal creation
+    this._terminalCreationQueue = Promise.resolve(); // Serialize terminal creation requests
     this._renderScheduled = false; // Debounce flag for render
     this._pendingState = null; // Pending state for debounced render
     this._mountedTerminalId = null; // Track currently mounted terminal to avoid unnecessary re-mounts
@@ -81,29 +81,29 @@ class MultiTerminalUI {
    * @param {string|null} [options.aiTool] - AI tool id associated with this terminal
    */
   async createTerminalForCurrentProject(options = {}) {
-    if (this._creatingTerminal) {
-      return null;
-    }
-    this._creatingTerminal = true;
-    try {
-      const projectPath = this.manager.getCurrentProject();
-      const terminalId = await this.manager.createTerminal({
-        ...options,
-        projectPath
-      });
+    const createTask = async () => {
+      try {
+        const projectPath = this.manager.getCurrentProject();
+        const terminalId = await this.manager.createTerminal({
+          ...options,
+          projectPath
+        });
 
-      if (terminalId) {
-        this.manager.setViewMode('tabs');
-        this.manager.setActiveTerminal(terminalId);
+        if (terminalId) {
+          this.manager.setViewMode('tabs');
+          this.manager.setActiveTerminal(terminalId);
+        }
+
+        return terminalId;
+      } catch (err) {
+        console.error('Failed to create terminal:', err);
+        return null;
       }
+    };
 
-      return terminalId;
-    } catch (err) {
-      console.error('Failed to create terminal:', err);
-      return null;
-    } finally {
-      this._creatingTerminal = false;
-    }
+    const run = this._terminalCreationQueue.then(createTask, createTask);
+    this._terminalCreationQueue = run.then(() => undefined, () => undefined);
+    return run;
   }
 
   /**
@@ -268,10 +268,10 @@ class MultiTerminalUI {
         this._switchTerminal(-1);
       }
 
-      // Ctrl/Cmd+1-9 - Switch to terminal by number
-      if (modKey && e.key >= '1' && e.key <= '9') {
+      // Ctrl/Cmd+1-9/0 - Switch to terminal by number (0 = 10th terminal)
+      if (modKey && ((e.key >= '1' && e.key <= '9') || e.key === '0')) {
         e.preventDefault();
-        const index = parseInt(e.key) - 1;
+        const index = e.key === '0' ? 9 : parseInt(e.key, 10) - 1;
         const terminals = this.manager.getTerminalStates();
         if (index < terminals.length) {
           this.manager.setActiveTerminal(terminals[index].id);

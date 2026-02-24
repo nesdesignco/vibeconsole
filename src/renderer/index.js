@@ -14,9 +14,11 @@ const editor = require('./editor');
 const sidebarResize = require('./sidebarResize');
 const aiToolSelector = require('./aiToolSelector');
 const savedPromptsPanel = require('./savedPromptsPanel');
+const { createToast } = require('./toast');
 const { ipcRenderer, pathApi } = require('./electronBridge');
 const { IPC } = require('../shared/ipcChannels');
 let _rendererInitialized = false;
+let _startToast = null;
 
 let _lastSidebarToggleAt = 0;
 
@@ -41,6 +43,10 @@ function init() {
   let multiTerminalUI;
   try {
     multiTerminalUI = terminal.initTerminal('terminal');
+    const terminalContainer = document.getElementById('terminal-container');
+    if (terminalContainer) {
+      _startToast = createToast(terminalContainer);
+    }
   } catch (err) {
     console.error('Failed to initialize terminal:', err);
     return;
@@ -240,28 +246,49 @@ function init() {
  * Setup button click handlers
  */
 function setupButtonHandlers() {
+  const showStartToast = (message, type = 'error') => {
+    if (_startToast) _startToast.show(message, type);
+  };
+
   // Create new project (header button)
   document.getElementById('btn-create-project').addEventListener('click', () => {
     state.createNewProject();
   });
 
   // Start AI Tool (Claude Code / Codex CLI / etc.)
-  document.getElementById('btn-start-ai').addEventListener('click', async () => {
+  const startAiBtn = document.getElementById('btn-start-ai');
+  startAiBtn.addEventListener('click', async () => {
+    if (startAiBtn.dataset.busy === '1') return;
+
     const projectPath = state.getProjectPath();
-    if (projectPath) {
+    if (!projectPath) return;
+
+    startAiBtn.dataset.busy = '1';
+    startAiBtn.disabled = true;
+
+    try {
       const currentAiTool = aiToolSelector.getCurrentTool();
       const aiToolId = currentAiTool ? currentAiTool.id : null;
       const newTerminalId = await terminal.restartTerminal(projectPath, { aiTool: aiToolId });
+      if (!newTerminalId) {
+        throw new Error('Terminal could not be created');
+      }
 
-      if (newTerminalId) {
-        // Ensure the new terminal is focused
-        terminal.setActiveTerminal(newTerminalId);
+      // Ensure the new terminal is focused
+      terminal.setActiveTerminal(newTerminalId);
 
-        // Send start command for the selected AI tool
-        const startCommand = aiToolSelector.getStartCommand();
-        setTimeout(() => {
-          terminal.sendCommand(startCommand, newTerminalId);
-        }, 1000);
+      // Send start command for the selected AI tool
+      const startCommand = aiToolSelector.getStartCommand();
+      setTimeout(() => {
+        terminal.sendCommand(startCommand, newTerminalId);
+      }, 150);
+    } catch (err) {
+      console.error('Failed to start AI tool terminal:', err);
+      showStartToast(err?.message || 'Failed to start AI tool terminal', 'error');
+    } finally {
+      startAiBtn.dataset.busy = '0';
+      if (state.getProjectPath()) {
+        startAiBtn.disabled = false;
       }
     }
   });

@@ -10,6 +10,7 @@ const pluginsPanel = require('./pluginsPanel');
 const githubPanel = require('./githubPanel');
 const savedPromptsPanel = require('./savedPromptsPanel');
 const { AI_TOOL_ICONS } = require('./aiToolSelector');
+const { createToast } = require('./toast');
 
 const AI_TOOL_FULL_NAMES = {
   claude: 'Claude Code',
@@ -31,6 +32,7 @@ class TerminalTabBar {
     this._usageRetryTimer = null; // Timer for retry scheduling
     this._ipcCleanup = [];
     this._stateCleanup = [];
+    this._toast = createToast(container);
     this._injectStyles();
     this._render();
     this._createContextMenu();
@@ -867,12 +869,16 @@ class TerminalTabBar {
   _createTerminalAndFocus(options = {}) {
     this.manager.createTerminal(options)
       .then((terminalId) => {
-        if (!terminalId) return;
+        if (!terminalId) {
+          if (this._toast) this._toast.show('Terminal could not be created', 'error');
+          return;
+        }
         this.manager.setViewMode('tabs');
         this.manager.setActiveTerminal(terminalId);
       })
       .catch((err) => {
         console.error('Failed to create terminal:', err);
+        if (this._toast) this._toast.show(err?.message || 'Failed to create terminal', 'error');
       });
   }
 

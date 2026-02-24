@@ -53,8 +53,6 @@ function getMenuTemplate() {
     {
       label: 'View',
       submenu: [
-        { role: 'reload' },
-        { role: 'forceReload' },
         { role: 'toggleDevTools' },
         { type: 'separator' },
         {

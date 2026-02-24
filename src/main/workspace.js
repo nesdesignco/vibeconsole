@@ -10,7 +10,7 @@ const { IPC } = require('../shared/ipcChannels');
 
 const WORKSPACE_DIR = '.frame';
 const WORKSPACE_FILE = 'workspaces.json';
-const FRAME_VERSION = '1.0';
+const FRAME_VERSION = '1.1';
 
 let workspaceDir = null;
 let workspacePath = null;
