@@ -164,15 +164,27 @@ function clearFileTree() {
 function refreshFileTree(projectPath) {
   const path = projectPath || (currentProjectPath && currentProjectPath());
   if (path) {
-    ipcRenderer.send(IPC.LOAD_FILE_TREE, path);
+    requestFileTree(path);
   }
+}
+
+function requestFileTree(projectPath) {
+  ipcRenderer.send(IPC.LOAD_FILE_TREE, projectPath);
 }
 
 /**
  * Load file tree for path
  */
 function loadFileTree(projectPath) {
-  ipcRenderer.send(IPC.LOAD_FILE_TREE, projectPath);
+  requestFileTree(projectPath);
+  ipcRenderer.send(IPC.START_FILE_TREE_WATCH, projectPath);
+}
+
+/**
+ * Stop watching file tree changes for the current renderer
+ */
+function stopFileTreeWatch() {
+  ipcRenderer.send(IPC.STOP_FILE_TREE_WATCH);
 }
 
 /**
@@ -578,6 +590,7 @@ module.exports = {
   clearFileTree,
   refreshFileTree,
   loadFileTree,
+  stopFileTreeWatch,
   focus,
   blur
 };

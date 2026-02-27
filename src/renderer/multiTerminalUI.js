@@ -153,7 +153,7 @@ class MultiTerminalUI {
   /**
    * Render tab view (single terminal)
    * Optimized: only re-mounts the terminal when the active terminal actually changes,
-   * avoiding unnecessary DOM teardown/rebuild that causes scroll position loss.
+   * avoiding unnecessary DOM teardown/rebuild.
    */
   _renderTabView(state) {
     const activeChanged = this._mountedTerminalId !== state.activeTerminalId;
@@ -165,11 +165,6 @@ class MultiTerminalUI {
 
     if (!needsRemount) {
       return; // Tab bar is already updated by tabBar.update(); terminal stays mounted
-    }
-
-    // Save scroll state before DOM teardown
-    if (this._mountedTerminalId) {
-      this.manager._saveScrollState(this._mountedTerminalId);
     }
 
     // Full re-mount: clear container and reset inline styles from grid
@@ -215,10 +210,6 @@ class MultiTerminalUI {
    * Render grid view (multiple terminals)
    */
   _renderGridView(state) {
-    // Save scroll state before switching from tab view
-    if (this._mountedTerminalId) {
-      this.manager._saveScrollState(this._mountedTerminalId);
-    }
     this._mountedTerminalId = null; // Reset so tabs will re-mount when switching back
     this._lastViewMode = 'grid';
     this.contentContainer.className = 'terminal-content grid-view';

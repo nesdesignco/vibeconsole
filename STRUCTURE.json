@@ -1,7 +1,7 @@
 {
   "version": "1.1",
   "description": "Claude Code IDE - Module structure and IPC communication map",
-  "lastUpdated": "2026-02-22",
+  "lastUpdated": "2026-02-27",
   "architecture": {
     "type": "electron",
     "mainProcess": "src/main/index.js",
@@ -189,37 +189,37 @@
           "purpose": "Get menu template based on active AI tool"
         },
         "buildAICommandsSubmenu": {
-          "line": 99,
+          "line": 97,
           "params": [
             "tool"
           ],
           "purpose": "Build AI commands submenu based on active tool"
         },
         "buildToolSwitcherSubmenu": {
-          "line": 187,
+          "line": 185,
           "purpose": "Build tool switcher submenu"
         },
         "sendCommand": {
-          "line": 206,
+          "line": 204,
           "params": [
             "command"
           ],
           "purpose": "Send command to terminal"
         },
         "toggleHistoryPanel": {
-          "line": 215,
+          "line": 213,
           "purpose": "Toggle history panel"
         },
         "toggleSidebar": {
-          "line": 224,
+          "line": 222,
           "purpose": "Toggle sidebar visibility"
         },
         "openHistoryFile": {
-          "line": 233,
+          "line": 231,
           "purpose": "Open history file in default editor"
         },
         "createMenu": {
-          "line": 247,
+          "line": 245,
           "purpose": "Create and set application menu"
         }
       },
@@ -305,7 +305,7 @@
       ],
       "functions": {
         "getFileTree": {
-          "line": 19,
+          "line": 20,
           "params": [
             "dirPath",
             "maxDepth = 5",
@@ -314,7 +314,7 @@
           ]
         },
         "safeSend": {
-          "line": 70,
+          "line": 71,
           "params": [
             "sender",
             "channel",
@@ -322,8 +322,21 @@
           ],
           "purpose": "Setup IPC handlers"
         },
+        "stopWatcherForSender": {
+          "line": 77,
+          "params": [
+            "senderId"
+          ]
+        },
+        "startWatcherForSender": {
+          "line": 89,
+          "params": [
+            "sender",
+            "projectPath"
+          ]
+        },
         "setupIPC": {
-          "line": 74,
+          "line": 148,
           "params": [
             "ipcMain"
           ]
@@ -332,6 +345,8 @@
       "ipc": {
         "listens": [
           "LOAD_FILE_TREE",
+          "START_FILE_TREE_WATCH",
+          "STOP_FILE_TREE_WATCH",
           "CREATE_FILE",
           "CREATE_FOLDER",
           "RENAME_FILE",
@@ -563,23 +578,24 @@
         "sidebarResize",
         "aiToolSelector",
         "savedPromptsPanel",
+        "toast",
         "electronBridge",
         "shared/ipcChannels"
       ],
       "functions": {
         "toggleSidebarSafe": {
-          "line": 23
+          "line": 25
         },
         "init": {
-          "line": 36,
+          "line": 38,
           "purpose": "Initialize all modules"
         },
         "setupButtonHandlers": {
-          "line": 242,
+          "line": 249,
           "purpose": "Setup button click handlers"
         },
         "setupKeyboardShortcuts": {
-          "line": 289,
+          "line": 317,
           "purpose": "Setup keyboard shortcuts"
         }
       },
@@ -695,6 +711,7 @@
         "clearFileTree",
         "refreshFileTree",
         "loadFileTree",
+        "stopFileTreeWatch",
         "focus",
         "blur"
       ],
@@ -748,29 +765,39 @@
           ],
           "purpose": "Refresh file tree"
         },
+        "requestFileTree": {
+          "line": 171,
+          "params": [
+            "projectPath"
+          ]
+        },
         "loadFileTree": {
-          "line": 174,
+          "line": 178,
           "params": [
             "projectPath"
           ],
           "purpose": "Load file tree for path"
         },
+        "stopFileTreeWatch": {
+          "line": 186,
+          "purpose": "Stop watching file tree changes for the current renderer"
+        },
         "validateFileName": {
-          "line": 182,
+          "line": 194,
           "params": [
             "name"
           ],
           "purpose": "Validate a file/folder name"
         },
         "getTargetDir": {
-          "line": 191,
+          "line": 203,
           "params": [
             "file"
           ],
           "purpose": "Get the directory path for creating new items relative to a file"
         },
         "createInlineInput": {
-          "line": 198,
+          "line": 210,
           "params": [
             "fileItem",
             "initialValue",
@@ -780,7 +807,7 @@
           "purpose": "Create an inline input for rename or new file/folder"
         },
         "showNewItemInput": {
-          "line": 275,
+          "line": 287,
           "params": [
             "file",
             "isFolder"
@@ -788,14 +815,14 @@
           "purpose": "Show inline input for creating a new file or folder inside a directory"
         },
         "startRename": {
-          "line": 364,
+          "line": 376,
           "params": [
             "file"
           ],
           "purpose": "Start inline rename for a file item"
         },
         "showContextMenu": {
-          "line": 380,
+          "line": 392,
           "params": [
             "x",
             "y",
@@ -804,26 +831,26 @@
           "purpose": "Show context menu for a file item"
         },
         "setupIPC": {
-          "line": 443,
+          "line": 455,
           "purpose": "Setup IPC listeners"
         },
         "focus": {
-          "line": 459,
+          "line": 471,
           "purpose": "Focus file tree for keyboard navigation"
         },
         "getVisibleItems": {
-          "line": 484,
+          "line": 496,
           "purpose": "Get all visible file items (for navigation)"
         },
         "handleKeydown": {
-          "line": 503,
+          "line": 515,
           "params": [
             "e"
           ],
           "purpose": "Handle keyboard navigation in file tree"
         },
         "blur": {
-          "line": 565,
+          "line": 577,
           "purpose": "Blur/unfocus file tree"
         }
       },
@@ -834,7 +861,8 @@
         ],
         "emits": [
           "LOAD_FILE_TREE",
-          "LOAD_FILE_TREE",
+          "START_FILE_TREE_WATCH",
+          "STOP_FILE_TREE_WATCH",
           "CREATE_FOLDER",
           "CREATE_FILE",
           "RENAME_FILE",
@@ -950,26 +978,26 @@
           "purpose": "Register callback for project change"
         },
         "updateProjectUI": {
-          "line": 69,
+          "line": 72,
           "purpose": "Update project UI elements"
         },
         "selectProjectFolder": {
-          "line": 90,
+          "line": 93,
           "purpose": "Request folder selection"
         },
         "showPromptDialog": {
-          "line": 97,
+          "line": 100,
           "params": [
             "message"
           ],
           "purpose": "Show a custom prompt dialog (window.prompt is unreliable in Electron sandbox)"
         },
         "createNewProject": {
-          "line": 152,
+          "line": 155,
           "purpose": "Request new project creation"
         },
         "setupIPC": {
-          "line": 172,
+          "line": 175,
           "purpose": "Setup IPC listeners"
         }
       },
@@ -1422,22 +1450,22 @@
       ],
       "functions": {
         "init": {
-          "line": 21,
+          "line": 22,
           "params": [
             "window"
           ],
           "purpose": "Initialize PTY manager with window reference"
         },
         "getDefaultShell": {
-          "line": 36,
+          "line": 37,
           "purpose": "Get default shell based on platform"
         },
         "getAvailableShells": {
-          "line": 53,
+          "line": 54,
           "purpose": "Get available shells on the system"
         },
         "createTerminal": {
-          "line": 142,
+          "line": 143,
           "params": [
             "workingDir = null",
             "projectPath = null",
@@ -1445,21 +1473,21 @@
           ]
         },
         "getTerminalsByProject": {
-          "line": 217,
+          "line": 218,
           "params": [
             "projectPath"
           ],
           "purpose": "Get terminals for a specific project"
         },
         "getTerminalInfo": {
-          "line": 232,
+          "line": 233,
           "params": [
             "terminalId"
           ],
           "purpose": "Get terminal info"
         },
         "writeToTerminal": {
-          "line": 243,
+          "line": 244,
           "params": [
             "terminalId",
             "data"
@@ -1467,7 +1495,7 @@
           "purpose": "Write data to specific terminal"
         },
         "resizeTerminal": {
-          "line": 253,
+          "line": 254,
           "params": [
             "terminalId",
             "cols",
@@ -1476,33 +1504,33 @@
           "purpose": "Resize specific terminal"
         },
         "destroyTerminal": {
-          "line": 263,
+          "line": 264,
           "params": [
             "terminalId"
           ],
           "purpose": "Destroy specific terminal"
         },
         "destroyAll": {
-          "line": 275,
+          "line": 276,
           "purpose": "Destroy all terminals"
         },
         "getTerminalCount": {
-          "line": 286,
+          "line": 287,
           "purpose": "Get terminal count"
         },
         "getTerminalIds": {
-          "line": 293,
+          "line": 294,
           "purpose": "Get all terminal IDs"
         },
         "hasTerminal": {
-          "line": 300,
+          "line": 301,
           "params": [
             "terminalId"
           ],
           "purpose": "Check if terminal exists"
         },
         "setupIPC": {
-          "line": 307,
+          "line": 308,
           "params": [
             "ipcMain"
           ],
@@ -1623,16 +1651,13 @@
         "githubPanel",
         "savedPromptsPanel",
         "aiToolSelector",
+        "toast",
         "state"
       ],
       "functions": {},
       "ipc": {
         "listens": [
-          "AI_USAGE_DATA",
-          "UPDATE_AVAILABLE",
-          "UPDATE_DOWNLOAD_PROGRESS",
-          "UPDATE_DOWNLOADED",
-          "UPDATE_ERROR"
+          "channel"
         ],
         "emits": [
           "LOAD_AI_USAGE",
@@ -1764,28 +1789,28 @@
           "purpose": "Setup event listeners"
         },
         "setupIPCListeners": {
-          "line": 76,
+          "line": 95,
           "purpose": "Setup IPC listeners"
         },
         "loadPlugins": {
-          "line": 100,
+          "line": 119,
           "purpose": "Load plugins"
         },
         "refreshPlugins": {
-          "line": 114,
+          "line": 133,
           "purpose": "Refresh plugins from marketplace"
         },
         "show": {
-          "line": 135
+          "line": 154
         },
         "hide": {
-          "line": 136
+          "line": 155
         },
         "toggle": {
-          "line": 137
+          "line": 156
         },
         "setFilter": {
-          "line": 142,
+          "line": 161,
           "params": [
             "filter",
             "options = {}"
@@ -1793,43 +1818,43 @@
           "purpose": "Set filter"
         },
         "getFilteredPlugins": {
-          "line": 155,
+          "line": 174,
           "purpose": "Get filtered plugins"
         },
         "render": {
-          "line": 171,
+          "line": 190,
           "purpose": "Render plugins list"
         },
         "renderPluginItem": {
-          "line": 215,
+          "line": 216,
           "params": [
             "plugin"
           ],
           "purpose": "Render single plugin item"
         },
         "getPluginIcon": {
-          "line": 261,
+          "line": 262,
           "params": [
             "name"
           ],
           "purpose": "Get icon for plugin based on name"
         },
         "togglePlugin": {
-          "line": 300,
+          "line": 301,
           "params": [
             "pluginId"
           ],
           "purpose": "Toggle plugin enabled/disabled"
         },
         "installPlugin": {
-          "line": 312,
+          "line": 313,
           "params": [
             "pluginName"
           ],
           "purpose": "Install plugin via terminal command"
         },
         "showToast": {
-          "line": 329,
+          "line": 330,
           "params": [
             "message",
             "type = 'info'"
@@ -2934,57 +2959,57 @@
           "purpose": "Setup event listeners"
         },
         "setupIPCListeners": {
-          "line": 97,
+          "line": 125,
           "purpose": "Setup IPC listeners"
         },
         "loadPrompts": {
-          "line": 120,
+          "line": 148,
           "purpose": "Load prompts from backend"
         },
         "show": {
-          "line": 125
+          "line": 153
         },
         "hide": {
-          "line": 126
+          "line": 154
         },
         "toggle": {
-          "line": 127
+          "line": 155
         },
         "setScope": {
-          "line": 129,
+          "line": 157,
           "params": [
             "scope",
             "options = {}"
           ]
         },
         "getMergedPrompts": {
-          "line": 141,
+          "line": 169,
           "purpose": "Get merged and filtered prompts"
         },
         "render": {
-          "line": 177,
+          "line": 205,
           "purpose": "Render the panel content"
         },
         "renderCategories": {
-          "line": 236,
+          "line": 234,
           "purpose": "Render category chips"
         },
         "renderPromptItem": {
-          "line": 243,
+          "line": 241,
           "params": [
             "prompt"
           ],
           "purpose": "Render a single prompt item"
         },
         "copyToClipboard": {
-          "line": 292,
+          "line": 290,
           "params": [
             "promptId",
             "scope"
           ]
         },
         "toggleFavorite": {
-          "line": 320,
+          "line": 318,
           "params": [
             "promptId",
             "scope"
@@ -2992,7 +3017,7 @@
           "purpose": "Toggle favorite status"
         },
         "deletePrompt": {
-          "line": 337,
+          "line": 335,
           "params": [
             "promptId",
             "scope"
@@ -3000,11 +3025,11 @@
           "purpose": "Delete a prompt"
         },
         "showAddPromptModal": {
-          "line": 351,
+          "line": 349,
           "purpose": "Show add prompt modal"
         },
         "showEditPromptModal": {
-          "line": 381,
+          "line": 379,
           "params": [
             "promptId",
             "scope"
@@ -3012,22 +3037,22 @@
           "purpose": "Show edit prompt modal"
         },
         "hidePromptModal": {
-          "line": 412,
+          "line": 410,
           "purpose": "Hide prompt modal"
         },
         "handlePromptFormSubmit": {
-          "line": 422,
+          "line": 420,
           "params": [
             "e"
           ],
           "purpose": "Handle form submit"
         },
         "setupModalListeners": {
-          "line": 461,
+          "line": 459,
           "purpose": "Setup modal listeners"
         },
         "showToast": {
-          "line": 511,
+          "line": 509,
           "params": [
             "message",
             "type = 'info'"
@@ -3332,7 +3357,7 @@
       ],
       "functions": {
         "isAllowedChannel": {
-          "line": 109,
+          "line": 111,
           "params": [
             "channel"
           ]

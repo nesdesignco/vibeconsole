@@ -18,6 +18,8 @@ const IPC = {
   CREATE_FOLDER: 'create-folder',
   RENAME_FILE: 'rename-file',
   REVEAL_IN_FINDER: 'reveal-in-finder',
+  START_FILE_TREE_WATCH: 'start-file-tree-watch',
+  STOP_FILE_TREE_WATCH: 'stop-file-tree-watch',
 
   // History
   LOAD_PROMPT_HISTORY: 'load-prompt-history',

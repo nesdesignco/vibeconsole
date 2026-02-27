@@ -8,6 +8,7 @@ const path = require('path');
 const { shell } = require('electron');
 const { IPC } = require('../shared/ipcChannels');
 const { isPathWithinProject } = require('../shared/pathValidation');
+const watcherBySenderId = new Map(); // Map<number, { watcher: fs.FSWatcher, projectPath: string, timer: NodeJS.Timeout | null }>
 
 /**
  * Get file tree for a directory
@@ -68,13 +69,94 @@ function getFileTree(dirPath, maxDepth = 5, currentDepth = 0, visitedPaths = nul
  * Setup IPC handlers
  */
 function safeSend(sender, channel, data) {
-  if (!sender.isDestroyed()) sender.send(channel, data);
+  if (!sender || typeof sender.send !== 'function') return;
+  if (typeof sender.isDestroyed === 'function' && sender.isDestroyed()) return;
+  sender.send(channel, data);
+}
+
+function stopWatcherForSender(senderId) {
+  const entry = watcherBySenderId.get(senderId);
+  if (!entry) return;
+  if (entry.timer) clearTimeout(entry.timer);
+  try {
+    entry.watcher.close();
+  } catch (err) {
+    console.error('Failed to close file tree watcher:', err);
+  }
+  watcherBySenderId.delete(senderId);
+}
+
+function startWatcherForSender(sender, projectPath) {
+  if (!sender || typeof sender.id !== 'number') return;
+  const senderId = sender.id;
+  stopWatcherForSender(senderId);
+
+  if (!projectPath || !fs.existsSync(projectPath)) return;
+  let stat;
+  try {
+    stat = fs.statSync(projectPath);
+  } catch {
+    return;
+  }
+  if (!stat.isDirectory()) return;
+
+  let timer = null;
+  const scheduleRefresh = () => {
+    if (timer) clearTimeout(timer);
+    const prevEntry = watcherBySenderId.get(senderId);
+    if (prevEntry) prevEntry.timer = null;
+    timer = setTimeout(() => {
+      timer = null;
+      const current = watcherBySenderId.get(senderId);
+      if (!current || current.projectPath !== projectPath) return;
+      current.timer = null;
+      const files = getFileTree(projectPath);
+      safeSend(sender, IPC.FILE_TREE_DATA, files);
+    }, 120);
+    const current = watcherBySenderId.get(senderId);
+    if (current) current.timer = timer;
+  };
+
+  try {
+    let watcher;
+    try {
+      watcher = fs.watch(projectPath, { recursive: true }, scheduleRefresh);
+    } catch (err) {
+      if (err && err.code === 'ERR_FEATURE_UNAVAILABLE_ON_PLATFORM') {
+        watcher = fs.watch(projectPath, scheduleRefresh);
+      } else {
+        throw err;
+      }
+    }
+
+    watcher.on('error', (err) => {
+      console.error('File tree watcher error:', err);
+    });
+
+    watcherBySenderId.set(senderId, { watcher, projectPath, timer });
+
+    if (typeof sender.once === 'function') {
+      sender.once('destroyed', () => {
+        stopWatcherForSender(senderId);
+      });
+    }
+  } catch (err) {
+    console.error('Failed to start file tree watcher:', err);
+  }
 }
 
 function setupIPC(ipcMain) {
   ipcMain.on(IPC.LOAD_FILE_TREE, (event, projectPath) => {
     const files = getFileTree(projectPath);
     safeSend(event.sender, IPC.FILE_TREE_DATA, files);
+  });
+
+  ipcMain.on(IPC.START_FILE_TREE_WATCH, (event, projectPath) => {
+    startWatcherForSender(event.sender, projectPath);
+  });
+
+  ipcMain.on(IPC.STOP_FILE_TREE_WATCH, (event) => {
+    stopWatcherForSender(event.sender.id);
   });
 
   ipcMain.on(IPC.CREATE_FILE, (event, { filePath, projectPath }) => {

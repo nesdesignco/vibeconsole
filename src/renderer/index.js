@@ -172,6 +172,7 @@ function init() {
         savedPromptsPanel.show();
       }
     } else {
+      fileTreeUI.stopFileTreeWatch();
       fileTreeUI.clearFileTree();
     }
   });

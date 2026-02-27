@@ -49,8 +49,6 @@ class TerminalManager {
   constructor() {
     this.terminals = new Map(); // Map<id, {terminal, fitAddon, element, state}>
     this._inputLineBuffers = new Map(); // Map<terminalId, currentInputLine>
-    this._savedScrollState = new Map(); // Map<terminalId, {viewportY, wasAtBottom}>
-    this._forceBottomOnProjectSwitch = false; // Force active terminal to bottom after project switches
     this.activeTerminalId = null;
     this.viewMode = 'tabs'; // 'tabs' or 'grid'
     this.gridLayout = '2x2';
@@ -122,25 +120,6 @@ class TerminalManager {
     instance.scrollBtn.classList.toggle('visible', !isAtBottom);
   }
 
-  _scheduleDeferredScrollRestore(terminalId, maxAttempts = 10) {
-    let attempts = 0;
-    const tick = () => {
-      const instance = this.terminals.get(terminalId);
-      if (!instance || !instance.opened || !this._isInDOM(instance)) return;
-
-      if (this._restoreScrollState(terminalId)) {
-        this._syncScrollDownButton(instance);
-        return;
-      }
-
-      attempts++;
-      if (attempts >= maxAttempts || !this._savedScrollState.has(terminalId)) return;
-      setTimeout(tick, 60);
-    };
-
-    setTimeout(tick, 60);
-  }
-
   /**
    * Set current project context
    * @param {string|null} projectPath - Project path or null for global
@@ -149,7 +128,6 @@ class TerminalManager {
     // Save current project session before switching
     if (this.currentProjectPath !== projectPath) {
       this.saveProjectSession(this.currentProjectPath);
-      this._forceBottomOnProjectSwitch = true;
     }
 
     this.currentProjectPath = projectPath;
@@ -613,28 +591,6 @@ class TerminalManager {
           if (!this._isInDOM(instance)) return;
           instance.fitAddon.fit();
           this._sendResize(terminalId);
-          // On project switch, keep active terminal pinned to bottom to avoid
-          // stale viewport restores that look like a jump to upper lines.
-          const shouldForceBottom = this._forceBottomOnProjectSwitch && terminalId === this.activeTerminalId;
-          if (shouldForceBottom) {
-            this._savedScrollState.delete(terminalId);
-            instance.terminal.scrollToBottom();
-            // When terminals are re-parented (project switches / view changes), some
-            // environments can end up with the DOM scrollbar thumb at the top while
-            // xterm's internal buffer is at the bottom. Force-sync the viewport to
-            // avoid "snap to top" on the next wheel/scroll interaction.
-            this._forceViewportScrollToBottom(instance);
-            this._forceBottomOnProjectSwitch = false;
-          } else if (!this._restoreScrollState(terminalId)) {
-            // Restore saved scroll position, or scroll to bottom for new terminals
-            instance.terminal.scrollToBottom();
-            this._forceViewportScrollToBottom(instance);
-            // If we had a saved scroll position but the buffer isn't populated yet,
-            // retry briefly to avoid snapping to the top.
-            if (this._savedScrollState.has(terminalId)) {
-              this._scheduleDeferredScrollRestore(terminalId);
-            }
-          }
           this._syncScrollDownButton(instance);
           // Focus if this is the active terminal
           if (this.activeTerminalId === terminalId) {
@@ -709,7 +665,6 @@ class TerminalManager {
     const instance = this.terminals.get(terminalId);
     if (instance) {
       this._inputLineBuffers.delete(terminalId);
-      this._savedScrollState.delete(terminalId);
       instance.terminal.dispose();
       instance.element.remove();
       this.terminals.delete(terminalId);
@@ -783,24 +738,23 @@ class TerminalManager {
   }
 
   /**
-   * Fit all terminals (preserves scroll position)
+   * Fit all mounted terminals and push resize events only when geometry changed.
    */
   fitAll() {
     for (const [id, instance] of this.terminals) {
       if (instance.opened && this._isInDOM(instance)) {
         try {
-          const buf = instance.terminal.buffer.active;
-          const viewportYBefore = buf.viewportY;
-          const wasAtBottom = this._isAtOrNearBottom(instance.terminal, 1);
+          const colsBefore = instance.terminal.cols;
+          const rowsBefore = instance.terminal.rows;
           instance.fitAddon.fit();
-          this._sendResize(id);
-          if (wasAtBottom) {
-            instance.terminal.scrollToBottom();
-            this._forceViewportScrollToBottom(instance);
-          } else {
-            const newBaseY = instance.terminal.buffer.active.baseY;
-            instance.terminal.scrollToLine(Math.min(viewportYBefore, newBaseY));
+          const colsAfter = instance.terminal.cols;
+          const rowsAfter = instance.terminal.rows;
+          const sizeChanged = colsBefore !== colsAfter || rowsBefore !== rowsAfter;
+          if (!sizeChanged) {
+            this._syncScrollDownButton(instance);
+            continue;
           }
+          this._sendResize(id);
           this._syncScrollDownButton(instance);
         } catch (err) {
           console.error(`Failed to fit terminal ${id}:`, err);
@@ -810,23 +764,22 @@ class TerminalManager {
   }
 
   /**
-   * Fit specific terminal (preserves scroll position)
+   * Fit specific mounted terminal and send resize only if needed.
    */
   fitTerminal(terminalId) {
     const instance = this.terminals.get(terminalId);
     if (instance && instance.opened && this._isInDOM(instance)) {
-      const buf = instance.terminal.buffer.active;
-      const viewportYBefore = buf.viewportY;
-      const wasAtBottom = this._isAtOrNearBottom(instance.terminal, 1);
+      const colsBefore = instance.terminal.cols;
+      const rowsBefore = instance.terminal.rows;
       instance.fitAddon.fit();
-      this._sendResize(terminalId);
-      if (wasAtBottom) {
-        instance.terminal.scrollToBottom();
-        this._forceViewportScrollToBottom(instance);
-      } else {
-        const newBaseY = instance.terminal.buffer.active.baseY;
-        instance.terminal.scrollToLine(Math.min(viewportYBefore, newBaseY));
+      const colsAfter = instance.terminal.cols;
+      const rowsAfter = instance.terminal.rows;
+      const sizeChanged = colsBefore !== colsAfter || rowsBefore !== rowsAfter;
+      if (!sizeChanged) {
+        this._syncScrollDownButton(instance);
+        return;
       }
+      this._sendResize(terminalId);
       this._syncScrollDownButton(instance);
     }
   }
@@ -838,9 +791,7 @@ class TerminalManager {
     if (this.activeTerminalId) {
       const instance = this.terminals.get(this.activeTerminalId);
       if (instance) {
-        const wasAtBottom = this._isAtOrNearBottom(instance.terminal, 1);
         instance.terminal.write(data, () => {
-          if (wasAtBottom) instance.terminal.scrollToBottom();
           if (typeof instance.scheduleSyncScrollBtn === 'function') {
             instance.scheduleSyncScrollBtn();
           } else {
@@ -868,64 +819,9 @@ class TerminalManager {
     }
   }
 
-  /**
-   * Save scroll position for a terminal (before unmount)
-   */
-  _saveScrollState(terminalId) {
-    const instance = this.terminals.get(terminalId);
-    if (!instance || !instance.opened) return;
-    const buf = instance.terminal.buffer.active;
-    // Use a small threshold: after fit/reflow xterm can land 1-2 lines above baseY.
-    const wasAtBottom = this._isAtOrNearBottom(instance.terminal, 1);
-    this._savedScrollState.set(terminalId, {
-      viewportY: buf.viewportY,
-      wasAtBottom
-    });
-  }
-
-  /**
-   * Restore scroll position for a terminal (after remount)
-   * Returns true if state was restored, false otherwise
-   */
-  _restoreScrollState(terminalId) {
-    const saved = this._savedScrollState.get(terminalId);
-    if (!saved) return false;
-
-    const instance = this.terminals.get(terminalId);
-    if (!instance || !instance.opened) return false;
-
-    if (saved.wasAtBottom) {
-      instance.terminal.scrollToBottom();
-      this._forceViewportScrollToBottom(instance);
-      this._savedScrollState.delete(terminalId);
-    } else {
-      const newBaseY = instance.terminal.buffer.active.baseY;
-      // Buffer not populated yet (baseY=0) but we have a meaningful saved viewport.
-      // Defer restore to avoid snapping to the top.
-      if (newBaseY === 0 && saved.viewportY > 0) return false;
-      const clampedY = Math.min(saved.viewportY, newBaseY);
-      instance.terminal.scrollToLine(clampedY);
-      this._savedScrollState.delete(terminalId);
-    }
-    return true;
-  }
-
   // Private methods
   _isInDOM(instance) {
     return instance.element && instance.element.isConnected;
-  }
-
-  _forceViewportScrollToBottom(instance) {
-    try {
-      const root = instance?.element;
-      if (!root || typeof root.querySelector !== 'function') return false;
-      const viewport = root.querySelector('.xterm-viewport');
-      if (!viewport) return false;
-      viewport.scrollTop = viewport.scrollHeight;
-      return true;
-    } catch {
-      return false;
-    }
   }
 
   _sendResize(terminalId) {
@@ -1101,9 +997,7 @@ class TerminalManager {
     ipcRenderer.on(IPC.TERMINAL_OUTPUT_ID, (event, { terminalId, data }) => {
       const instance = this.terminals.get(terminalId);
       if (instance) {
-        const wasAtBottom = this._isAtOrNearBottom(instance.terminal, 1);
         instance.terminal.write(data, () => {
-          if (wasAtBottom) instance.terminal.scrollToBottom();
           if (typeof instance.scheduleSyncScrollBtn === 'function') {
             instance.scheduleSyncScrollBtn();
           } else {

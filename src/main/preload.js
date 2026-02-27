@@ -18,6 +18,8 @@ const allowedChannels = new Set([
   'create-folder',
   'rename-file',
   'reveal-in-finder',
+  'start-file-tree-watch',
+  'stop-file-tree-watch',
   'load-prompt-history',
   'prompt-history-data',
   'toggle-history-panel',
