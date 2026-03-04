@@ -299,8 +299,11 @@ async function showCommitDiffModal(commitHash) {
   if (!modal) return;
 
   const shortHash = commitHash.substring(0, 7);
-  modal.querySelector('.diff-modal-filename').textContent = `Commit ${shortHash}`;
-  modal.querySelector('.diff-modal-path').textContent = commitHash;
+  const filenameEl = modal.querySelector('.diff-modal-filename');
+  const pathEl = modal.querySelector('.diff-modal-path');
+  filenameEl.textContent = `Commit ${shortHash}`;
+  pathEl.textContent = commitHash;
+  pathEl.title = commitHash;
   const bodyEl = modal.querySelector('.diff-modal-body');
   bodyEl.textContent = '';
   const loadingDiv = document.createElement('div');
@@ -335,6 +338,23 @@ async function showCommitDiffModal(commitHash) {
       errDiv.appendChild(errP);
       bodyEl.appendChild(errDiv);
       return;
+    }
+
+    const details = result.details || null;
+    if (details) {
+      const titleText = details.subject?.trim() || `Commit ${details.shortHash || shortHash}`;
+      filenameEl.textContent = titleText;
+
+      const metaParts = [];
+      if (details.author) {
+        metaParts.push(details.authorEmail ? `${details.author} <${details.authorEmail}>` : details.author);
+      }
+      if (details.relativeTime) metaParts.push(details.relativeTime);
+      if (details.authoredAt) metaParts.push(details.authoredAt);
+      if (details.hash) metaParts.push(details.hash);
+      const metaLine = metaParts.join(' • ') || commitHash;
+      pathEl.textContent = metaLine;
+      pathEl.title = metaLine;
     }
 
     const { lines, additions, deletions } = parseDiff(result.diff);

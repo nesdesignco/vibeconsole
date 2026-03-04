@@ -10,11 +10,15 @@ function renderCommitItem(commit, options = { kind: 'outgoing' }) {
   ` : '';
   return `
     <div class="git-commit-item ${isOutgoing ? 'outgoing' : 'incoming'}" data-hash="${escapeAttr(commit.hash)}">
-      <span class="git-commit-graph">${escapeHtml(graphLane)}</span>
-      <span class="git-commit-hash">${escapeHtml(commit.shortHash)}</span>
-      <span class="git-commit-message">${escapeHtml(commit.message)}</span>
-      <span class="git-commit-meta">${escapeHtml(commit.author)} &middot; ${escapeHtml(commit.relativeTime)}</span>
-      ${actions}
+      <div class="git-commit-main">
+        <span class="git-commit-graph">${escapeHtml(graphLane)}</span>
+        <span class="git-commit-hash">${escapeHtml(commit.shortHash)}</span>
+        <span class="git-commit-message">${escapeHtml(commit.message)}</span>
+      </div>
+      <div class="git-commit-sub">
+        <span class="git-commit-meta">${escapeHtml(commit.author)} &middot; ${escapeHtml(commit.relativeTime)}</span>
+        ${actions}
+      </div>
     </div>
   `;
 }

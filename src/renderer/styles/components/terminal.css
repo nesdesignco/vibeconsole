@@ -133,6 +133,18 @@
   color: var(--text-secondary);
 }
 
+.terminal-tab.dragging {
+  opacity: 0.55;
+}
+
+.terminal-tab.drop-before {
+  box-shadow: inset 2px 0 0 var(--accent-primary);
+}
+
+.terminal-tab.drop-after {
+  box-shadow: inset -2px 0 0 var(--accent-primary);
+}
+
 .terminal-tab.active {
   background: var(--bg-primary);
   color: var(--text-primary);

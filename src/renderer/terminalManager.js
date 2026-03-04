@@ -66,6 +66,59 @@ class TerminalManager {
       .length;
   }
 
+  _getProjectTerminalEntries(projectPath) {
+    return Array.from(this.terminals.entries())
+      .filter(([, instance]) => instance.state.projectPath === projectPath)
+      .sort(([, a], [, b]) => this._compareTerminalState(a.state, b.state));
+  }
+
+  _compareTerminalState(a, b) {
+    const aOrder = Number.isFinite(a.order) ? a.order : Number.MAX_SAFE_INTEGER;
+    const bOrder = Number.isFinite(b.order) ? b.order : Number.MAX_SAFE_INTEGER;
+    if (aOrder !== bOrder) return aOrder - bOrder;
+
+    const aCreated = Number.isFinite(a.createdAt) ? a.createdAt : 0;
+    const bCreated = Number.isFinite(b.createdAt) ? b.createdAt : 0;
+    if (aCreated !== bCreated) return aCreated - bCreated;
+
+    return String(a.id).localeCompare(String(b.id));
+  }
+
+  _getNextOrderForProject(projectPath) {
+    const entries = this._getProjectTerminalEntries(projectPath);
+    if (entries.length === 0) return 0;
+    const lastOrder = entries[entries.length - 1][1].state.order;
+    if (!Number.isFinite(lastOrder)) return entries.length;
+    return lastOrder + 1;
+  }
+
+  _normalizeProjectOrder(projectPath) {
+    const entries = this._getProjectTerminalEntries(projectPath);
+    entries.forEach(([, instance], index) => {
+      instance.state.order = index;
+    });
+  }
+
+  _applyProjectOrder(projectPath, orderedIds = []) {
+    const entries = this._getProjectTerminalEntries(projectPath);
+    const byId = new Map(entries.map(([id, instance]) => [id, instance]));
+    const ordered = [];
+
+    orderedIds.forEach((id) => {
+      if (byId.has(id)) {
+        ordered.push([id, byId.get(id)]);
+        byId.delete(id);
+      }
+    });
+
+    const remaining = Array.from(byId.entries())
+      .sort(([, a], [, b]) => this._compareTerminalState(a.state, b.state));
+    const finalOrder = [...ordered, ...remaining];
+    finalOrder.forEach(([, instance], index) => {
+      instance.state.order = index;
+    });
+  }
+
   async _invokeWithTimeout(promise, timeoutMs, timeoutMessage) {
     let timeoutId = null;
     try {
@@ -150,10 +203,8 @@ class TerminalManager {
    * @param {string|null} projectPath - Project path or null for global
    */
   getTerminalsByProject(projectPath) {
-    return Array.from(this.terminals.values())
-      .filter(t => t.state.projectPath === projectPath)
-      .map(t => ({ ...t.state }))
-      .sort((a, b) => a.createdAt - b.createdAt);
+    return this._getProjectTerminalEntries(projectPath)
+      .map(([, instance]) => ({ ...instance.state }));
   }
 
   /**
@@ -172,7 +223,8 @@ class TerminalManager {
       activeTerminalId: this.activeTerminalId,
       viewMode: this.viewMode,
       gridLayout: this.gridLayout,
-      terminalNames: {} // Map of terminalId -> customName
+      terminalNames: {}, // Map of terminalId -> customName
+      terminalOrder: projectTerminals.map((t) => t.id)
     };
 
     // Save custom names
@@ -214,6 +266,9 @@ class TerminalManager {
 
         // Restore custom names for existing terminals
         const projectTerminals = this.getTerminalsByProject(projectPath);
+        if (Array.isArray(sessionData.terminalOrder)) {
+          this._applyProjectOrder(projectPath, sessionData.terminalOrder);
+        }
         projectTerminals.forEach(t => {
           if (sessionData.terminalNames && sessionData.terminalNames[t.id]) {
             const instance = this.terminals.get(t.id);
@@ -431,6 +486,7 @@ class TerminalManager {
       customName: null,
       isActive: false,
       createdAt: Date.now(),
+      order: this._getNextOrderForProject(options.projectPath !== undefined ? options.projectPath : this.currentProjectPath),
       projectPath: options.projectPath !== undefined ? options.projectPath : this.currentProjectPath,
       aiTool: options.aiTool || null
     };
@@ -702,6 +758,42 @@ class TerminalManager {
     this._notifyStateChange();
   }
 
+  moveTerminal(terminalId, targetIndex) {
+    const instance = this.terminals.get(terminalId);
+    if (!instance) return;
+
+    const projectPath = instance.state.projectPath;
+    const entries = this._getProjectTerminalEntries(projectPath);
+    if (entries.length <= 1) return;
+
+    const fromIndex = entries.findIndex(([id]) => id === terminalId);
+    if (fromIndex === -1) return;
+
+    const boundedTarget = Math.max(0, Math.min(targetIndex, entries.length - 1));
+    if (fromIndex === boundedTarget) return;
+
+    const [moved] = entries.splice(fromIndex, 1);
+    entries.splice(boundedTarget, 0, moved);
+    entries.forEach(([, item], index) => {
+      item.state.order = index;
+    });
+
+    this._renumberTerminals(projectPath);
+    this._notifyStateChange();
+  }
+
+  moveTerminalToStart(terminalId) {
+    this.moveTerminal(terminalId, 0);
+  }
+
+  moveTerminalToEnd(terminalId) {
+    const instance = this.terminals.get(terminalId);
+    if (!instance) return;
+    const entries = this._getProjectTerminalEntries(instance.state.projectPath);
+    if (entries.length === 0) return;
+    this.moveTerminal(terminalId, entries.length - 1);
+  }
+
   /**
    * Get all terminal states (filtered by current project)
    * @param {boolean} allProjects - If true, return all terminals regardless of project
@@ -716,7 +808,7 @@ class TerminalManager {
 
     return terminals
       .map(t => ({ ...t.state }))
-      .sort((a, b) => a.createdAt - b.createdAt);
+      .sort((a, b) => this._compareTerminalState(a, b));
   }
 
   /**
@@ -1020,6 +1112,7 @@ class TerminalManager {
    * Only affects terminals without custom names. Only notifies if names actually changed.
    */
   _renumberTerminals(projectPath) {
+    this._normalizeProjectOrder(projectPath);
     const terminals = this.getTerminalsByProject(projectPath);
     let changed = false;
 

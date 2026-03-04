@@ -450,12 +450,50 @@ function showContextMenu(x, y, file) {
 }
 
 /**
+ * Get paths of all currently expanded folders
+ */
+function getExpandedPaths() {
+  if (!fileTreeElement) return new Set();
+  const expanded = new Set();
+  fileTreeElement.querySelectorAll('.folder-children').forEach(container => {
+    if (container.style.display !== 'none') {
+      const wrapper = container.parentElement;
+      const fileItem = wrapper && wrapper.querySelector('.file-item');
+      if (fileItem && fileItem.dataset.path) {
+        expanded.add(fileItem.dataset.path);
+      }
+    }
+  });
+  return expanded;
+}
+
+/**
+ * Restore expanded state after re-render
+ */
+function restoreExpandedPaths(expandedPaths) {
+  if (!fileTreeElement || expandedPaths.size === 0) return;
+  expandedPaths.forEach(p => {
+    const fileItem = fileTreeElement.querySelector(`.file-item[data-path="${CSS.escape(p)}"]`);
+    if (!fileItem) return;
+    const wrapper = fileItem.parentElement;
+    const children = wrapper && wrapper.querySelector('.folder-children');
+    const arrow = fileItem.querySelector('.folder-arrow');
+    if (children) {
+      children.style.display = 'block';
+      if (arrow) arrow.style.transform = 'rotate(90deg)';
+    }
+  });
+}
+
+/**
  * Setup IPC listeners
  */
 function setupIPC() {
   ipcRenderer.on(IPC.FILE_TREE_DATA, (event, files) => {
+    const expanded = getExpandedPaths();
     clearFileTree();
     renderFileTree(files, fileTreeElement);
+    restoreExpandedPaths(expanded);
   });
 
   ipcRenderer.on(IPC.FILE_DELETED, (event, result) => {

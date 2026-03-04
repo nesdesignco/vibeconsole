@@ -384,26 +384,55 @@ async function resolveGitConflict(projectPath, filePath, resolvedContent) {
  */
 async function loadCommitDiff(projectPath, commitHash) {
   if (!projectPath || !commitHash) {
-    return { error: 'Missing parameters', diff: '' };
+    return { error: 'Missing parameters', diff: '', details: null };
   }
 
   // Sanitize commit hash - only allow hex characters
   if (!/^[a-f0-9]+$/i.test(commitHash)) {
-    return { error: 'Invalid commit hash', diff: '' };
+    return { error: 'Invalid commit hash', diff: '', details: null };
   }
 
   try {
-    // Use `git show` for commit diffs; it's stable for root commits and doesn't
-    // depend on parent range construction.
+    // Use null-delimited metadata prefix so parsing stays robust against spaces/newlines.
     const { stdout } = await execFileGit(
-      ['show', '--format=', '--no-color', '--root', commitHash],
+      ['show', '--no-color', '--root', '--format=%H%x00%h%x00%an%x00%ae%x00%ar%x00%aI%x00%s%x00%b%x00', commitHash],
       projectPath,
-      5 * 1024 * 1024,
+      8 * 1024 * 1024,
       15000
     );
-    return { error: null, diff: stdout || '(No diff available)' };
+
+    const parts = String(stdout || '').split('\0');
+    const details = parts.length >= 9 ? {
+      hash: parts[0] || commitHash,
+      shortHash: parts[1] || commitHash.slice(0, 7),
+      author: parts[2] || '',
+      authorEmail: parts[3] || '',
+      relativeTime: parts[4] || '',
+      authoredAt: parts[5] || '',
+      subject: parts[6] || '',
+      body: (parts[7] || '').trim()
+    } : {
+      hash: commitHash,
+      shortHash: commitHash.slice(0, 7),
+      author: '',
+      authorEmail: '',
+      relativeTime: '',
+      authoredAt: '',
+      subject: '',
+      body: ''
+    };
+
+    const diffText = (parts.length >= 9 ? parts.slice(8).join('\0') : String(stdout || ''))
+      .replace(/^\r?\n/, '')
+      .trimEnd();
+
+    return {
+      error: null,
+      diff: diffText || '(No diff available)',
+      details
+    };
   } catch (err) {
-    return { error: err.error || 'Failed to load commit diff', diff: '' };
+    return { error: err.error || 'Failed to load commit diff', diff: '', details: null };
   }
 }
 

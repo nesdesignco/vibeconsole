@@ -32,6 +32,8 @@ class TerminalTabBar {
     this._usageRetryTimer = null; // Timer for retry scheduling
     this._ipcCleanup = [];
     this._stateCleanup = [];
+    this._draggingTerminalId = null;
+    this._dropTarget = null;
     this._toast = createToast(container);
     this._injectStyles();
     this._render();
@@ -274,12 +276,15 @@ class TerminalTabBar {
     } else {
       // Full re-render
       tabsContainer.innerHTML = state.terminals.map(t => `
-        <div class="terminal-tab ${t.isActive ? 'active' : ''}" data-terminal-id="${escapeAttr(t.id)}">
+        <div class="terminal-tab ${t.isActive ? 'active' : ''}" draggable="true" data-terminal-id="${escapeAttr(t.id)}">
           <span class="tab-name">${escapeHtml(t.customName || t.name)}</span>
           <button class="btn btn-close tab-close" data-embedded data-terminal-id="${escapeAttr(t.id)}" title="Close" aria-label="Close terminal">✕</button>
         </div>
       `).join('');
     }
+    tabsContainer.querySelectorAll('.terminal-tab').forEach((tab) => {
+      tab.draggable = true;
+    });
 
     // Update view toggle button
     const toggleBtn = this.element.querySelector('.btn-view-toggle');
@@ -399,6 +404,62 @@ class TerminalTabBar {
       if (tab) {
         this._showContextMenu(e.clientX, e.clientY, tab);
       }
+    });
+
+    // Drag to reorder tabs
+    this.element.addEventListener('dragstart', (e) => {
+      const tab = e.target.closest('.terminal-tab');
+      if (!tab || e.target.closest('.tab-close')) return;
+      const terminalId = tab.dataset.terminalId;
+      if (!terminalId) return;
+
+      this._draggingTerminalId = terminalId;
+      tab.classList.add('dragging');
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', terminalId);
+      }
+    });
+
+    this.element.addEventListener('dragover', (e) => {
+      if (!this._draggingTerminalId) return;
+      const tab = e.target.closest('.terminal-tab');
+      if (!tab) return;
+      const targetId = tab.dataset.terminalId;
+      if (!targetId || targetId === this._draggingTerminalId) return;
+
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+
+      const rect = tab.getBoundingClientRect();
+      const before = e.clientX < rect.left + (rect.width / 2);
+      this._setDropIndicator(tab, before ? 'before' : 'after');
+    });
+
+    this.element.addEventListener('drop', (e) => {
+      if (!this._draggingTerminalId) return;
+      e.preventDefault();
+      const tab = e.target.closest('.terminal-tab');
+      if (!tab) return;
+
+      const targetId = tab.dataset.terminalId;
+      if (!targetId || targetId === this._draggingTerminalId) return;
+
+      const terminals = this.manager.getTerminalStates();
+      const targetIndex = terminals.findIndex((t) => t.id === targetId);
+      const sourceIndex = terminals.findIndex((t) => t.id === this._draggingTerminalId);
+      if (targetIndex === -1 || sourceIndex === -1) return;
+
+      const position = tab.classList.contains('drop-before') ? 'before' : 'after';
+      let nextIndex = targetIndex + (position === 'after' ? 1 : 0);
+      if (sourceIndex < nextIndex) nextIndex -= 1;
+      this.manager.moveTerminal(this._draggingTerminalId, nextIndex);
+      this._clearDropIndicators();
+    });
+
+    this.element.addEventListener('dragend', () => {
+      this._clearDropIndicators();
+      this._draggingTerminalId = null;
     });
 
     // New terminal button - click to show shell selection, or right-click for default shell
@@ -825,6 +886,41 @@ class TerminalTabBar {
       this._startRename(tabElement);
       this._hideContextMenu();
     });
+
+    // Move to start option
+    const moveStartItem = document.createElement('div');
+    moveStartItem.className = 'terminal-context-menu-item';
+    moveStartItem.innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="11 17 6 12 11 7"></polyline>
+        <line x1="18" y1="6" x2="18" y2="18"></line>
+      </svg>
+      Move to Start
+    `;
+    moveStartItem.addEventListener('click', () => {
+      const terminalId = tabElement.dataset.terminalId;
+      if (terminalId) this.manager.moveTerminalToStart(terminalId);
+      this._hideContextMenu();
+    });
+
+    // Move to end option
+    const moveEndItem = document.createElement('div');
+    moveEndItem.className = 'terminal-context-menu-item';
+    moveEndItem.innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <polyline points="13 17 18 12 13 7"></polyline>
+        <line x1="6" y1="6" x2="6" y2="18"></line>
+      </svg>
+      Move to End
+    `;
+    moveEndItem.addEventListener('click', () => {
+      const terminalId = tabElement.dataset.terminalId;
+      if (terminalId) this.manager.moveTerminalToEnd(terminalId);
+      this._hideContextMenu();
+    });
+
+    const divider = document.createElement('div');
+    divider.className = 'terminal-context-menu-divider';
     
     // Close option
     const closeItem = document.createElement('div');
@@ -843,6 +939,9 @@ class TerminalTabBar {
     });
 
     this.contextMenu.appendChild(renameItem);
+    this.contextMenu.appendChild(moveStartItem);
+    this.contextMenu.appendChild(moveEndItem);
+    this.contextMenu.appendChild(divider);
     this.contextMenu.appendChild(closeItem);
 
     // Position and show
@@ -864,6 +963,26 @@ class TerminalTabBar {
     if (this.contextMenu) {
       this.contextMenu.classList.remove('visible');
     }
+  }
+
+  _setDropIndicator(tab, position) {
+    if (!tab) return;
+    if (this._dropTarget && this._dropTarget !== tab) {
+      this._dropTarget.classList.remove('drop-before', 'drop-after');
+    }
+    tab.classList.toggle('drop-before', position === 'before');
+    tab.classList.toggle('drop-after', position === 'after');
+    this._dropTarget = tab;
+  }
+
+  _clearDropIndicators() {
+    if (this._dropTarget) {
+      this._dropTarget.classList.remove('drop-before', 'drop-after');
+      this._dropTarget = null;
+    }
+    this.element?.querySelectorAll('.terminal-tab.dragging').forEach((tab) => {
+      tab.classList.remove('dragging');
+    });
   }
 
   _createTerminalAndFocus(options = {}) {
