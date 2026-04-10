@@ -236,6 +236,37 @@ test('loadGitActivity returns daily commit activity for recent range', async (t)
   assert.ok(todayCell.count >= 2);
 });
 
+test('loadChanges expands untracked directories into individual files', async (t) => {
+  const repoDir = createTempDir(t, 'untracked-dir');
+  await initRepo(repoDir);
+
+  const previewDir = path.join(repoDir, 'app', 'api', 'preview');
+  fs.mkdirSync(previewDir, { recursive: true });
+  fs.writeFileSync(path.join(previewDir, 'route.ts'), 'export const GET = () => null;\n', 'utf8');
+  fs.writeFileSync(path.join(previewDir, 'schema.json'), '{"ok":true}\n', 'utf8');
+
+  const changes = await gitChangesManager.loadChanges(repoDir);
+  const untrackedPaths = changes.untracked.map(item => item.path).sort();
+
+  assert.deepEqual(untrackedPaths, [
+    'app/api/preview/route.ts',
+    'app/api/preview/schema.json'
+  ]);
+});
+
+test('loadDiff returns directory placeholder for untracked folders', async (t) => {
+  const repoDir = createTempDir(t, 'untracked-dir-diff');
+  await initRepo(repoDir);
+
+  const previewDir = path.join(repoDir, 'app', 'api', 'preview');
+  fs.mkdirSync(previewDir, { recursive: true });
+  fs.writeFileSync(path.join(previewDir, 'route.ts'), 'export const GET = () => null;\n', 'utf8');
+
+  const result = await gitChangesManager.loadDiff(repoDir, 'app/api/preview/', 'untracked');
+  assert.equal(result.error, null);
+  assert.equal(result.diff, 'Directory');
+});
+
 test('undoLastCommit works for initial commit by returning to unborn branch', async (t) => {
   const repoDir = createTempDir(t, 'undo-initial');
   const branch = await initRepo(repoDir);

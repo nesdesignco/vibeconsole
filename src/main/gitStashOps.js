@@ -4,7 +4,7 @@
  */
 
 const { execFileGit, isValidStashRef } = require('./gitExecUtils');
-const { isRelativePathWithinProject } = require('../shared/pathValidation');
+const { isRelativePathWithinProjectContent } = require('../shared/pathValidation');
 
 /**
  * Stash changes (optionally a single file, with optional message)
@@ -14,8 +14,8 @@ async function stashChanges(projectPath, filePath, message, includeUntracked = f
     return { error: 'Missing parameters' };
   }
 
-  if (filePath && !isRelativePathWithinProject(projectPath, filePath)) {
-    return { error: 'Path is outside project directory' };
+  if (filePath && !isRelativePathWithinProjectContent(projectPath, filePath)) {
+    return { error: 'Path is outside project directory or targets protected metadata' };
   }
 
   try {

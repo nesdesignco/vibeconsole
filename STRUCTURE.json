@@ -1,7 +1,7 @@
 {
   "version": "1.1",
   "description": "Claude Code IDE - Module structure and IPC communication map",
-  "lastUpdated": "2026-02-27",
+  "lastUpdated": "2026-03-29",
   "architecture": {
     "type": "electron",
     "mainProcess": "src/main/index.js",
@@ -305,7 +305,7 @@
       ],
       "functions": {
         "getFileTree": {
-          "line": 20,
+          "line": 21,
           "params": [
             "dirPath",
             "maxDepth = 5",
@@ -314,7 +314,7 @@
           ]
         },
         "safeSend": {
-          "line": 71,
+          "line": 72,
           "params": [
             "sender",
             "channel",
@@ -323,20 +323,20 @@
           "purpose": "Setup IPC handlers"
         },
         "stopWatcherForSender": {
-          "line": 77,
+          "line": 78,
           "params": [
             "senderId"
           ]
         },
         "startWatcherForSender": {
-          "line": 89,
+          "line": 90,
           "params": [
             "sender",
             "projectPath"
           ]
         },
         "setupIPC": {
-          "line": 148,
+          "line": 149,
           "params": [
             "ipcMain"
           ]
@@ -830,27 +830,38 @@
           ],
           "purpose": "Show context menu for a file item"
         },
-        "setupIPC": {
+        "getExpandedPaths": {
           "line": 455,
+          "purpose": "Get paths of all currently expanded folders"
+        },
+        "restoreExpandedPaths": {
+          "line": 473,
+          "params": [
+            "expandedPaths"
+          ],
+          "purpose": "Restore expanded state after re-render"
+        },
+        "setupIPC": {
+          "line": 491,
           "purpose": "Setup IPC listeners"
         },
         "focus": {
-          "line": 471,
+          "line": 509,
           "purpose": "Focus file tree for keyboard navigation"
         },
         "getVisibleItems": {
-          "line": 496,
+          "line": 534,
           "purpose": "Get all visible file items (for navigation)"
         },
         "handleKeydown": {
-          "line": 515,
+          "line": 553,
           "params": [
             "e"
           ],
           "purpose": "Handle keyboard navigation in file tree"
         },
         "blur": {
-          "line": 577,
+          "line": 615,
           "purpose": "Blur/unfocus file tree"
         }
       },
@@ -1357,33 +1368,33 @@
       ],
       "functions": {
         "getMimeTypeForExtension": {
-          "line": 13,
+          "line": 14,
           "params": [
             "extension"
           ]
         },
         "init": {
-          "line": 30,
+          "line": 31,
           "params": [
             "_window"
           ],
           "purpose": "Initialize file editor module"
         },
         "readFile": {
-          "line": 37,
+          "line": 38,
           "params": [
             "filePath"
           ],
           "purpose": "Read file contents"
         },
         "readFileAsDataUrl": {
-          "line": 55,
+          "line": 56,
           "params": [
             "filePath"
           ]
         },
         "writeFile": {
-          "line": 89,
+          "line": 90,
           "params": [
             "filePath",
             "content"
@@ -1391,14 +1402,14 @@
           "purpose": "Write file contents"
         },
         "getFileExtension": {
-          "line": 108,
+          "line": 109,
           "params": [
             "filePath"
           ],
           "purpose": "Get file extension"
         },
         "safeSend": {
-          "line": 112,
+          "line": 113,
           "params": [
             "sender",
             "channel",
@@ -1406,7 +1417,7 @@
           ]
         },
         "setupIPC": {
-          "line": 119,
+          "line": 120,
           "params": [
             "ipcMain"
           ],
@@ -1675,7 +1686,9 @@
         "init",
         "setupIPC",
         "getAllPlugins",
-        "togglePlugin"
+        "togglePlugin",
+        "isValidPluginId",
+        "isTrustedMarketplaceRemote"
       ],
       "depends": [
         "fs",
@@ -1683,64 +1696,97 @@
         "os",
         "child_process",
         "util",
-        "shared/ipcChannels"
+        "shared/ipcChannels",
+        "shared/pathValidation"
       ],
       "functions": {
         "init": {
-          "line": 26,
+          "line": 38,
           "params": [
             "window"
           ],
           "purpose": "Initialize plugins manager"
         },
         "readJsonFile": {
-          "line": 33,
+          "line": 45,
           "params": [
-            "filePath"
+            "filePath",
+            "allowedBase = CLAUDE_DIR"
           ],
           "purpose": "Read JSON file safely"
         },
         "writeJsonFile": {
-          "line": 47,
+          "line": 63,
           "params": [
             "filePath",
-            "data"
+            "data",
+            "allowedBase = CLAUDE_DIR"
           ],
           "purpose": "Write JSON file safely"
         },
         "getEnabledPlugins": {
-          "line": 60,
+          "line": 93,
           "purpose": "Get enabled plugins from settings"
         },
         "getInstalledPlugins": {
-          "line": 68,
+          "line": 101,
           "purpose": "Get installed plugins"
         },
+        "normalizeRemote": {
+          "line": 106,
+          "params": [
+            "remote"
+          ]
+        },
+        "isTrustedMarketplaceRemote": {
+          "line": 110,
+          "params": [
+            "remote"
+          ]
+        },
+        "getMarketplaceOriginUrl": {
+          "line": 115,
+          "params": [
+            "repoPath"
+          ]
+        },
+        "hasTrustedMarketplaceOrigin": {
+          "line": 128,
+          "params": [
+            "repoPath"
+          ]
+        },
+        "isValidPluginId": {
+          "line": 137,
+          "params": [
+            "pluginId"
+          ]
+        },
         "getMarketplacePlugins": {
-          "line": 76,
+          "line": 144,
           "purpose": "Get all available plugins from marketplace"
         },
         "getAllPlugins": {
-          "line": 120,
+          "line": 195,
           "purpose": "Get all plugins with their status"
         },
         "togglePlugin": {
-          "line": 142,
+          "line": 217,
           "params": [
             "pluginId"
           ],
           "purpose": "Toggle plugin enabled/disabled status"
         },
         "ensureOfficialMarketplace": {
-          "line": 165,
+          "line": 249,
           "purpose": "Ensure official marketplace exists"
         },
         "refreshMarketplace": {
-          "line": 193,
+          "line": 277,
           "purpose": "Refresh marketplace plugins (git pull or clone)"
         },
         "setupIPC": {
-          "line": 221,
+          "line": 309,
           "params": [
             "ipcMain"
           ],
@@ -2276,46 +2322,57 @@
         "loadWorktrees",
         "addWorktree",
         "removeWorktree",
+        "isAllowedWorktreePath",
         "isWorkingTreeClean",
         "setupIPC"
       ],
       "depends": [
+        "os",
+        "path",
         "shared/ipcChannels",
         "gitExecUtils",
-        "os",
-        "path"
+        "shared/pathValidation"
       ],
       "functions": {
         "isValidBranchName": {
-          "line": 16,
+          "line": 19,
           "params": [
             "name"
           ],
           "purpose": "Rejects names starting with '-' (flag injection)"
         },
         "init": {
-          "line": 29,
+          "line": 32,
           "params": [
             "window"
           ],
           "purpose": "Initialize manager"
         },
+        "getResolvedHomeDir": {
+          "line": 36
+        },
+        "isAllowedWorktreePath": {
+          "line": 40,
+          "params": [
+            "worktreePath"
+          ]
+        },
         "isWorkingTreeClean": {
-          "line": 36,
+          "line": 53,
           "params": [
             "projectPath"
           ],
           "purpose": "Check if working tree is clean"
         },
         "loadBranches": {
-          "line": 48,
+          "line": 65,
           "params": [
             "projectPath"
           ],
           "purpose": "Load all branches"
         },
         "switchBranch": {
-          "line": 93,
+          "line": 110,
           "params": [
             "projectPath",
             "branchName"
@@ -2323,7 +2380,7 @@
           "purpose": "Switch to a branch"
         },
         "createBranch": {
-          "line": 140,
+          "line": 157,
           "params": [
             "projectPath",
             "branchName",
@@ -2333,7 +2390,7 @@
           "purpose": "Create a new branch"
         },
         "deleteBranch": {
-          "line": 174,
+          "line": 191,
           "params": [
             "projectPath",
             "branchName",
@@ -2342,14 +2399,14 @@
           "purpose": "Delete a branch"
         },
         "loadWorktrees": {
-          "line": 194,
+          "line": 211,
           "params": [
             "projectPath"
           ],
           "purpose": "Load worktrees"
         },
         "addWorktree": {
-          "line": 236,
+          "line": 253,
           "params": [
             "projectPath",
             "worktreePath",
@@ -2359,7 +2416,7 @@
           "purpose": "Add a worktree"
         },
         "removeWorktree": {
-          "line": 267,
+          "line": 279,
           "params": [
             "projectPath",
             "worktreePath",
@@ -2368,7 +2425,7 @@
           "purpose": "Remove a worktree"
         },
         "setupIPC": {
-          "line": 286,
+          "line": 304,
           "params": [
             "ipcMain"
           ],
@@ -2533,6 +2590,7 @@
         "loadCommitGraph",
         "loadGitActivity",
         "gitFetch",
+        "expandUntrackedEntries",
         "applyGitHunk",
         "extractHunkPatches",
         "loadGitConflict",
@@ -2566,52 +2624,52 @@
       ],
       "functions": {
         "init": {
-          "line": 42,
+          "line": 43,
           "params": [
             "_window"
           ],
           "purpose": "Initialize manager"
         },
         "getActivityCacheKey": {
-          "line": 47,
+          "line": 48,
           "params": [
             "projectPath",
             "days"
           ]
         },
         "getRepoCacheKey": {
-          "line": 51,
+          "line": 52,
           "params": [
             "projectPath"
           ]
         },
         "invalidateActivityCache": {
-          "line": 60,
+          "line": 61,
           "params": [
             "projectPath"
           ]
         },
         "invalidateRepoStatusCache": {
-          "line": 68,
+          "line": 69,
           "params": [
             "projectPath"
           ]
         },
         "invalidateAheadBehindCache": {
-          "line": 75,
+          "line": 76,
           "params": [
             "projectPath"
           ]
         },
         "invalidateRepoCaches": {
-          "line": 82,
+          "line": 83,
           "params": [
             "projectPath",
             "options = {}"
           ]
         },
         "loadLocalCommits": {
-          "line": 92,
+          "line": 93,
           "params": [
             "projectPath",
             "maxCount = 20"
@@ -2619,22 +2677,29 @@
           "purpose": "Load recent commits from HEAD (used when no upstream/tracking branch is configured)."
         },
         "loadSyncCommits": {
-          "line": 110,
+          "line": 111,
           "params": [
             "projectPath"
           ],
           "purpose": "Load outgoing (ahead) and incoming (behind) commits relative to upstream."
         },
         "loadCommitGraph": {
-          "line": 159,
+          "line": 160,
           "params": [
             "projectPath",
             "maxCount = 200"
           ],
           "purpose": "Load ASCII lane graph for recent commits."
         },
+        "expandUntrackedEntries": {
+          "line": 187,
+          "params": [
+            "projectPath",
+            "relativePath"
+          ]
+        },
         "loadGitActivity": {
-          "line": 189,
+          "line": 232,
           "params": [
             "projectPath",
             "days = ACTIVITY_LOOKBACK_DAYS"
@@ -2642,7 +2707,7 @@
           "purpose": "Load GitHub-style daily commit activity for the last N days."
         },
         "gitFetch": {
-          "line": 245,
+          "line": 288,
           "params": [
             "projectPath",
             "prune = true"
@@ -2650,7 +2715,7 @@
           "purpose": "Fetch remote refs for accurate incoming/outgoing calculations."
         },
         "gitPush": {
-          "line": 260,
+          "line": 303,
           "params": [
             "projectPath",
             "branch",
@@ -2658,7 +2723,7 @@
           ]
         },
         "gitPull": {
-          "line": 275,
+          "line": 318,
           "params": [
             "projectPath",
             "branch",
@@ -2666,7 +2731,7 @@
           ]
         },
         "applyGitHunk": {
-          "line": 293,
+          "line": 336,
           "params": [
             "projectPath",
             "filePath",
@@ -2677,7 +2742,7 @@
           "purpose": "Apply a single hunk patch to index and/or working tree."
         },
         "loadGitConflict": {
-          "line": 332,
+          "line": 375,
           "params": [
             "projectPath",
             "filePath"
@@ -2685,7 +2750,7 @@
           "purpose": "Load base/ours/theirs versions for a conflicted file."
         },
         "resolveGitConflict": {
-          "line": 367,
+          "line": 410,
           "params": [
             "projectPath",
             "filePath",
@@ -2694,7 +2759,7 @@
           "purpose": "Save resolved conflict content and stage file."
         },
         "loadCommitDiff": {
-          "line": 385,
+          "line": 428,
           "params": [
             "projectPath",
             "commitHash"
@@ -2702,21 +2767,21 @@
           "purpose": "Load diff for a specific commit"
         },
         "loadChanges": {
-          "line": 413,
+          "line": 485,
           "params": [
             "projectPath"
           ],
           "purpose": "Load git changes (status)"
         },
         "loadChangesCached": {
-          "line": 534,
+          "line": 608,
           "params": [
             "projectPath",
             "options = {}"
           ]
         },
         "loadDiff": {
-          "line": 567,
+          "line": 641,
           "params": [
             "projectPath",
             "filePath",
@@ -2725,7 +2790,7 @@
           "purpose": "diffType: 'staged', 'unstaged', 'untracked', 'conflict'"
         },
         "stageFile": {
-          "line": 630,
+          "line": 709,
           "params": [
             "projectPath",
             "filePath"
@@ -2733,7 +2798,7 @@
           "purpose": "Stage a file"
         },
         "unstageFile": {
-          "line": 650,
+          "line": 729,
           "params": [
             "projectPath",
             "filePath"
@@ -2741,7 +2806,7 @@
           "purpose": "Unstage a file"
         },
         "discardFile": {
-          "line": 671,
+          "line": 750,
           "params": [
             "projectPath",
             "filePath",
@@ -2750,42 +2815,42 @@
           "purpose": "diffType: 'staged', 'unstaged', 'untracked'"
         },
         "discardAllUnstaged": {
-          "line": 701,
+          "line": 780,
           "params": [
             "projectPath"
           ],
           "purpose": "Discard all unstaged changes"
         },
         "stageAll": {
-          "line": 720,
+          "line": 799,
           "params": [
             "projectPath"
           ],
           "purpose": "Stage all files"
         },
         "unstageAll": {
-          "line": 736,
+          "line": 815,
           "params": [
             "projectPath"
           ],
           "purpose": "Unstage all files"
         },
         "gitAheadBehind": {
-          "line": 762,
+          "line": 841,
           "params": [
             "projectPath"
           ],
           "purpose": "Get ahead/behind count relative to upstream tracking branch"
         },
         "gitAheadBehindCached": {
-          "line": 788,
+          "line": 867,
           "params": [
             "projectPath",
             "options = {}"
           ]
         },
         "setupIPC": {
-          "line": 820,
+          "line": 899,
           "params": [
             "ipcMain"
           ],
@@ -3084,29 +3149,39 @@
         "cleanup"
       ],
       "depends": [
+        "electron",
         "electron-updater",
         "shared/ipcChannels"
       ],
       "functions": {
+        "isAutoUpdateSupported": {
+          "line": 17
+        },
+        "sendUpdateError": {
+          "line": 21,
+          "params": [
+            "message"
+          ]
+        },
         "ensureEventListeners": {
-          "line": 14
+          "line": 25
         },
         "init": {
-          "line": 42,
+          "line": 62,
           "params": [
             "window"
           ],
           "purpose": "Initialize auto updater"
         },
         "setupIPC": {
-          "line": 63,
+          "line": 89,
           "params": [
             "_ipcMain"
           ],
           "purpose": "Setup IPC handlers"
         },
         "send": {
-          "line": 72,
+          "line": 127,
           "params": [
             "channel",
             "data"
@@ -3114,7 +3189,7 @@
           "purpose": "Send message to renderer"
         },
         "cleanup": {
-          "line": 81,
+          "line": 136,
           "purpose": "Cleanup timers"
         }
       },
@@ -3315,8 +3390,12 @@
       "file": "src/shared/pathValidation.js",
       "description": "S",
       "exports": [
+        "resolvePathForContainment",
+        "isPathWithinDirectory",
         "isPathWithinProject",
-        "isRelativePathWithinProject"
+        "isPathWithinProjectContent",
+        "isRelativePathWithinProject",
+        "isRelativePathWithinProjectContent"
       ],
       "depends": [
         "path",
@@ -3324,27 +3403,65 @@
       ],
       "functions": {
         "resolvePathForContainment": {
-          "line": 15,
+          "line": 16,
           "params": [
             "p"
           ],
           "purpose": "for create/write operations on non-existent targets."
         },
-        "isPathWithinProject": {
+        "isPathWithinDirectory": {
+          "line": 50,
+          "params": [
+            "targetPath",
+            "basePath"
+          ]
+        },
+        "getRelativeSegmentsWithinBase": {
           "line": 57,
+          "params": [
+            "targetPath",
+            "basePath"
+          ]
+        },
+        "hasBlockedPathSegment": {
+          "line": 71,
+          "params": [
+            "targetPath",
+            "basePath",
+            "blockedSegments = BLOCKED_PROJECT_SEGMENTS"
+          ]
+        },
+        "isPathWithinProject": {
+          "line": 91,
           "params": [
             "filePath",
             "projectPath"
           ],
           "purpose": "Resolves symlinks to prevent symlink-based escapes."
         },
+        "isPathWithinProjectContent": {
+          "line": 102,
+          "params": [
+            "filePath",
+            "projectPath"
+          ],
+          "purpose": "repository metadata paths like .git/."
+        },
         "isRelativePathWithinProject": {
-          "line": 72,
+          "line": 115,
           "params": [
             "projectPath",
             "relativePath"
           ],
           "purpose": "Resolves symlinks to prevent symlink-based escapes."
+        },
+        "isRelativePathWithinProjectContent": {
+          "line": 128,
+          "params": [
+            "projectPath",
+            "relativePath"
+          ],
+          "purpose": "target protected metadata paths like .git/."
         }
       }
     },
@@ -3353,11 +3470,12 @@
       "description": "P",
       "exports": [],
       "depends": [
-        "electron"
+        "electron",
+        "shared/ipcChannels"
       ],
       "functions": {
         "isAllowedChannel": {
-          "line": 111,
+          "line": 12,
           "params": [
             "channel"
           ]
@@ -4009,32 +4127,32 @@
           "purpose": "Show diff modal for a file"
         },
         "showCommitDiffModal": {
-          "line": 295,
+          "line": 304,
           "params": [
             "commitHash"
           ],
           "purpose": "Show diff modal for a commit"
         },
         "showStashDiffModal": {
-          "line": 376,
+          "line": 405,
           "params": [
             "stashRef"
           ],
           "purpose": "Show diff modal for a stash"
         },
         "hideDiffModal": {
-          "line": 456,
+          "line": 485,
           "purpose": "Hide diff modal"
         },
         "parseDiff": {
-          "line": 467,
+          "line": 496,
           "params": [
             "diffText"
           ],
           "purpose": "Parse unified diff into structured lines"
         },
         "renderDiffContent": {
-          "line": 521,
+          "line": 550,
           "params": [
             "container",
             "lines"
@@ -4042,13 +4160,25 @@
           "purpose": "All interpolated values are escaped via escapeHtml/escapeAttr — safe for innerHTML."
         },
         "buildSplitRows": {
-          "line": 575,
+          "line": 604,
           "params": [
             "lines"
           ]
         },
+        "getRenderedLineLength": {
+          "line": 637,
+          "params": [
+            "line"
+          ]
+        },
+        "getSplitColumnWidths": {
+          "line": 643,
+          "params": [
+            "rows"
+          ]
+        },
         "renderSplitSide": {
-          "line": 608,
+          "line": 661,
           "params": [
             "line",
             "side",
@@ -4056,7 +4186,7 @@
           ]
         },
         "renderSplitDiffContent": {
-          "line": 622,
+          "line": 675,
           "params": [
             "container",
             "lines"
@@ -4064,20 +4194,20 @@
           "purpose": "Render split diff view. All interpolated values are escaped — safe for innerHTML."
         },
         "tokenizeForWordDiff": {
-          "line": 664,
+          "line": 732,
           "params": [
             "text"
           ]
         },
         "highlightModifiedPair": {
-          "line": 669,
+          "line": 737,
           "params": [
             "oldText",
             "newText"
           ]
         },
         "setupDiffModalListeners": {
-          "line": 706,
+          "line": 774,
           "purpose": "Setup diff modal event listeners"
         },
         "_showToast": {
@@ -4195,7 +4325,7 @@
           ]
         },
         "renderChangeItem": {
-          "line": 22,
+          "line": 26,
           "params": [
             "file",
             "diffType",

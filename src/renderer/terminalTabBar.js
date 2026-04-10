@@ -183,6 +183,12 @@ class TerminalTabBar {
           </div>
         </div>
         <div class="toolbar-right">
+          <button class="toolbar-btn btn-sidebar-toggle" title="Toggle Sidebar (Ctrl/Cmd+B)" aria-label="Toggle sidebar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="6" height="16" rx="1"/>
+              <rect x="11" y="4" width="10" height="16" rx="1"/>
+            </svg>
+          </button>
           <button class="toolbar-btn btn-view-toggle" title="Toggle Grid View">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="3" width="18" height="18" rx="2"/>
@@ -475,6 +481,13 @@ class TerminalTabBar {
       e.preventDefault();
       e.stopPropagation();
       this._createTerminalAndFocus();
+    });
+
+    // View toggle button
+    this.element.querySelector('.btn-sidebar-toggle').addEventListener('click', () => {
+      if (typeof window.toggleSidebar === 'function') {
+        window.toggleSidebar();
+      }
     });
 
     // View toggle button

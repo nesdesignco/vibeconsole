@@ -41,7 +41,7 @@ function createWindow() {
     width: 1400,
     height: 850,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, '..', '..', 'dist', 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: true,

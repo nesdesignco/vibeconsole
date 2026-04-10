@@ -7,7 +7,8 @@ const fs = require('fs');
 const path = require('path');
 const { shell } = require('electron');
 const { IPC } = require('../shared/ipcChannels');
-const { isRelativePathWithinProject } = require('../shared/pathValidation');
+const { isRelativePathWithinProjectContent } = require('../shared/pathValidation');
+const PROJECT_PATH_ERROR = 'Path is outside project directory or targets protected metadata';
 
 // Shared utilities
 const {
@@ -183,6 +184,48 @@ async function loadCommitGraph(projectPath, maxCount = 200) {
   }
 }
 
+async function expandUntrackedEntries(projectPath, relativePath) {
+  const rawPath = String(relativePath || '');
+  if (!projectPath || !rawPath) return [];
+
+  const normalizedPath = rawPath.replace(/\\/g, '/');
+  const trimmedPath = normalizedPath.replace(/\/+$/, '');
+  if (!trimmedPath) {
+    return [{ path: normalizedPath, oldPath: null, status: '?' }];
+  }
+
+  const fullPath = path.join(projectPath, trimmedPath);
+  let isDirectory = normalizedPath.endsWith('/');
+  if (!isDirectory) {
+    try {
+      isDirectory = fs.statSync(fullPath).isDirectory();
+    } catch {
+      isDirectory = false;
+    }
+  }
+
+  if (!isDirectory) {
+    return [{ path: normalizedPath, oldPath: null, status: '?' }];
+  }
+
+  try {
+    const { stdout } = await execFileGit(
+      ['ls-files', '--others', '--exclude-standard', '--', `${trimmedPath}/`],
+      projectPath,
+      4 * 1024 * 1024,
+      15000
+    );
+    const children = String(stdout || '').split('\n').filter(Boolean);
+    if (children.length > 0) {
+      return children.map((childPath) => ({ path: childPath, oldPath: null, status: '?' }));
+    }
+  } catch {
+    // Fall through to directory placeholder below.
+  }
+
+  return [{ path: `${trimmedPath}/`, oldPath: null, status: '?' }];
+}
+
 /**
  * Load GitHub-style daily commit activity for the last N days.
  */
@@ -294,8 +337,8 @@ async function applyGitHunk(projectPath, filePath, diffType, action, hunkPatch) 
   if (!projectPath || !filePath || !diffType || !action || !hunkPatch) {
     return { error: 'Missing parameters' };
   }
-  if (!isRelativePathWithinProject(projectPath, filePath)) {
-    return { error: 'Path is outside project directory' };
+  if (!isRelativePathWithinProjectContent(projectPath, filePath)) {
+    return { error: PROJECT_PATH_ERROR };
   }
   if (typeof hunkPatch !== 'string' || hunkPatch.length > 1024 * 1024 || !hunkPatch.includes('@@')) {
     return { error: 'Invalid hunk patch' };
@@ -331,7 +374,7 @@ async function applyGitHunk(projectPath, filePath, diffType, action, hunkPatch) 
  */
 async function loadGitConflict(projectPath, filePath) {
   if (!projectPath || !filePath) return { error: 'Missing parameters' };
-  if (!isRelativePathWithinProject(projectPath, filePath)) return { error: 'Path is outside project directory' };
+  if (!isRelativePathWithinProjectContent(projectPath, filePath)) return { error: PROJECT_PATH_ERROR };
 
   const fullPath = path.join(projectPath, filePath);
 
@@ -366,7 +409,7 @@ async function loadGitConflict(projectPath, filePath) {
  */
 async function resolveGitConflict(projectPath, filePath, resolvedContent) {
   if (!projectPath || !filePath || typeof resolvedContent !== 'string') return { error: 'Missing parameters' };
-  if (!isRelativePathWithinProject(projectPath, filePath)) return { error: 'Path is outside project directory' };
+  if (!isRelativePathWithinProjectContent(projectPath, filePath)) return { error: PROJECT_PATH_ERROR };
   if (resolvedContent.length > 5 * 1024 * 1024) return { error: 'Resolved content too large' };
 
   try {
@@ -471,9 +514,10 @@ async function loadChanges(projectPath) {
     const untracked = [];
 
     if (stdout) {
-      stdout.split('\n').filter(Boolean).forEach(line => {
+      const statusLines = stdout.split('\n').filter(Boolean);
+      for (const line of statusLines) {
         const parsed = parseStatusLine(line);
-        if (!parsed) return;
+        if (!parsed) continue;
 
         const { x, y } = parsed;
         const fileInfo = { path: parsed.path, oldPath: parsed.oldPath };
@@ -481,13 +525,14 @@ async function loadChanges(projectPath) {
         // Unmerged conflicts are their own section in professional UIs.
         if (isUnmergedStatus(x, y)) {
           conflicts.push({ ...fileInfo, status: `${x}${y}`, x, y });
-          return;
+          continue;
         }
 
-        // Untracked files
+        // Untracked files/directories
         if (x === '?' && y === '?') {
-          untracked.push({ ...fileInfo, status: '?' });
-          return;
+          const entries = await expandUntrackedEntries(projectPath, parsed.path);
+          untracked.push(...entries);
+          continue;
         }
 
         // Staged changes (X column, ignore '?' and ' ')
@@ -499,7 +544,7 @@ async function loadChanges(projectPath) {
         if (y !== ' ' && y !== '?') {
           unstaged.push({ ...fileInfo, status: y });
         }
-      });
+      }
     }
 
     // Load sync metadata
@@ -598,8 +643,8 @@ async function loadDiff(projectPath, filePath, diffType) {
     return { error: 'Missing parameters', diff: '' };
   }
 
-  if (!isRelativePathWithinProject(projectPath, filePath)) {
-    return { error: 'Path is outside project directory', diff: '' };
+  if (!isRelativePathWithinProjectContent(projectPath, filePath)) {
+    return { error: PROJECT_PATH_ERROR, diff: '' };
   }
 
   try {
@@ -609,6 +654,11 @@ async function loadDiff(projectPath, filePath, diffType) {
       // For untracked files, read file content and format as "all added"
       const fullPath = path.join(projectPath, filePath);
       try {
+        const stats = fs.statSync(fullPath);
+        if (stats.isDirectory()) {
+          return { error: null, diff: 'Directory', filePath };
+        }
+
         // Check if binary
         const { stdout: mimeOut } = await execFileCmd('file', ['--mime-encoding', fullPath], projectPath);
         if (mimeOut.includes('binary')) {
@@ -661,8 +711,8 @@ async function stageFile(projectPath, filePath) {
     return { error: 'Missing parameters' };
   }
 
-  if (!isRelativePathWithinProject(projectPath, filePath)) {
-    return { error: 'Path is outside project directory' };
+  if (!isRelativePathWithinProjectContent(projectPath, filePath)) {
+    return { error: PROJECT_PATH_ERROR };
   }
 
   try {
@@ -681,8 +731,8 @@ async function unstageFile(projectPath, filePath) {
     return { error: 'Missing parameters' };
   }
 
-  if (!isRelativePathWithinProject(projectPath, filePath)) {
-    return { error: 'Path is outside project directory' };
+  if (!isRelativePathWithinProjectContent(projectPath, filePath)) {
+    return { error: PROJECT_PATH_ERROR };
   }
 
   try {
@@ -702,8 +752,8 @@ async function discardFile(projectPath, filePath, diffType) {
     return { error: 'Missing parameters' };
   }
 
-  if (!isRelativePathWithinProject(projectPath, filePath)) {
-    return { error: 'Path is outside project directory' };
+  if (!isRelativePathWithinProjectContent(projectPath, filePath)) {
+    return { error: PROJECT_PATH_ERROR };
   }
 
   try {
@@ -987,6 +1037,7 @@ module.exports = {
   loadCommitGraph,
   loadGitActivity,
   gitFetch,
+  expandUntrackedEntries,
   applyGitHunk,
   extractHunkPatches,
   loadGitConflict,

@@ -5,6 +5,7 @@
 
 const path = require('path');
 const fs = require('fs');
+const BLOCKED_PROJECT_SEGMENTS = new Set(['.git']);
 
 /**
  * Resolve a path for containment checks.
@@ -46,6 +47,39 @@ function resolvePathForContainment(p) {
   }
 }
 
+function isPathWithinDirectory(targetPath, basePath) {
+  if (!targetPath || !basePath) return false;
+  const resolvedTarget = resolvePathForContainment(targetPath);
+  const resolvedBase = resolvePathForContainment(basePath);
+  return resolvedTarget.startsWith(resolvedBase + path.sep) || resolvedTarget === resolvedBase;
+}
+
+function getRelativeSegmentsWithinBase(targetPath, basePath) {
+  if (!isPathWithinDirectory(targetPath, basePath)) return null;
+
+  const resolvedTarget = resolvePathForContainment(targetPath);
+  const resolvedBase = resolvePathForContainment(basePath);
+  const relative = path.relative(resolvedBase, resolvedTarget);
+  if (!relative) return [];
+
+  return relative
+    .split(path.sep)
+    .map(segment => segment.trim())
+    .filter(Boolean);
+}
+
+function hasBlockedPathSegment(targetPath, basePath, blockedSegments = BLOCKED_PROJECT_SEGMENTS) {
+  const segments = getRelativeSegmentsWithinBase(targetPath, basePath);
+  if (!segments) return false;
+
+  for (const segment of segments) {
+    if (blockedSegments.has(segment)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /**
  * Validate that a file path is within the project directory.
  * Prevents path traversal attacks (e.g. ../../etc/passwd).
@@ -55,10 +89,19 @@ function resolvePathForContainment(p) {
  * @returns {boolean}
  */
 function isPathWithinProject(filePath, projectPath) {
-  if (!projectPath || !filePath) return false;
-  const resolvedFile = resolvePathForContainment(filePath);
-  const resolvedProject = resolvePathForContainment(projectPath);
-  return resolvedFile.startsWith(resolvedProject + path.sep) || resolvedFile === resolvedProject;
+  return isPathWithinDirectory(filePath, projectPath);
+}
+
+/**
+ * Validate that a file path is within the project directory and avoids protected
+ * repository metadata paths like .git/.
+ * @param {string} filePath - Absolute or relative file path
+ * @param {string} projectPath - Absolute project root path
+ * @returns {boolean}
+ */
+function isPathWithinProjectContent(filePath, projectPath) {
+  return isPathWithinProject(filePath, projectPath)
+    && !hasBlockedPathSegment(filePath, projectPath, BLOCKED_PROJECT_SEGMENTS);
 }
 
 /**
@@ -72,9 +115,27 @@ function isPathWithinProject(filePath, projectPath) {
 function isRelativePathWithinProject(projectPath, relativePath) {
   if (!projectPath || !relativePath) return false;
   const fullPath = path.resolve(path.join(projectPath, relativePath));
-  const resolvedProject = resolvePathForContainment(projectPath);
-  const resolvedFile = resolvePathForContainment(fullPath);
-  return resolvedFile.startsWith(resolvedProject + path.sep) || resolvedFile === resolvedProject;
+  return isPathWithinProject(fullPath, projectPath);
 }
 
-module.exports = { isPathWithinProject, isRelativePathWithinProject };
+/**
+ * Validate that a relative file path stays within project content and does not
+ * target protected metadata paths like .git/.
+ * @param {string} projectPath - Absolute project root path
+ * @param {string} relativePath - Relative file path within project
+ * @returns {boolean}
+ */
+function isRelativePathWithinProjectContent(projectPath, relativePath) {
+  if (!projectPath || !relativePath) return false;
+  const fullPath = path.resolve(path.join(projectPath, relativePath));
+  return isPathWithinProjectContent(fullPath, projectPath);
+}
+
+module.exports = {
+  resolvePathForContainment,
+  isPathWithinDirectory,
+  isPathWithinProject,
+  isPathWithinProjectContent,
+  isRelativePathWithinProject,
+  isRelativePathWithinProjectContent
+};

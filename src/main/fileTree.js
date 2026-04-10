@@ -7,8 +7,9 @@ const fs = require('fs');
 const path = require('path');
 const { shell } = require('electron');
 const { IPC } = require('../shared/ipcChannels');
-const { isPathWithinProject } = require('../shared/pathValidation');
+const { isPathWithinProjectContent } = require('../shared/pathValidation');
 const watcherBySenderId = new Map(); // Map<number, { watcher: fs.FSWatcher, projectPath: string, timer: NodeJS.Timeout | null }>
+const PROJECT_PATH_ERROR = 'Path is outside project directory or targets protected metadata';
 
 /**
  * Get file tree for a directory
@@ -161,8 +162,8 @@ function setupIPC(ipcMain) {
 
   ipcMain.on(IPC.CREATE_FILE, (event, { filePath, projectPath }) => {
     try {
-      if (!projectPath || !isPathWithinProject(filePath, projectPath)) {
-        safeSend(event.sender, IPC.FILE_DELETED, { success: false, filePath, error: 'Path is outside project directory' });
+      if (!projectPath || !isPathWithinProjectContent(filePath, projectPath)) {
+        safeSend(event.sender, IPC.FILE_DELETED, { success: false, filePath, error: PROJECT_PATH_ERROR });
         return;
       }
       if (fs.existsSync(filePath)) {
@@ -182,8 +183,8 @@ function setupIPC(ipcMain) {
 
   ipcMain.on(IPC.CREATE_FOLDER, (event, { folderPath, projectPath }) => {
     try {
-      if (!projectPath || !isPathWithinProject(folderPath, projectPath)) {
-        safeSend(event.sender, IPC.FILE_DELETED, { success: false, filePath: folderPath, error: 'Path is outside project directory' });
+      if (!projectPath || !isPathWithinProjectContent(folderPath, projectPath)) {
+        safeSend(event.sender, IPC.FILE_DELETED, { success: false, filePath: folderPath, error: PROJECT_PATH_ERROR });
         return;
       }
       if (fs.existsSync(folderPath)) {
@@ -203,8 +204,8 @@ function setupIPC(ipcMain) {
 
   ipcMain.on(IPC.RENAME_FILE, (event, { oldPath, newPath, projectPath }) => {
     try {
-      if (!projectPath || !isPathWithinProject(oldPath, projectPath) || !isPathWithinProject(newPath, projectPath)) {
-        safeSend(event.sender, IPC.FILE_DELETED, { success: false, filePath: oldPath, error: 'Path is outside project directory' });
+      if (!projectPath || !isPathWithinProjectContent(oldPath, projectPath) || !isPathWithinProjectContent(newPath, projectPath)) {
+        safeSend(event.sender, IPC.FILE_DELETED, { success: false, filePath: oldPath, error: PROJECT_PATH_ERROR });
         return;
       }
       if (fs.existsSync(newPath)) {
@@ -223,14 +224,14 @@ function setupIPC(ipcMain) {
   });
 
   ipcMain.on(IPC.REVEAL_IN_FINDER, (event, { filePath, projectPath }) => {
-    if (!projectPath || !isPathWithinProject(filePath, projectPath)) return;
+    if (!projectPath || !isPathWithinProjectContent(filePath, projectPath)) return;
     shell.showItemInFolder(filePath);
   });
 
   ipcMain.on(IPC.DELETE_FILE, async (event, { filePath, projectPath }) => {
     try {
-      if (!projectPath || !isPathWithinProject(filePath, projectPath)) {
-        safeSend(event.sender, IPC.FILE_DELETED, { success: false, filePath, error: 'Path is outside project directory' });
+      if (!projectPath || !isPathWithinProjectContent(filePath, projectPath)) {
+        safeSend(event.sender, IPC.FILE_DELETED, { success: false, filePath, error: PROJECT_PATH_ERROR });
         return;
       }
       await shell.trashItem(filePath);

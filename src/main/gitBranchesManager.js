@@ -3,8 +3,11 @@
  * Handles git branch and worktree operations
  */
 
+const os = require('os');
+const path = require('path');
 const { IPC } = require('../shared/ipcChannels');
 const { execFileGit } = require('./gitExecUtils');
+const { isPathWithinDirectory } = require('../shared/pathValidation');
 
 let mainWindow = null;
 
@@ -28,6 +31,20 @@ function isValidBranchName(name) {
  */
 function init(window) {
   mainWindow = window;
+}
+
+function getResolvedHomeDir() {
+  return path.resolve(os.homedir());
+}
+
+function isAllowedWorktreePath(worktreePath) {
+  if (typeof worktreePath !== 'string' || !worktreePath.trim()) {
+    return false;
+  }
+
+  const resolvedPath = path.resolve(worktreePath);
+  const homeDir = getResolvedHomeDir();
+  return resolvedPath !== homeDir && isPathWithinDirectory(resolvedPath, homeDir);
 }
 
 /**
@@ -241,12 +258,7 @@ async function addWorktree(projectPath, worktreePath, branchName, createBranch =
     return { error: 'Invalid branch name' };
   }
 
-  // Validate worktree path is within home directory to prevent arbitrary filesystem access
-  const os = require('os');
-  const path = require('path');
-  const resolvedPath = path.resolve(worktreePath);
-  const homeDir = os.homedir();
-  if (!resolvedPath.startsWith(homeDir + path.sep) && resolvedPath !== homeDir) {
+  if (!isAllowedWorktreePath(worktreePath)) {
     return { error: 'Worktree path must be within home directory' };
   }
 
@@ -267,6 +279,12 @@ async function addWorktree(projectPath, worktreePath, branchName, createBranch =
 async function removeWorktree(projectPath, worktreePath, force = false) {
   if (!projectPath || !worktreePath) {
     return { error: 'Missing parameters' };
+  }
+  if (!isAllowedWorktreePath(worktreePath)) {
+    return { error: 'Worktree path must be within home directory' };
+  }
+  if (path.resolve(projectPath) === path.resolve(worktreePath)) {
+    return { error: 'Cannot remove the main worktree' };
   }
 
   try {
@@ -336,6 +354,7 @@ module.exports = {
   loadWorktrees,
   addWorktree,
   removeWorktree,
+  isAllowedWorktreePath,
   isWorkingTreeClean,
   setupIPC
 };

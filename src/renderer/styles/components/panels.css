@@ -2367,12 +2367,69 @@
 }
 
 .diff-content.split {
-  min-width: 820px;
+  --diff-split-old-width: 60ch;
+  --diff-split-new-width: 60ch;
+  width: max-content;
+  min-width: max(820px, calc(var(--diff-split-old-width) + var(--diff-split-new-width) + 144px));
 }
 
+.diff-split-head,
 .diff-split-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns:
+    minmax(26rem, calc(var(--diff-split-old-width) + 72px))
+    minmax(26rem, calc(var(--diff-split-new-width) + 72px));
+  min-width: 100%;
+}
+
+.diff-split-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border-bottom: 1px solid var(--border-default);
+  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+  box-shadow: 0 1px 0 var(--border-subtle);
+}
+
+.diff-split-pane-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+  padding: 8px 12px;
+}
+
+.diff-split-pane-title.old {
+  border-right: 1px solid var(--border-subtle);
+}
+
+.diff-split-pane-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 58px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.diff-split-pane-badge.old {
+  background: var(--diff-remove-bg);
+  color: var(--error);
+}
+
+.diff-split-pane-badge.new {
+  background: var(--diff-add-bg);
+  color: var(--success);
+}
+
+.diff-split-pane-caption {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  white-space: nowrap;
 }
 
 .diff-split-row.meta {
@@ -2385,17 +2442,21 @@
 }
 
 .diff-split-meta {
+  display: block;
   font-size: 11px;
   color: var(--text-tertiary);
   padding: 2px var(--space-md);
   border-bottom: 1px solid var(--border-subtle);
   white-space: pre;
+  min-width: max-content;
 }
 
 .diff-split-cell {
   display: grid;
   grid-template-columns: 48px minmax(0, 1fr);
   min-height: 20px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .diff-split-cell.old {
@@ -2412,11 +2473,14 @@
 }
 
 .diff-split-text {
+  display: block;
   font-family: var(--font-mono);
   font-size: 12px;
   line-height: 1.5;
   white-space: pre;
   padding: 0 var(--space-md);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .diff-split-row.context .diff-split-text {

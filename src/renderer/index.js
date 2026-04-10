@@ -32,6 +32,9 @@ function toggleSidebarSafe() {
   terminal.fitTerminal();
 }
 
+// Expose layout toggle for renderer modules that should not depend on index.js directly.
+window.toggleSidebar = toggleSidebarSafe;
+
 /**
  * Initialize all modules
  */

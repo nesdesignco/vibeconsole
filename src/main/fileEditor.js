@@ -7,8 +7,9 @@ const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
 const { IPC } = require('../shared/ipcChannels');
-const { isPathWithinProject } = require('../shared/pathValidation');
+const { isPathWithinProjectContent } = require('../shared/pathValidation');
 const MAX_EDITOR_FILE_BYTES = 10 * 1024 * 1024; // 10MB
+const PROJECT_PATH_ERROR = 'Path is outside project directory or targets protected metadata';
 
 function getMimeTypeForExtension(extension) {
   switch ((extension || '').toLowerCase()) {
@@ -118,8 +119,8 @@ function safeSend(sender, channel, data) {
  */
 function setupIPC(ipcMain) {
   ipcMain.on(IPC.READ_FILE, async (event, { filePath, projectPath }) => {
-    if (!projectPath || !isPathWithinProject(filePath, projectPath)) {
-      safeSend(event.sender, IPC.FILE_CONTENT, { success: false, error: 'Path is outside project directory', filePath });
+    if (!projectPath || !isPathWithinProjectContent(filePath, projectPath)) {
+      safeSend(event.sender, IPC.FILE_CONTENT, { success: false, error: PROJECT_PATH_ERROR, filePath });
       return;
     }
     const result = await readFile(filePath);
@@ -129,8 +130,8 @@ function setupIPC(ipcMain) {
   });
 
   ipcMain.on(IPC.READ_FILE_DATA_URL, async (event, { filePath, projectPath }) => {
-    if (!projectPath || !isPathWithinProject(filePath, projectPath)) {
-      safeSend(event.sender, IPC.FILE_DATA_URL, { success: false, error: 'Path is outside project directory', filePath });
+    if (!projectPath || !isPathWithinProjectContent(filePath, projectPath)) {
+      safeSend(event.sender, IPC.FILE_DATA_URL, { success: false, error: PROJECT_PATH_ERROR, filePath });
       return;
     }
     const result = await readFileAsDataUrl(filePath);
@@ -140,8 +141,8 @@ function setupIPC(ipcMain) {
   });
 
   ipcMain.on(IPC.WRITE_FILE, async (event, { filePath, content, projectPath }) => {
-    if (!projectPath || !isPathWithinProject(filePath, projectPath)) {
-      safeSend(event.sender, IPC.FILE_SAVED, { success: false, error: 'Path is outside project directory', filePath });
+    if (!projectPath || !isPathWithinProjectContent(filePath, projectPath)) {
+      safeSend(event.sender, IPC.FILE_SAVED, { success: false, error: PROJECT_PATH_ERROR, filePath });
       return;
     }
     if (Buffer.byteLength(content || '', 'utf8') > MAX_EDITOR_FILE_BYTES) {

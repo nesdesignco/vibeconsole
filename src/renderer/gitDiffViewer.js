@@ -255,6 +255,15 @@ async function showDiffModal(filePath, diffType) {
       return;
     }
 
+    if (result.diff === 'Directory') {
+      bodyEl.textContent = '';
+      const dirDiv = document.createElement('div');
+      dirDiv.className = 'diff-binary-message';
+      dirDiv.textContent = 'Folder entry - no line diff available';
+      bodyEl.appendChild(dirDiv);
+      return;
+    }
+
     const { lines, additions, deletions } = parseDiff(result.diff);
     const hunks = extractDiffHunks(result.diff);
     setCurrentDiffState({
@@ -625,6 +634,30 @@ function buildSplitRows(lines) {
   return rows;
 }
 
+function getRenderedLineLength(line) {
+  if (!line) return 0;
+  const prefix = line.type === 'add' ? '+' : line.type === 'remove' ? '-' : ' ';
+  return `${prefix}${String(line.content || '')}`.length;
+}
+
+function getSplitColumnWidths(rows) {
+  let oldChars = 0;
+  let newChars = 0;
+
+  for (const row of rows) {
+    if (!row || row.kind !== 'code') continue;
+    oldChars = Math.max(oldChars, getRenderedLineLength(row.oldLine));
+    newChars = Math.max(newChars, getRenderedLineLength(row.newLine));
+  }
+
+  const MIN_CH = 44;
+  const MAX_CH = 140;
+  return {
+    oldCh: Math.max(MIN_CH, Math.min(oldChars + 8, MAX_CH)),
+    newCh: Math.max(MIN_CH, Math.min(newChars + 8, MAX_CH))
+  };
+}
+
 function renderSplitSide(line, side, contentHtml = null) {
   if (!line) {
     return `<div class="diff-split-cell ${escapeAttr(side)} empty"><span class="diff-split-num"></span><span class="diff-split-text"></span></div>`;
@@ -652,6 +685,7 @@ function renderSplitDiffContent(container, lines) {
     const newText = row.newLine ? String(row.newLine.content || '').toLowerCase() : '';
     return oldText.includes(q) || newText.includes(q);
   });
+  const { oldCh, newCh } = getSplitColumnWidths(rows);
 
   const html = rows.map(row => {
     const selectedClass = row.hunkIndex === _selectedHunkIndex ? ' selected-hunk' : '';
@@ -678,7 +712,21 @@ function renderSplitDiffContent(container, lines) {
   }).join('');
 
   // Safe: all values escaped above
-  container.innerHTML = `<div class="diff-content split">${html}</div>`;
+  container.innerHTML = `
+    <div class="diff-content split" style="--diff-split-old-width: ${oldCh}ch; --diff-split-new-width: ${newCh}ch;">
+      <div class="diff-split-head" aria-hidden="true">
+        <div class="diff-split-pane-title old">
+          <span class="diff-split-pane-badge old">Before</span>
+          <span class="diff-split-pane-caption">Original</span>
+        </div>
+        <div class="diff-split-pane-title new">
+          <span class="diff-split-pane-badge new">After</span>
+          <span class="diff-split-pane-caption">Changed</span>
+        </div>
+      </div>
+      ${html}
+    </div>
+  `;
 }
 
 function tokenizeForWordDiff(text) {

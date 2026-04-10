@@ -9,9 +9,21 @@ const os = require('os');
 const { execFile } = require('child_process');
 const { promisify } = require('util');
 const { IPC } = require('../shared/ipcChannels');
+const { isPathWithinDirectory } = require('../shared/pathValidation');
 const execFileAsync = promisify(execFile);
 
 let mainWindow = null;
+const OFFICIAL_MARKETPLACE_REPO = 'https://github.com/anthropics/claude-plugins-official.git';
+const TRUSTED_MARKETPLACE_REMOTES = new Set([
+  'https://github.com/anthropics/claude-plugins-official',
+  OFFICIAL_MARKETPLACE_REPO.replace(/\.git$/, ''),
+  OFFICIAL_MARKETPLACE_REPO,
+  'git@github.com:anthropics/claude-plugins-official',
+  'git@github.com:anthropics/claude-plugins-official.git',
+  'ssh://git@github.com/anthropics/claude-plugins-official',
+  'ssh://git@github.com/anthropics/claude-plugins-official.git'
+]);
+const PLUGIN_ID_RE = /^[A-Za-z0-9._-]+@claude-plugins-official$/;
 
 // Claude Code paths
 const CLAUDE_DIR = path.join(os.homedir(), '.claude');
@@ -30,8 +42,12 @@ function init(window) {
 /**
  * Read JSON file safely
  */
-function readJsonFile(filePath) {
+function readJsonFile(filePath, allowedBase = CLAUDE_DIR) {
   try {
+    if (!isPathWithinDirectory(filePath, allowedBase)) {
+      console.error(`Blocked JSON read outside managed path: ${filePath}`);
+      return null;
+    }
     if (fs.existsSync(filePath)) {
       return JSON.parse(fs.readFileSync(filePath, 'utf8'));
     }
@@ -44,9 +60,26 @@ function readJsonFile(filePath) {
 /**
  * Write JSON file safely
  */
-function writeJsonFile(filePath, data) {
+function writeJsonFile(filePath, data, allowedBase = CLAUDE_DIR) {
   try {
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+    if (!isPathWithinDirectory(filePath, allowedBase)) {
+      console.error(`Blocked JSON write outside managed path: ${filePath}`);
+      return false;
+    }
+
+    const dir = path.dirname(filePath);
+    if (!isPathWithinDirectory(dir, allowedBase)) {
+      console.error(`Blocked JSON write to unmanaged directory: ${dir}`);
+      return false;
+    }
+
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true, mode: 0o700 });
+    }
+
+    const tempPath = path.join(dir, `${path.basename(filePath)}.tmp-${process.pid}-${Date.now()}`);
+    fs.writeFileSync(tempPath, JSON.stringify(data, null, 2), { encoding: 'utf8', mode: 0o600 });
+    fs.renameSync(tempPath, filePath);
     return true;
   } catch (err) {
     console.error(`Error writing ${filePath}:`, err);
@@ -58,7 +91,7 @@ function writeJsonFile(filePath, data) {
  * Get enabled plugins from settings
  */
 function getEnabledPlugins() {
-  const settings = readJsonFile(SETTINGS_FILE);
+  const settings = readJsonFile(SETTINGS_FILE, CLAUDE_DIR);
   return settings?.enabledPlugins || {};
 }
 
@@ -66,8 +99,43 @@ function getEnabledPlugins() {
  * Get installed plugins
  */
 function getInstalledPlugins() {
-  const data = readJsonFile(INSTALLED_PLUGINS_FILE);
+  const data = readJsonFile(INSTALLED_PLUGINS_FILE, PLUGINS_DIR);
   return data?.plugins || {};
+}
+
+function normalizeRemote(remote) {
+  return String(remote || '').trim().replace(/\.git$/, '');
+}
+
+function isTrustedMarketplaceRemote(remote) {
+  return TRUSTED_MARKETPLACE_REMOTES.has(String(remote || '').trim())
+    || TRUSTED_MARKETPLACE_REMOTES.has(normalizeRemote(remote));
+}
+
+async function getMarketplaceOriginUrl(repoPath) {
+  try {
+    const { stdout } = await execFileAsync('git', ['config', '--get', 'remote.origin.url'], {
+      cwd: repoPath,
+      timeout: 15000,
+      encoding: 'utf8'
+    });
+    return String(stdout || '').trim();
+  } catch {
+    return '';
+  }
+}
+
+async function hasTrustedMarketplaceOrigin(repoPath) {
+  if (!fs.existsSync(repoPath) || !isPathWithinDirectory(repoPath, MARKETPLACES_DIR)) {
+    return false;
+  }
+
+  const remote = await getMarketplaceOriginUrl(repoPath);
+  return isTrustedMarketplaceRemote(remote);
+}
+
+function isValidPluginId(pluginId) {
+  return typeof pluginId === 'string' && PLUGIN_ID_RE.test(pluginId);
 }
 
 /**
@@ -87,15 +155,22 @@ async function getMarketplacePlugins() {
     }
   }
 
-  try {
-    const pluginDirs = fs.readdirSync(officialMarketplace);
+  if (!(await hasTrustedMarketplaceOrigin(path.dirname(officialMarketplace)))) {
+    console.error('Blocked plugin marketplace read: repository origin is untrusted');
+    return plugins;
+  }
 
-    for (const pluginName of pluginDirs) {
+  try {
+    const pluginDirs = fs.readdirSync(officialMarketplace, { withFileTypes: true });
+
+    for (const entry of pluginDirs) {
+      if (!entry.isDirectory() || entry.isSymbolicLink()) continue;
+      const pluginName = entry.name;
       const pluginPath = path.join(officialMarketplace, pluginName);
       const configPath = path.join(pluginPath, '.claude-plugin', 'plugin.json');
 
       if (fs.existsSync(configPath)) {
-        const config = readJsonFile(configPath);
+        const config = readJsonFile(configPath, officialMarketplace);
         if (config) {
           plugins.push({
             id: `${pluginName}@claude-plugins-official`,
@@ -140,6 +215,15 @@ async function getAllPlugins() {
  * Toggle plugin enabled/disabled status
  */
 function togglePlugin(pluginId) {
+  if (!isValidPluginId(pluginId)) {
+    return { success: false, pluginId, enabled: false, error: 'Invalid plugin ID' };
+  }
+
+  const installedPlugins = getInstalledPlugins();
+  if (!installedPlugins[pluginId]) {
+    return { success: false, pluginId, enabled: false, error: 'Plugin is not installed' };
+  }
+
   const settings = readJsonFile(SETTINGS_FILE) || {};
 
   if (!settings.enabledPlugins) {
@@ -150,7 +234,7 @@ function togglePlugin(pluginId) {
   const currentStatus = settings.enabledPlugins[pluginId] === true;
   settings.enabledPlugins[pluginId] = !currentStatus;
 
-  const success = writeJsonFile(SETTINGS_FILE, settings);
+  const success = writeJsonFile(SETTINGS_FILE, settings, CLAUDE_DIR);
 
   return {
     success,
@@ -166,7 +250,7 @@ async function ensureOfficialMarketplace() {
   const officialMarketplace = path.join(MARKETPLACES_DIR, 'claude-plugins-official');
   
   if (fs.existsSync(officialMarketplace)) {
-    return true;
+    return hasTrustedMarketplaceOrigin(officialMarketplace);
   }
 
   try {
@@ -175,12 +259,12 @@ async function ensureOfficialMarketplace() {
       fs.mkdirSync(MARKETPLACES_DIR, { recursive: true });
     }
 
-    await execFileAsync('git', ['clone', 'https://github.com/anthropics/claude-plugins-official.git'], {
+    await execFileAsync('git', ['clone', '--depth', '1', OFFICIAL_MARKETPLACE_REPO], {
       cwd: MARKETPLACES_DIR,
       timeout: 60000,
       encoding: 'utf8'
     });
-    return true;
+    return hasTrustedMarketplaceOrigin(officialMarketplace);
   } catch (err) {
     console.error('Error cloning official marketplace:', err);
     return false;
@@ -197,9 +281,13 @@ async function refreshMarketplace() {
   if (!fs.existsSync(officialMarketplace)) {
     const success = await ensureOfficialMarketplace();
     if (!success) {
-      return { success: false, error: 'Failed to clone marketplace' };
+      return { success: false, error: 'Failed to clone trusted marketplace' };
     }
     return { success: true };
+  }
+
+  if (!(await hasTrustedMarketplaceOrigin(officialMarketplace))) {
+    return { success: false, error: 'Marketplace repository origin is untrusted' };
   }
 
   try {
@@ -250,5 +338,7 @@ module.exports = {
   init,
   setupIPC,
   getAllPlugins,
-  togglePlugin
+  togglePlugin,
+  isValidPluginId,
+  isTrustedMarketplaceRemote
 };

@@ -3,6 +3,7 @@
  * Uses electron-updater for automatic updates via GitHub Releases.
  */
 
+const { app } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const { IPC } = require('../shared/ipcChannels');
 
@@ -10,6 +11,16 @@ let mainWindow = null;
 let checkInterval = null;
 let initialCheckTimeout = null;
 let listenersRegistered = false;
+let updateAvailableInfo = null;
+let updateReady = false;
+
+function isAutoUpdateSupported() {
+  return app.isPackaged === true;
+}
+
+function sendUpdateError(message) {
+  send(IPC.UPDATE_ERROR, { message });
+}
 
 function ensureEventListeners() {
   if (listenersRegistered) return;
@@ -17,6 +28,11 @@ function ensureEventListeners() {
 
   // Event → IPC bridge
   autoUpdater.on('update-available', (info) => {
+    updateAvailableInfo = {
+      version: info.version,
+      releaseNotes: info.releaseNotes || ''
+    };
+    updateReady = false;
     send(IPC.UPDATE_AVAILABLE, {
       version: info.version,
       releaseNotes: info.releaseNotes || ''
@@ -28,10 +44,14 @@ function ensureEventListeners() {
   });
 
   autoUpdater.on('update-downloaded', () => {
+    updateReady = true;
     send(IPC.UPDATE_DOWNLOADED);
   });
 
   autoUpdater.on('error', (err) => {
+    if (!updateReady) {
+      updateAvailableInfo = null;
+    }
     send(IPC.UPDATE_ERROR, { message: err.message });
   });
 }
@@ -42,8 +62,14 @@ function ensureEventListeners() {
 function init(window) {
   mainWindow = window;
 
+  if (!isAutoUpdateSupported()) {
+    return;
+  }
+
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
+  autoUpdater.allowPrerelease = false;
+  autoUpdater.allowDowngrade = false;
   ensureEventListeners();
 
   // Initial check after 15s delay (don't slow startup)
@@ -61,9 +87,38 @@ function init(window) {
  * Setup IPC handlers
  */
 function setupIPC(_ipcMain) {
-  _ipcMain.handle(IPC.CHECK_FOR_UPDATES, () => autoUpdater.checkForUpdates());
-  _ipcMain.on(IPC.DOWNLOAD_UPDATE, () => autoUpdater.downloadUpdate());
-  _ipcMain.on(IPC.INSTALL_UPDATE, () => autoUpdater.quitAndInstall(false, true));
+  _ipcMain.handle(IPC.CHECK_FOR_UPDATES, () => {
+    if (!isAutoUpdateSupported()) {
+      return { skipped: true, reason: 'updates-disabled-in-development' };
+    }
+    return autoUpdater.checkForUpdates();
+  });
+
+  _ipcMain.on(IPC.DOWNLOAD_UPDATE, () => {
+    if (!isAutoUpdateSupported()) {
+      sendUpdateError('Updates are only available in packaged builds');
+      return;
+    }
+    if (!updateAvailableInfo || updateReady) {
+      sendUpdateError('No update is currently available to download');
+      return;
+    }
+    autoUpdater.downloadUpdate().catch((err) => {
+      sendUpdateError(err.message);
+    });
+  });
+
+  _ipcMain.on(IPC.INSTALL_UPDATE, () => {
+    if (!isAutoUpdateSupported()) {
+      sendUpdateError('Updates are only available in packaged builds');
+      return;
+    }
+    if (!updateReady) {
+      sendUpdateError('No downloaded update is ready to install');
+      return;
+    }
+    autoUpdater.quitAndInstall(false, true);
+  });
 }
 
 /**
@@ -79,6 +134,8 @@ function send(channel, data) {
  * Cleanup timers
  */
 function cleanup() {
+  updateAvailableInfo = null;
+  updateReady = false;
   if (checkInterval) {
     clearInterval(checkInterval);
     checkInterval = null;
