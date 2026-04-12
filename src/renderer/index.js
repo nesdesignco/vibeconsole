@@ -21,13 +21,13 @@ let _rendererInitialized = false;
 let _startToast = null;
 
 let _lastSidebarToggleAt = 0;
-let _autoCollapsedRightPanel = null;
-let _rightPanelResizeTimer = null;
-let _rightPanelResizeObserver = null;
-let _rightPanelClassObserver = null;
+let _autoCollapsedPanel = null;
+let _panelResizeTimer = null;
+let _panelResizeObserver = null;
+let _panelClassObserver = null;
 
-const RIGHT_PANEL_COLLAPSE_BUFFER = 12;
-const RIGHT_PANEL_RESTORE_BUFFER = 64;
+const PANEL_COLLAPSE_BUFFER = 12;
+const PANEL_RESTORE_BUFFER = 64;
 const DEFAULT_TERMINAL_MIN_WIDTH = 620;
 
 function toggleSidebarSafe() {
@@ -43,19 +43,40 @@ function toggleSidebarSafe() {
 // Expose layout toggle for renderer modules that should not depend on index.js directly.
 window.toggleSidebar = toggleSidebarSafe;
 
-function getRightPanelDescriptors() {
+function getPanelDescriptors() {
   return [
-    { id: 'plugins-panel', panel: pluginsPanel },
-    { id: 'github-panel', panel: githubPanel },
-    { id: 'saved-prompts-panel', panel: savedPromptsPanel }
+    {
+      id: 'history-panel',
+      show: historyPanel.showHistoryPanel,
+      hide: historyPanel.hideHistoryPanel,
+      isVisible: historyPanel.isHistoryVisible
+    },
+    {
+      id: 'plugins-panel',
+      show: pluginsPanel.show,
+      hide: pluginsPanel.hide,
+      isVisible: pluginsPanel.isVisible
+    },
+    {
+      id: 'github-panel',
+      show: githubPanel.show,
+      hide: githubPanel.hide,
+      isVisible: githubPanel.isVisible
+    },
+    {
+      id: 'saved-prompts-panel',
+      show: savedPromptsPanel.show,
+      hide: savedPromptsPanel.hide,
+      isVisible: savedPromptsPanel.isVisible
+    }
   ].map((descriptor) => ({
     ...descriptor,
     element: document.getElementById(descriptor.id)
   }));
 }
 
-function getVisibleRightPanel() {
-  return getRightPanelDescriptors().find(({ panel }) => panel.isVisible());
+function getVisiblePanel() {
+  return getPanelDescriptors().find(({ isVisible }) => isVisible());
 }
 
 function getCssPixelValue(element, propertyName, fallback = 0) {
@@ -67,7 +88,9 @@ function getCssPixelValue(element, propertyName, fallback = 0) {
 function getPanelTargetWidth(panelElement) {
   if (!panelElement) return 0;
   const panelWidth = getCssPixelValue(panelElement, '--panel-width', 0);
-  return panelWidth || panelElement.getBoundingClientRect().width;
+  const panelMinWidth = getCssPixelValue(panelElement, '--panel-min-width', panelWidth);
+  const renderedWidth = panelElement.getBoundingClientRect().width;
+  return Math.max(panelWidth, panelMinWidth, renderedWidth);
 }
 
 function getRequiredMainContentWidth(panelElement, buffer) {
@@ -81,99 +104,90 @@ function getRequiredMainContentWidth(panelElement, buffer) {
   return terminalMinWidth + terminalMargins + getPanelTargetWidth(panelElement) + buffer;
 }
 
-function showRightPanel(panelToShow) {
-  getRightPanelDescriptors().forEach(({ panel }) => {
-    if (panel === panelToShow) return;
-    panel.hide();
-  });
-  panelToShow.show();
-}
-
-function syncRightPanelForAvailableWidth() {
+function syncPanelForAvailableWidth() {
   const mainContent = document.getElementById('main-content');
   if (!mainContent) return;
 
   const availableWidth = mainContent.clientWidth;
-  const visibleRightPanel = getVisibleRightPanel();
+  const visiblePanel = getVisiblePanel();
 
-  if (_autoCollapsedRightPanel) {
-    if (visibleRightPanel?.element) {
+  if (_autoCollapsedPanel) {
+    if (visiblePanel?.element) {
       const visibleCollapseWidth = getRequiredMainContentWidth(
-        visibleRightPanel.element,
-        RIGHT_PANEL_COLLAPSE_BUFFER
+        visiblePanel.element,
+        PANEL_COLLAPSE_BUFFER
       );
       if (availableWidth < visibleCollapseWidth) {
-        _autoCollapsedRightPanel = { panel: visibleRightPanel.panel };
-        visibleRightPanel.panel.hide();
+        _autoCollapsedPanel = visiblePanel.id;
+        visiblePanel.hide();
       } else {
-        _autoCollapsedRightPanel = null;
+        _autoCollapsedPanel = null;
       }
       return;
     }
 
-    const autoCollapsedDescriptor = getRightPanelDescriptors()
-      .find(({ panel }) => panel === _autoCollapsedRightPanel.panel);
+    const autoCollapsedDescriptor = getPanelDescriptors()
+      .find(({ id }) => id === _autoCollapsedPanel);
     if (!autoCollapsedDescriptor?.element) {
-      _autoCollapsedRightPanel = null;
+      _autoCollapsedPanel = null;
       return;
     }
 
     const restoreWidth = getRequiredMainContentWidth(
       autoCollapsedDescriptor.element,
-      RIGHT_PANEL_RESTORE_BUFFER
+      PANEL_RESTORE_BUFFER
     );
     if (availableWidth >= restoreWidth) {
-      showRightPanel(autoCollapsedDescriptor.panel);
-      _autoCollapsedRightPanel = null;
-      return;
+      autoCollapsedDescriptor.show();
+      _autoCollapsedPanel = null;
     }
     return;
   }
 
-  if (!visibleRightPanel?.element) return;
+  if (!visiblePanel?.element) return;
 
   const collapseWidth = getRequiredMainContentWidth(
-    visibleRightPanel.element,
-    RIGHT_PANEL_COLLAPSE_BUFFER
+    visiblePanel.element,
+    PANEL_COLLAPSE_BUFFER
   );
   if (availableWidth < collapseWidth) {
-    _autoCollapsedRightPanel = { panel: visibleRightPanel.panel };
-    visibleRightPanel.panel.hide();
+    _autoCollapsedPanel = visiblePanel.id;
+    visiblePanel.hide();
   }
 }
 
-function scheduleRightPanelWidthSync() {
-  if (_rightPanelResizeTimer) clearTimeout(_rightPanelResizeTimer);
-  _rightPanelResizeTimer = setTimeout(() => {
-    _rightPanelResizeTimer = null;
-    syncRightPanelForAvailableWidth();
+function schedulePanelWidthSync() {
+  if (_panelResizeTimer) clearTimeout(_panelResizeTimer);
+  _panelResizeTimer = setTimeout(() => {
+    _panelResizeTimer = null;
+    syncPanelForAvailableWidth();
   }, 80);
 }
 
-function setupResponsiveRightPanelCollapse() {
-  if (_rightPanelResizeObserver || _rightPanelClassObserver) return;
+function setupResponsivePanelCollapse() {
+  if (_panelResizeObserver || _panelClassObserver) return;
 
   const mainContent = document.getElementById('main-content');
   if (mainContent && typeof ResizeObserver !== 'undefined') {
-    _rightPanelResizeObserver = new ResizeObserver(scheduleRightPanelWidthSync);
-    _rightPanelResizeObserver.observe(mainContent);
+    _panelResizeObserver = new ResizeObserver(schedulePanelWidthSync);
+    _panelResizeObserver.observe(mainContent);
   }
 
-  const panelElements = getRightPanelDescriptors()
+  const panelElements = getPanelDescriptors()
     .map(({ element }) => element)
     .filter(Boolean);
   if (panelElements.length && typeof MutationObserver !== 'undefined') {
-    _rightPanelClassObserver = new MutationObserver(scheduleRightPanelWidthSync);
+    _panelClassObserver = new MutationObserver(schedulePanelWidthSync);
     panelElements.forEach((element) => {
-      _rightPanelClassObserver.observe(element, {
+      _panelClassObserver.observe(element, {
         attributes: true,
         attributeFilter: ['class']
       });
     });
   }
 
-  syncRightPanelForAvailableWidth();
-  window.addEventListener('resize', scheduleRightPanelWidthSync);
+  syncPanelForAvailableWidth();
+  window.addEventListener('resize', schedulePanelWidthSync);
 }
 
 /**
@@ -270,7 +284,7 @@ function init() {
   // Initialize history panel with terminal resize callback
   try {
     historyPanel.init('history-panel', 'history-content', () => {
-      setTimeout(() => terminal.fitTerminal(), 50);
+      setTimeout(() => terminal.fitTerminal(), 360);
     });
   } catch (err) {
     console.error('Failed to initialize history panel:', err);
@@ -294,7 +308,7 @@ function init() {
     console.error('Failed to initialize sidebar resize:', err);
   }
 
-  setupResponsiveRightPanelCollapse();
+  setupResponsivePanelCollapse();
 
   // Allow menu items (and other main-process actions) to toggle layout.
   try {
@@ -447,7 +461,7 @@ function setupButtonHandlers() {
 
   // Close history panel
   document.getElementById('history-close').addEventListener('click', () => {
-    historyPanel.toggleHistoryPanel();
+    historyPanel.hideHistoryPanel();
   });
 
   // Add project to workspace
@@ -461,15 +475,6 @@ function setupButtonHandlers() {
  * Setup keyboard shortcuts
  */
 function setupKeyboardShortcuts() {
-  const toggleExclusivePanel = (targetPanel, otherPanels) => {
-    if (targetPanel.isVisible()) {
-      targetPanel.hide();
-      return;
-    }
-    otherPanels.forEach((panel) => panel.hide());
-    targetPanel.show();
-  };
-
   document.addEventListener('keydown', (e) => {
     const modKey = e.ctrlKey || e.metaKey; // Support both Ctrl (Windows/Linux) and Cmd (macOS)
     const key = e.key.toLowerCase(); // Normalize key to lowercase
@@ -482,12 +487,12 @@ function setupKeyboardShortcuts() {
     // Ctrl/Cmd+Shift+P - Toggle plugins panel
     if (modKey && e.shiftKey && key === 'p') {
       e.preventDefault();
-      toggleExclusivePanel(pluginsPanel, [githubPanel, savedPromptsPanel]);
+      pluginsPanel.toggle();
     }
     // Ctrl/Cmd+Shift+G - Toggle GitHub panel
     if (modKey && e.shiftKey && key === 'g') {
       e.preventDefault();
-      toggleExclusivePanel(githubPanel, [pluginsPanel, savedPromptsPanel]);
+      githubPanel.toggle();
     }
     // Ctrl/Cmd+B - Toggle sidebar
     if (modKey && !e.shiftKey && key === 'b') {
@@ -519,7 +524,7 @@ function setupKeyboardShortcuts() {
     // Ctrl/Cmd+Shift+S - Toggle saved prompts panel
     if (modKey && e.shiftKey && key === 's') {
       e.preventDefault();
-      toggleExclusivePanel(savedPromptsPanel, [pluginsPanel, githubPanel]);
+      savedPromptsPanel.toggle();
     }
   });
 }

@@ -9,6 +9,7 @@ const { createPanelHeaderDropdown } = require('./panelHeaderDropdown');
 const { withSpinner } = require('./spinnerButton');
 const { createToast } = require('./toast');
 const { createPanelVisibility } = require('./panelVisibility');
+const { registerPanel, showPanel, hidePanel, togglePanel } = require('./panelCoordinator');
 const gitDiffViewer = require('./gitDiffViewer');
 const gitActivityHeatmap = require('./gitActivityHeatmap');
 const gitConflictResolver = require('./gitConflictResolver');
@@ -57,6 +58,7 @@ let tabDropdownControl = null;
 let _toast = null;
 let _panel = null;
 
+const PANEL_ID = 'github';
 const GIT_CHANGES_COUNT_EVENT = 'vibe:git-changes-count';
 const AUTO_STAGE_STORAGE_KEY = 'vibe.git.autoStageBeforeCommit';
 let _autoStageBeforeCommit = true;
@@ -84,6 +86,7 @@ function init() {
       handleFetch({ silent: true, auto: true });
     }
   });
+  registerPanel(PANEL_ID, _panel);
 
   setupEventListeners();
   setupContentDelegation();
@@ -261,9 +264,17 @@ async function refreshIssues() {
   });
 }
 
-function show() { if (_panel) _panel.show(); }
-function hide() { if (_panel) _panel.hide(); }
-function toggle() { if (_panel) _panel.toggle(); }
+function show() {
+  return showPanel(PANEL_ID);
+}
+
+function hide() {
+  return hidePanel(PANEL_ID);
+}
+
+function toggle() {
+  return togglePanel(PANEL_ID);
+}
 
 /**
  * Set active tab

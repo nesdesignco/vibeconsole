@@ -10,8 +10,11 @@ const { createPanelHeaderDropdown } = require('./panelHeaderDropdown');
 const { withSpinner } = require('./spinnerButton');
 const { createToast } = require('./toast');
 const { createPanelVisibility } = require('./panelVisibility');
+const { registerPanel, showPanel, hidePanel, togglePanel } = require('./panelCoordinator');
 let pluginsData = [];
 let currentFilter = 'all'; // all, installed, enabled
+
+const PANEL_ID = 'plugins';
 
 // DOM Elements
 let panelElement = null;
@@ -34,6 +37,7 @@ function init() {
 
   _toast = createToast(panelElement);
   _panel = createPanelVisibility(panelElement, { onShow: loadPlugins });
+  registerPanel(PANEL_ID, _panel);
 
   setupEventListeners();
   setupIPCListeners();
@@ -151,9 +155,17 @@ async function refreshPlugins() {
   });
 }
 
-function show() { if (_panel) _panel.show(); }
-function hide() { if (_panel) _panel.hide(); }
-function toggle() { if (_panel) _panel.toggle(); }
+function show() {
+  return showPanel(PANEL_ID);
+}
+
+function hide() {
+  return hidePanel(PANEL_ID);
+}
+
+function toggle() {
+  return togglePanel(PANEL_ID);
+}
 
 /**
  * Set filter

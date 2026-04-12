@@ -4,6 +4,7 @@
 #github-panel,
 #saved-prompts-panel {
   transition: width var(--transition-panel),
+              min-width var(--transition-panel),
               border-left-color var(--transition-normal),
               box-shadow var(--transition-panel);
   will-change: width;
@@ -21,6 +22,7 @@
 #github-panel > *,
 #saved-prompts-panel > * {
   width: var(--panel-width);
+  min-width: var(--panel-min-width, var(--panel-width));
   margin-left: auto;
   opacity: 0;
   transform: translateX(24px);
@@ -78,15 +80,17 @@
 /* ==================== HISTORY PANEL ==================== */
 #history-panel {
   --panel-width: 340px;
+  --panel-min-width: 340px;
   width: 0;
   min-width: 0;
+  max-width: var(--panel-width);
   background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
   border-left: 1px solid transparent;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   position: relative;
-  flex-shrink: 0;
+  flex: 0 0 auto;
 }
 
 #history-panel::before {
@@ -102,6 +106,7 @@
 
 #history-panel.visible {
   width: var(--panel-width);
+  min-width: var(--panel-min-width);
   border-left-color: var(--border-subtle);
 }
 
@@ -170,15 +175,17 @@
 /* ==================== PLUGINS PANEL STYLES ==================== */
 #plugins-panel {
   --panel-width: 342px;
+  --panel-min-width: 342px;
   width: 0;
   min-width: 0;
+  max-width: var(--panel-width);
   background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
   border-left: 1px solid transparent;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   position: relative;
-  flex-shrink: 0;
+  flex: 0 0 auto;
 }
 
 #plugins-panel::before {
@@ -194,6 +201,7 @@
 
 #plugins-panel.visible {
   width: var(--panel-width);
+  min-width: var(--panel-min-width);
   border-left-color: var(--border-subtle);
 }
 
@@ -439,15 +447,17 @@
 /* ==================== GITHUB PANEL STYLES ==================== */
 #github-panel {
   --panel-width: 360px;
+  --panel-min-width: 360px;
   width: 0;
   min-width: 0;
+  max-width: var(--panel-width);
   background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
   border-left: 1px solid transparent;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   position: relative;
-  flex-shrink: 0;
+  flex: 0 0 auto;
 }
 
 #github-panel::before {
@@ -463,6 +473,7 @@
 
 #github-panel.visible {
   width: var(--panel-width);
+  min-width: var(--panel-min-width);
   border-left-color: var(--border-subtle);
   overflow: visible;
 }
@@ -2764,15 +2775,17 @@
 /* ==================== SAVED PROMPTS PANEL STYLES ==================== */
 #saved-prompts-panel {
   --panel-width: 342px;
+  --panel-min-width: 342px;
   width: 0;
   min-width: 0;
+  max-width: var(--panel-width);
   background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
   border-left: 1px solid transparent;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   position: relative;
-  flex-shrink: 0;
+  flex: 0 0 auto;
 }
 
 #saved-prompts-panel::before {
@@ -2788,6 +2801,7 @@
 
 #saved-prompts-panel.visible {
   width: var(--panel-width);
+  min-width: var(--panel-min-width);
   border-left-color: var(--border-subtle);
 }
 

@@ -5,11 +5,16 @@
 
 const { ipcRenderer } = require('./electronBridge');
 const { IPC } = require('../shared/ipcChannels');
+const { registerPanel, showPanel, hidePanel, togglePanel } = require('./panelCoordinator');
 
 let historyPanel = null;
 let historyContent = null;
 let historyVisible = false;
 let onToggleCallback = null;
+let lastHistoryToggleAt = 0;
+
+const PANEL_ID = 'history';
+const HISTORY_TOGGLE_DEDUP_MS = 150;
 
 /**
  * Initialize history panel
@@ -18,6 +23,12 @@ function init(panelId, contentId, onToggle) {
   historyPanel = document.getElementById(panelId);
   historyContent = document.getElementById(contentId);
   onToggleCallback = onToggle;
+
+  registerPanel(PANEL_ID, {
+    show: showHistoryPanelRaw,
+    hide: hideHistoryPanelRaw,
+    isVisible: isHistoryVisible
+  });
 
   setupIPC();
 }
@@ -32,22 +43,43 @@ function isHistoryVisible() {
 /**
  * Toggle history panel visibility
  */
-function toggleHistoryPanel() {
-  historyVisible = !historyVisible;
-
-  if (historyVisible) {
-    historyPanel.classList.add('visible');
-    loadPromptHistory();
-  } else {
-    historyPanel.classList.remove('visible');
-  }
-
-  // Callback for terminal resize
+function notifyToggle() {
   if (onToggleCallback) {
     onToggleCallback(historyVisible);
   }
+}
 
+function showHistoryPanelRaw() {
+  if (!historyPanel || historyVisible) return historyVisible;
+  historyVisible = true;
+  historyPanel.classList.add('visible');
+  loadPromptHistory();
+  notifyToggle();
   return historyVisible;
+}
+
+function hideHistoryPanelRaw() {
+  if (!historyPanel || !historyVisible) return historyVisible;
+  historyVisible = false;
+  historyPanel.classList.remove('visible');
+  notifyToggle();
+  return historyVisible;
+}
+
+function showHistoryPanel() {
+  return showPanel(PANEL_ID);
+}
+
+function hideHistoryPanel() {
+  return hidePanel(PANEL_ID);
+}
+
+function toggleHistoryPanel() {
+  const now = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+  if ((now - lastHistoryToggleAt) < HISTORY_TOGGLE_DEDUP_MS) return historyVisible;
+  lastHistoryToggleAt = now;
+
+  return togglePanel(PANEL_ID);
 }
 
 /**
@@ -111,6 +143,8 @@ function setupIPC() {
 module.exports = {
   init,
   isHistoryVisible,
+  showHistoryPanel,
+  hideHistoryPanel,
   toggleHistoryPanel,
   loadPromptHistory
 };

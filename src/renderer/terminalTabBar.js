@@ -367,15 +367,6 @@ class TerminalTabBar {
   }
 
   _setupEventHandlers() {
-    const toggleExclusivePanel = (targetPanel, otherPanels) => {
-      if (targetPanel.isVisible()) {
-        targetPanel.hide();
-        return;
-      }
-      otherPanels.forEach((panel) => panel.hide());
-      targetPanel.show();
-    };
-
     // Tab click - activate terminal
     this.element.addEventListener('click', (e) => {
       const tab = e.target.closest('.terminal-tab');
@@ -516,12 +507,12 @@ class TerminalTabBar {
 
     // Plugins toggle button
     this.element.querySelector('.btn-plugins-toggle').addEventListener('click', () => {
-      toggleExclusivePanel(pluginsPanel, [githubPanel, savedPromptsPanel]);
+      pluginsPanel.toggle();
     });
 
     // GitHub toggle button
     this.element.querySelector('.btn-github-toggle').addEventListener('click', () => {
-      toggleExclusivePanel(githubPanel, [pluginsPanel, savedPromptsPanel]);
+      githubPanel.toggle();
     });
 
     // Usage bars click to refresh
@@ -533,7 +524,7 @@ class TerminalTabBar {
 
     // Saved Prompts toggle button
     this.element.querySelector('.btn-saved-prompts-toggle').addEventListener('click', () => {
-      toggleExclusivePanel(savedPromptsPanel, [pluginsPanel, githubPanel]);
+      savedPromptsPanel.toggle();
     });
 
     // Setup usage bar IPC listener

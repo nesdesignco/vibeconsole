@@ -10,6 +10,7 @@ const { createPanelHeaderDropdown } = require('./panelHeaderDropdown');
 const { writeClipboardText } = require('./clipboardWrite');
 const { createToast } = require('./toast');
 const { createPanelVisibility } = require('./panelVisibility');
+const { registerPanel, showPanel, hidePanel, togglePanel } = require('./panelCoordinator');
 let globalPrompts = [];
 let projectPrompts = [];
 let currentScope = 'all'; // all, global, project
@@ -19,6 +20,7 @@ let editingPromptId = null;
 let editingPromptScope = null;
 
 const PASTE_DEDUP_WINDOW_MS = 250;
+const PANEL_ID = 'saved-prompts';
 
 // DOM Elements
 let panelElement = null;
@@ -45,6 +47,7 @@ function init() {
 
   _toast = createToast(panelElement);
   _panel = createPanelVisibility(panelElement, { onShow: loadPrompts });
+  registerPanel(PANEL_ID, _panel);
 
   setupEventListeners();
   setupIPCListeners();
@@ -150,9 +153,17 @@ function loadPrompts() {
   ipcRenderer.send(IPC.LOAD_SAVED_PROMPTS, projectPath || null);
 }
 
-function show() { if (_panel) _panel.show(); }
-function hide() { if (_panel) _panel.hide(); }
-function toggle() { if (_panel) _panel.toggle(); }
+function show() {
+  return showPanel(PANEL_ID);
+}
+
+function hide() {
+  return hidePanel(PANEL_ID);
+}
+
+function toggle() {
+  return togglePanel(PANEL_ID);
+}
 
 function setScope(scope, options = {}) {
   const { syncDropdown = true } = options;

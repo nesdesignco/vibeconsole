@@ -280,6 +280,7 @@ body.sidebar-resizing * {
 #main-content {
   flex: 1;
   display: flex;
+  min-width: 0;
   overflow: hidden;
   background: var(--bg-deep);
 }

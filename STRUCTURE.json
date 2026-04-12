@@ -1,7 +1,7 @@
 {
   "version": "1.1",
   "description": "Claude Code IDE - Module structure and IPC communication map",
-  "lastUpdated": "2026-03-29",
+  "lastUpdated": "2026-04-12",
   "architecture": {
     "type": "electron",
     "mainProcess": "src/main/index.js",
@@ -584,18 +584,54 @@
       ],
       "functions": {
         "toggleSidebarSafe": {
-          "line": 25
+          "line": 33
+        },
+        "getPanelDescriptors": {
+          "line": 46
+        },
+        "getVisiblePanel": {
+          "line": 78
+        },
+        "getCssPixelValue": {
+          "line": 82,
+          "params": [
+            "element",
+            "propertyName",
+            "fallback = 0"
+          ]
+        },
+        "getPanelTargetWidth": {
+          "line": 88,
+          "params": [
+            "panelElement"
+          ]
+        },
+        "getRequiredMainContentWidth": {
+          "line": 96,
+          "params": [
+            "panelElement",
+            "buffer"
+          ]
+        },
+        "syncPanelForAvailableWidth": {
+          "line": 107
+        },
+        "schedulePanelWidthSync": {
+          "line": 159
+        },
+        "setupResponsivePanelCollapse": {
+          "line": 167
         },
         "init": {
-          "line": 38,
+          "line": 196,
           "purpose": "Initialize all modules"
         },
         "setupButtonHandlers": {
-          "line": 249,
+          "line": 409,
           "purpose": "Setup button click handlers"
         },
         "setupKeyboardShortcuts": {
-          "line": 317,
+          "line": 477,
           "purpose": "Setup keyboard shortcuts"
         }
       },
@@ -888,16 +924,19 @@
       "exports": [
         "init",
         "isHistoryVisible",
+        "showHistoryPanel",
+        "hideHistoryPanel",
         "toggleHistoryPanel",
         "loadPromptHistory"
       ],
       "depends": [
         "electronBridge",
-        "shared/ipcChannels"
+        "shared/ipcChannels",
+        "panelCoordinator"
       ],
       "functions": {
         "init": {
-          "line": 17,
+          "line": 22,
           "params": [
             "panelId",
             "contentId",
@@ -906,26 +945,41 @@
           "purpose": "Initialize history panel"
         },
         "isHistoryVisible": {
-          "line": 28,
+          "line": 39,
           "purpose": "Check if history panel is visible"
         },
-        "toggleHistoryPanel": {
-          "line": 35,
+        "notifyToggle": {
+          "line": 46,
           "purpose": "Toggle history panel visibility"
         },
+        "showHistoryPanelRaw": {
+          "line": 52
+        },
+        "hideHistoryPanelRaw": {
+          "line": 61
+        },
+        "showHistoryPanel": {
+          "line": 69
+        },
+        "hideHistoryPanel": {
+          "line": 73
+        },
+        "toggleHistoryPanel": {
+          "line": 77
+        },
         "loadPromptHistory": {
-          "line": 56,
+          "line": 88,
           "purpose": "Load prompt history from file"
         },
         "renderPromptHistory": {
-          "line": 63,
+          "line": 95,
           "params": [
             "historyData"
           ],
           "purpose": "Render prompt history data"
         },
         "setupIPC": {
-          "line": 101,
+          "line": 133,
           "purpose": "Setup IPC listeners"
         }
       },
@@ -1823,40 +1877,41 @@
         "spinnerButton",
         "toast",
         "panelVisibility",
+        "panelCoordinator",
         "escapeHtml"
       ],
       "functions": {
         "init": {
-          "line": 26,
+          "line": 29,
           "purpose": "Initialize plugins panel"
         },
         "setupEventListeners": {
-          "line": 45,
+          "line": 49,
           "purpose": "Setup event listeners"
         },
         "setupIPCListeners": {
-          "line": 95,
+          "line": 99,
           "purpose": "Setup IPC listeners"
         },
         "loadPlugins": {
-          "line": 119,
+          "line": 123,
           "purpose": "Load plugins"
         },
         "refreshPlugins": {
-          "line": 133,
+          "line": 137,
           "purpose": "Refresh plugins from marketplace"
         },
         "show": {
-          "line": 154
+          "line": 158
         },
         "hide": {
-          "line": 155
+          "line": 162
         },
         "toggle": {
-          "line": 156
+          "line": 166
         },
         "setFilter": {
-          "line": 161,
+          "line": 173,
           "params": [
             "filter",
             "options = {}"
@@ -1864,43 +1919,43 @@
           "purpose": "Set filter"
         },
         "getFilteredPlugins": {
-          "line": 174,
+          "line": 186,
           "purpose": "Get filtered plugins"
         },
         "render": {
-          "line": 190,
+          "line": 202,
           "purpose": "Render plugins list"
         },
         "renderPluginItem": {
-          "line": 216,
+          "line": 228,
           "params": [
             "plugin"
           ],
           "purpose": "Render single plugin item"
         },
         "getPluginIcon": {
-          "line": 262,
+          "line": 274,
           "params": [
             "name"
           ],
           "purpose": "Get icon for plugin based on name"
         },
         "togglePlugin": {
-          "line": 301,
+          "line": 313,
           "params": [
             "pluginId"
           ],
           "purpose": "Toggle plugin enabled/disabled"
         },
         "installPlugin": {
-          "line": 313,
+          "line": 325,
           "params": [
             "pluginName"
           ],
           "purpose": "Install plugin via terminal command"
         },
         "showToast": {
-          "line": 330,
+          "line": 342,
           "params": [
             "message",
             "type = 'info'"
@@ -1935,6 +1990,7 @@
         "spinnerButton",
         "toast",
         "panelVisibility",
+        "panelCoordinator",
         "gitDiffViewer",
         "gitActivityHeatmap",
         "gitConflictResolver",
@@ -1948,39 +2004,39 @@
       ],
       "functions": {
         "init": {
-          "line": 67,
+          "line": 69,
           "purpose": "Initialize GitHub panel"
         },
         "setupGitWatcher": {
-          "line": 130,
+          "line": 133,
           "purpose": "Setup .git directory watcher for auto-refresh when panel is visible"
         },
         "setupEventListeners": {
-          "line": 160,
+          "line": 163,
           "purpose": "Setup event listeners"
         },
         "setupContentDelegation": {
-          "line": 189
+          "line": 192
         },
         "setupIPCListeners": {
-          "line": 238,
+          "line": 241,
           "purpose": "Setup IPC listeners"
         },
         "refreshIssues": {
-          "line": 247,
+          "line": 250,
           "purpose": "Refresh current tab"
         },
         "show": {
-          "line": 264
+          "line": 267
         },
         "hide": {
-          "line": 265
+          "line": 271
         },
         "toggle": {
-          "line": 266
+          "line": 275
         },
         "setTab": {
-          "line": 271,
+          "line": 282,
           "params": [
             "tab",
             "options = {}"
@@ -1988,21 +2044,21 @@
           "purpose": "Set active tab"
         },
         "renderLoading": {
-          "line": 310,
+          "line": 321,
           "params": [
             "message = 'Loading...'"
           ],
           "purpose": "Render loading state"
         },
         "renderError": {
-          "line": 327,
+          "line": 338,
           "params": [
             "message"
           ],
           "purpose": "Render error state"
         },
         "showToast": {
-          "line": 351,
+          "line": 362,
           "params": [
             "message",
             "type = 'info'"
@@ -2010,35 +2066,35 @@
           "purpose": "Show toast notification (delegates to shared toast utility)"
         },
         "publishGitChangesCount": {
-          "line": 355,
+          "line": 366,
           "params": [
             "count"
           ]
         },
         "loadAutoStagePreference": {
-          "line": 362
-        },
-        "persistAutoStagePreference": {
           "line": 373
         },
+        "persistAutoStagePreference": {
+          "line": 384
+        },
         "syncAutoStageToggle": {
-          "line": 381
+          "line": 392
         },
         "computeChangesHash": {
-          "line": 395,
+          "line": 406,
           "params": [
             "data"
           ],
           "purpose": "==================== CHANGES FUNCTIONALITY ===================="
         },
         "clearActivitySlot": {
-          "line": 415
+          "line": 426
         },
         "getActivityRenderOptions": {
-          "line": 421
+          "line": 432
         },
         "renderActivitySlot": {
-          "line": 428,
+          "line": 439,
           "params": [
             "activity",
             "totalHint = null",
@@ -2046,50 +2102,50 @@
           ]
         },
         "setActivityPending": {
-          "line": 452,
+          "line": 463,
           "params": [
             "pending"
           ]
         },
         "loadChanges": {
-          "line": 459,
+          "line": 470,
           "params": [
             "force"
           ]
         },
         "_loadChangesImpl": {
-          "line": 466
+          "line": 477
         },
         "renderChanges": {
-          "line": 511,
+          "line": 522,
           "params": [
             "gen"
           ],
           "purpose": "Render source control sections with clear separation (merge, working tree, staged, sync)."
         },
         "toggleSection": {
-          "line": 721,
+          "line": 732,
           "params": [
             "sectionId"
           ],
           "purpose": "Toggle a collapsible section"
         },
         "handleStageFile": {
-          "line": 734,
+          "line": 745,
           "params": [
             "filePath"
           ],
           "purpose": "Handle staging a file"
         },
         "handleUnstageFile": {
-          "line": 758,
+          "line": 769,
           "params": [
             "filePath"
           ],
           "purpose": "Handle unstaging a file"
         },
         "handleDiscardFile": {
-          "line": 782,
+          "line": 793,
           "params": [
             "filePath",
             "diffType"
@@ -2097,136 +2153,136 @@
           "purpose": "Handle discarding changes for a file"
         },
         "handleStashFile": {
-          "line": 809,
+          "line": 820,
           "params": [
             "filePath"
           ],
           "purpose": "Handle stashing a single file"
         },
         "handleStageAll": {
-          "line": 836,
+          "line": 847,
           "purpose": "Handle staging all files"
         },
         "handleUnstageAll": {
-          "line": 860,
+          "line": 871,
           "purpose": "Handle unstaging all files"
         },
         "handleDiscardAllUnstaged": {
-          "line": 884,
+          "line": 895,
           "purpose": "Handle discarding all unstaged changes"
         },
         "handleStashAll": {
-          "line": 910,
+          "line": 921,
           "purpose": "Handle stashing all changes"
         },
         "handleUndoLastCommit": {
-          "line": 937,
+          "line": 948,
           "purpose": "Handle undoing the last commit"
         },
         "handleRevertCommit": {
-          "line": 963,
+          "line": 974,
           "params": [
             "hash"
           ],
           "purpose": "Handle reverting a specific commit"
         },
         "handleStashApply": {
-          "line": 990,
+          "line": 1001,
           "params": [
             "stashRef"
           ],
           "purpose": "Handle applying a stash"
         },
         "handleStashPop": {
-          "line": 1018,
+          "line": 1029,
           "params": [
             "stashRef"
           ],
           "purpose": "Handle popping a stash"
         },
         "handleStashDrop": {
-          "line": 1046,
+          "line": 1057,
           "params": [
             "stashRef"
           ],
           "purpose": "Handle dropping a stash"
         },
         "loadStashSection": {
-          "line": 1072,
+          "line": 1083,
           "params": [
             "gen"
           ],
           "purpose": "Load and render stash section"
         },
         "renderChangesError": {
-          "line": 1122,
+          "line": 1133,
           "params": [
             "message"
           ],
           "purpose": "Render changes error"
         },
         "setupCommitArea": {
-          "line": 1144,
+          "line": 1155,
           "purpose": "Setup commit area event listeners"
         },
         "syncRemoteButtonsState": {
-          "line": 1306
+          "line": 1317
         },
         "setDescriptionVisibility": {
-          "line": 1327,
+          "line": 1338,
           "params": [
             "visible"
           ]
         },
         "updateCommitBtnState": {
-          "line": 1351,
+          "line": 1362,
           "purpose": "Update commit button enabled/disabled state"
         },
         "updateCommitArea": {
-          "line": 1379,
+          "line": 1390,
           "purpose": "Update commit area visibility and button labels"
         },
         "buildCommitMessage": {
-          "line": 1413,
+          "line": 1424,
           "purpose": "Build full commit message from summary + description"
         },
         "clearCommitInputs": {
-          "line": 1423,
+          "line": 1434,
           "purpose": "Clear commit inputs"
         },
         "handleCommit": {
-          "line": 1439,
+          "line": 1450,
           "purpose": "Handle creating a commit (native execFile)"
         },
         "handleCommitAndPush": {
-          "line": 1506,
+          "line": 1517,
           "purpose": "Handle commit and push"
         },
         "handleAmendCommit": {
-          "line": 1514,
+          "line": 1525,
           "purpose": "Handle amending the last commit"
         },
         "handleFetch": {
-          "line": 1546,
+          "line": 1557,
           "params": [
             "options = {}"
           ],
           "purpose": "Fetch remote refs and refresh sync indicators."
         },
         "handlePull": {
-          "line": 1579,
+          "line": 1590,
           "purpose": "Handle pull (IPC background)"
         },
         "handlePush": {
-          "line": 1620,
+          "line": 1631,
           "purpose": "Handle push (IPC background)"
         },
         "updateSyncStatus": {
-          "line": 1659,
+          "line": 1670,
           "purpose": "Update sync status (ahead/behind counts)"
         },
         "renderBranchBar": {
-          "line": 1681,
+          "line": 1692,
           "purpose": "Branch/upstream info now lives in the activity header."
         }
       },
@@ -3012,69 +3068,70 @@
         "clipboardWrite",
         "toast",
         "panelVisibility",
+        "panelCoordinator",
         "escapeHtml"
       ],
       "functions": {
         "init": {
-          "line": 35,
+          "line": 37,
           "purpose": "Initialize saved prompts panel"
         },
         "setupEventListeners": {
-          "line": 64,
+          "line": 67,
           "purpose": "Setup event listeners"
         },
         "setupIPCListeners": {
-          "line": 125,
+          "line": 128,
           "purpose": "Setup IPC listeners"
         },
         "loadPrompts": {
-          "line": 148,
+          "line": 151,
           "purpose": "Load prompts from backend"
         },
         "show": {
-          "line": 153
+          "line": 156
         },
         "hide": {
-          "line": 154
+          "line": 160
         },
         "toggle": {
-          "line": 155
+          "line": 164
         },
         "setScope": {
-          "line": 157,
+          "line": 168,
           "params": [
             "scope",
             "options = {}"
           ]
         },
         "getMergedPrompts": {
-          "line": 169,
+          "line": 180,
           "purpose": "Get merged and filtered prompts"
         },
         "render": {
-          "line": 205,
+          "line": 216,
           "purpose": "Render the panel content"
         },
         "renderCategories": {
-          "line": 234,
+          "line": 245,
           "purpose": "Render category chips"
         },
         "renderPromptItem": {
-          "line": 241,
+          "line": 252,
           "params": [
             "prompt"
           ],
           "purpose": "Render a single prompt item"
         },
         "copyToClipboard": {
-          "line": 290,
+          "line": 301,
           "params": [
             "promptId",
             "scope"
           ]
         },
         "toggleFavorite": {
-          "line": 318,
+          "line": 329,
           "params": [
             "promptId",
             "scope"
@@ -3082,7 +3139,7 @@
           "purpose": "Toggle favorite status"
         },
         "deletePrompt": {
-          "line": 335,
+          "line": 346,
           "params": [
             "promptId",
             "scope"
@@ -3090,11 +3147,11 @@
           "purpose": "Delete a prompt"
         },
         "showAddPromptModal": {
-          "line": 349,
+          "line": 360,
           "purpose": "Show add prompt modal"
         },
         "showEditPromptModal": {
-          "line": 379,
+          "line": 390,
           "params": [
             "promptId",
             "scope"
@@ -3102,22 +3159,22 @@
           "purpose": "Show edit prompt modal"
         },
         "hidePromptModal": {
-          "line": 410,
+          "line": 421,
           "purpose": "Hide prompt modal"
         },
         "handlePromptFormSubmit": {
-          "line": 420,
+          "line": 431,
           "params": [
             "e"
           ],
           "purpose": "Handle form submit"
         },
         "setupModalListeners": {
-          "line": 459,
+          "line": 470,
           "purpose": "Setup modal listeners"
         },
         "showToast": {
-          "line": 509,
+          "line": 520,
           "params": [
             "message",
             "type = 'info'"
@@ -4441,6 +4498,56 @@
             "envPath"
           ],
           "purpose": "Results are cached for the lifetime of the process."
+        }
+      }
+    },
+    "renderer/panelCoordinator": {
+      "file": "src/renderer/panelCoordinator.js",
+      "description": "P",
+      "exports": [
+        "registerPanel",
+        "showPanel",
+        "hidePanel",
+        "togglePanel"
+      ],
+      "depends": [],
+      "functions": {
+        "registerPanel": {
+          "line": 8,
+          "params": [
+            "id",
+            "controller"
+          ]
+        },
+        "getPanel": {
+          "line": 13,
+          "params": [
+            "id"
+          ]
+        },
+        "hideOtherPanels": {
+          "line": 17,
+          "params": [
+            "activeId"
+          ]
+        },
+        "showPanel": {
+          "line": 25,
+          "params": [
+            "id"
+          ]
+        },
+        "hidePanel": {
+          "line": 36,
+          "params": [
+            "id"
+          ]
+        },
+        "togglePanel": {
+          "line": 45,
+          "params": [
+            "id"
+          ]
         }
       }
     }
