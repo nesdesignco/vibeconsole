@@ -5,6 +5,7 @@ declare global {
     terminalSendCommand?: (command: string, terminalId?: string | null) => void;
     terminalFocus?: () => void;
     fileTreeFocus?: () => void;
+    toggleSidebar?: () => void;
     vibe?: {
       ipc: {
         send: (channel: string, ...args: unknown[]) => void;
