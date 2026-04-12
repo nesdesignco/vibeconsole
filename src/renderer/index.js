@@ -21,6 +21,14 @@ let _rendererInitialized = false;
 let _startToast = null;
 
 let _lastSidebarToggleAt = 0;
+let _autoCollapsedRightPanel = null;
+let _rightPanelResizeTimer = null;
+let _rightPanelResizeObserver = null;
+let _rightPanelClassObserver = null;
+
+const RIGHT_PANEL_COLLAPSE_BUFFER = 12;
+const RIGHT_PANEL_RESTORE_BUFFER = 64;
+const DEFAULT_TERMINAL_MIN_WIDTH = 620;
 
 function toggleSidebarSafe() {
   // If both a menu accelerator and a DOM keydown handler fire, avoid double-toggle.
@@ -34,6 +42,139 @@ function toggleSidebarSafe() {
 
 // Expose layout toggle for renderer modules that should not depend on index.js directly.
 window.toggleSidebar = toggleSidebarSafe;
+
+function getRightPanelDescriptors() {
+  return [
+    { id: 'plugins-panel', panel: pluginsPanel },
+    { id: 'github-panel', panel: githubPanel },
+    { id: 'saved-prompts-panel', panel: savedPromptsPanel }
+  ].map((descriptor) => ({
+    ...descriptor,
+    element: document.getElementById(descriptor.id)
+  }));
+}
+
+function getVisibleRightPanel() {
+  return getRightPanelDescriptors().find(({ panel }) => panel.isVisible());
+}
+
+function getCssPixelValue(element, propertyName, fallback = 0) {
+  if (!element) return fallback;
+  const value = parseFloat(window.getComputedStyle(element).getPropertyValue(propertyName));
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function getPanelTargetWidth(panelElement) {
+  if (!panelElement) return 0;
+  const panelWidth = getCssPixelValue(panelElement, '--panel-width', 0);
+  return panelWidth || panelElement.getBoundingClientRect().width;
+}
+
+function getRequiredMainContentWidth(panelElement, buffer) {
+  const terminalContainer = document.getElementById('terminal-container');
+  if (!terminalContainer || !panelElement) return 0;
+
+  const terminalStyle = window.getComputedStyle(terminalContainer);
+  const terminalMinWidth = parseFloat(terminalStyle.minWidth) || DEFAULT_TERMINAL_MIN_WIDTH;
+  const terminalMargins = (parseFloat(terminalStyle.marginLeft) || 0) + (parseFloat(terminalStyle.marginRight) || 0);
+
+  return terminalMinWidth + terminalMargins + getPanelTargetWidth(panelElement) + buffer;
+}
+
+function showRightPanel(panelToShow) {
+  getRightPanelDescriptors().forEach(({ panel }) => {
+    if (panel === panelToShow) return;
+    panel.hide();
+  });
+  panelToShow.show();
+}
+
+function syncRightPanelForAvailableWidth() {
+  const mainContent = document.getElementById('main-content');
+  if (!mainContent) return;
+
+  const availableWidth = mainContent.clientWidth;
+  const visibleRightPanel = getVisibleRightPanel();
+
+  if (_autoCollapsedRightPanel) {
+    if (visibleRightPanel?.element) {
+      const visibleCollapseWidth = getRequiredMainContentWidth(
+        visibleRightPanel.element,
+        RIGHT_PANEL_COLLAPSE_BUFFER
+      );
+      if (availableWidth < visibleCollapseWidth) {
+        _autoCollapsedRightPanel = { panel: visibleRightPanel.panel };
+        visibleRightPanel.panel.hide();
+      } else {
+        _autoCollapsedRightPanel = null;
+      }
+      return;
+    }
+
+    const autoCollapsedDescriptor = getRightPanelDescriptors()
+      .find(({ panel }) => panel === _autoCollapsedRightPanel.panel);
+    if (!autoCollapsedDescriptor?.element) {
+      _autoCollapsedRightPanel = null;
+      return;
+    }
+
+    const restoreWidth = getRequiredMainContentWidth(
+      autoCollapsedDescriptor.element,
+      RIGHT_PANEL_RESTORE_BUFFER
+    );
+    if (availableWidth >= restoreWidth) {
+      showRightPanel(autoCollapsedDescriptor.panel);
+      _autoCollapsedRightPanel = null;
+      return;
+    }
+    return;
+  }
+
+  if (!visibleRightPanel?.element) return;
+
+  const collapseWidth = getRequiredMainContentWidth(
+    visibleRightPanel.element,
+    RIGHT_PANEL_COLLAPSE_BUFFER
+  );
+  if (availableWidth < collapseWidth) {
+    _autoCollapsedRightPanel = { panel: visibleRightPanel.panel };
+    visibleRightPanel.panel.hide();
+  }
+}
+
+function scheduleRightPanelWidthSync() {
+  if (_rightPanelResizeTimer) clearTimeout(_rightPanelResizeTimer);
+  _rightPanelResizeTimer = setTimeout(() => {
+    _rightPanelResizeTimer = null;
+    syncRightPanelForAvailableWidth();
+  }, 80);
+}
+
+function setupResponsiveRightPanelCollapse() {
+  if (_rightPanelResizeObserver || _rightPanelClassObserver) return;
+
+  const mainContent = document.getElementById('main-content');
+  if (mainContent && typeof ResizeObserver !== 'undefined') {
+    _rightPanelResizeObserver = new ResizeObserver(scheduleRightPanelWidthSync);
+    _rightPanelResizeObserver.observe(mainContent);
+  }
+
+  const panelElements = getRightPanelDescriptors()
+    .map(({ element }) => element)
+    .filter(Boolean);
+  if (panelElements.length && typeof MutationObserver !== 'undefined') {
+    _rightPanelClassObserver = new MutationObserver(scheduleRightPanelWidthSync);
+    panelElements.forEach((element) => {
+      _rightPanelClassObserver.observe(element, {
+        attributes: true,
+        attributeFilter: ['class']
+      });
+    });
+  }
+
+  syncRightPanelForAvailableWidth();
+  window.addEventListener('resize', scheduleRightPanelWidthSync);
+}
 
 /**
  * Initialize all modules
@@ -152,6 +293,8 @@ function init() {
   } catch (err) {
     console.error('Failed to initialize sidebar resize:', err);
   }
+
+  setupResponsiveRightPanelCollapse();
 
   // Allow menu items (and other main-process actions) to toggle layout.
   try {

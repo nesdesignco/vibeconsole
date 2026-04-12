@@ -289,8 +289,7 @@ body.sidebar-resizing * {
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
-  padding: var(--space-md) var(--space-md) var(--space-sm) var(--space-md);
-  min-width: 400px;
+  min-width: 620px;
   border-radius: var(--radius-lg) 0 0 var(--radius-lg);
   margin: var(--space-sm) 0 var(--space-sm) var(--space-sm);
 }
