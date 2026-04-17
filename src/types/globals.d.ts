@@ -1,6 +1,9 @@
 export {};
 
 declare global {
+  type Terminal = any;
+  type IDisposable = any;
+
   interface Window {
     terminalSendCommand?: (command: string, terminalId?: string | null) => void;
     terminalFocus?: () => void;
@@ -40,6 +43,7 @@ declare global {
     style?: CSSStyleDeclaration;
     title?: string;
     disabled?: boolean;
+    draggable?: boolean;
     value?: string;
     checked?: boolean;
     reset?: () => void;

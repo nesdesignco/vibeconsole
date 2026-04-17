@@ -1,7 +1,7 @@
 {
   "version": "1.1",
   "description": "Claude Code IDE - Module structure and IPC communication map",
-  "lastUpdated": "2026-04-12",
+  "lastUpdated": "2026-04-17",
   "architecture": {
     "type": "electron",
     "mainProcess": "src/main/index.js",
@@ -584,54 +584,18 @@
       ],
       "functions": {
         "toggleSidebarSafe": {
-          "line": 33
-        },
-        "getPanelDescriptors": {
-          "line": 46
-        },
-        "getVisiblePanel": {
-          "line": 78
-        },
-        "getCssPixelValue": {
-          "line": 82,
-          "params": [
-            "element",
-            "propertyName",
-            "fallback = 0"
-          ]
-        },
-        "getPanelTargetWidth": {
-          "line": 88,
-          "params": [
-            "panelElement"
-          ]
-        },
-        "getRequiredMainContentWidth": {
-          "line": 96,
-          "params": [
-            "panelElement",
-            "buffer"
-          ]
-        },
-        "syncPanelForAvailableWidth": {
-          "line": 107
-        },
-        "schedulePanelWidthSync": {
-          "line": 159
-        },
-        "setupResponsivePanelCollapse": {
-          "line": 167
+          "line": 25
         },
         "init": {
-          "line": 196,
+          "line": 41,
           "purpose": "Initialize all modules"
         },
         "setupButtonHandlers": {
-          "line": 409,
+          "line": 252,
           "purpose": "Setup button click handlers"
         },
         "setupKeyboardShortcuts": {
-          "line": 477,
+          "line": 320,
           "purpose": "Setup keyboard shortcuts"
         }
       },
@@ -4062,10 +4026,17 @@
         },
         "_showToast": {
           "line": 19,
+          "params": [
+            "_message",
+            "_type"
+          ],
           "purpose": "Callbacks and refs (set by init)"
         },
         "_renderLoading": {
-          "line": 20
+          "line": 20,
+          "params": [
+            "_message"
+          ]
         }
       }
     },
@@ -4104,10 +4075,17 @@
         },
         "_showToast": {
           "line": 12,
+          "params": [
+            "_message",
+            "_type"
+          ],
           "purpose": "Callbacks (set by init)"
         },
         "_loadChanges": {
-          "line": 13
+          "line": 13,
+          "params": [
+            "_force"
+          ]
         }
       }
     },
@@ -4149,34 +4127,34 @@
           ]
         },
         "setCurrentDiffState": {
-          "line": 50,
+          "line": 49,
           "params": [
             "nextState"
           ]
         },
         "clearCurrentDiffState": {
-          "line": 58
+          "line": 57
         },
         "extractDiffHunks": {
-          "line": 64,
+          "line": 63,
           "params": [
             "diffText"
           ]
         },
         "syncDiffControls": {
-          "line": 97
+          "line": 96
         },
         "syncDiffSearchControls": {
-          "line": 151
+          "line": 150
         },
         "applySelectedHunk": {
-          "line": 160,
+          "line": 159,
           "params": [
             "action"
           ]
         },
         "showDiffModal": {
-          "line": 197,
+          "line": 196,
           "params": [
             "filePath",
             "diffType"
@@ -4184,95 +4162,68 @@
           "purpose": "Show diff modal for a file"
         },
         "showCommitDiffModal": {
-          "line": 304,
+          "line": 303,
           "params": [
             "commitHash"
           ],
           "purpose": "Show diff modal for a commit"
         },
         "showStashDiffModal": {
-          "line": 405,
+          "line": 404,
           "params": [
             "stashRef"
           ],
           "purpose": "Show diff modal for a stash"
         },
         "hideDiffModal": {
-          "line": 485,
+          "line": 484,
           "purpose": "Hide diff modal"
         },
         "parseDiff": {
-          "line": 496,
+          "line": 495,
           "params": [
             "diffText"
           ],
           "purpose": "Parse unified diff into structured lines"
         },
         "renderDiffContent": {
-          "line": 550,
+          "line": 549,
           "params": [
             "container",
             "lines"
           ],
           "purpose": "All interpolated values are escaped via escapeHtml/escapeAttr — safe for innerHTML."
         },
-        "buildSplitRows": {
-          "line": 604,
-          "params": [
-            "lines"
-          ]
-        },
-        "getRenderedLineLength": {
-          "line": 637,
-          "params": [
-            "line"
-          ]
-        },
-        "getSplitColumnWidths": {
-          "line": 643,
-          "params": [
-            "rows"
-          ]
-        },
-        "renderSplitSide": {
-          "line": 661,
-          "params": [
-            "line",
-            "side",
-            "contentHtml = null"
-          ]
-        },
-        "renderSplitDiffContent": {
-          "line": 675,
-          "params": [
-            "container",
-            "lines"
-          ],
-          "purpose": "Render split diff view. All interpolated values are escaped — safe for innerHTML."
-        },
         "tokenizeForWordDiff": {
-          "line": 732,
+          "line": 598,
           "params": [
             "text"
           ]
         },
         "highlightModifiedPair": {
-          "line": 737,
+          "line": 603,
           "params": [
             "oldText",
             "newText"
           ]
         },
         "setupDiffModalListeners": {
-          "line": 774,
+          "line": 640,
           "purpose": "Setup diff modal event listeners"
         },
         "_showToast": {
           "line": 22,
+          "params": [
+            "_message",
+            "_type"
+          ],
           "purpose": "Callbacks (set by init)"
         },
         "_loadChanges": {
-          "line": 23
+          "line": 23,
+          "params": [
+            "_force"
+          ]
         }
       }
     },
@@ -4339,10 +4290,17 @@
         },
         "_showToast": {
           "line": 18,
+          "params": [
+            "_message",
+            "_type"
+          ],
           "purpose": "Callbacks and refs (set by init)"
         },
         "_renderLoading": {
-          "line": 19
+          "line": 19,
+          "params": [
+            "_message"
+          ]
         }
       }
     },

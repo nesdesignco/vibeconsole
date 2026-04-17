@@ -16,8 +16,8 @@ let _branchesGeneration = 0;
 let _hasBranchesData = false;
 
 // Callbacks and refs (set by init)
-let _showToast = () => {};
-let _renderLoading = () => {};
+let _showToast = (_message, _type) => {};
+let _renderLoading = (_message) => {};
 let _getContentElement = () => null;
 
 function init({ showToast, renderLoading, getContentElement }) {

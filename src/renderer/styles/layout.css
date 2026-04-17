@@ -283,6 +283,8 @@ body.sidebar-resizing * {
   min-width: 0;
   overflow: hidden;
   background: var(--bg-deep);
+  container-type: inline-size;
+  position: relative;
 }
 
 #terminal-container {
@@ -290,7 +292,7 @@ body.sidebar-resizing * {
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
-  min-width: 620px;
+  min-width: 0;
   border-radius: var(--radius-lg) 0 0 var(--radius-lg);
   margin: var(--space-sm) 0 var(--space-sm) var(--space-sm);
 }

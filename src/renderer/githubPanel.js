@@ -599,7 +599,7 @@ function renderChanges(gen) {
         <h4 class="git-changes-section-title" data-section-toggle="merge">
           <span class="section-chevron">▾</span>
           <span class="git-changes-section-icon conflict">●</span>
-          Merge Changes
+          <span class="git-changes-section-label">Merge Changes</span>
           <span class="git-changes-count">${conflicts.length}</span>
         </h4>
         <div class="git-changes-section-body">
@@ -616,7 +616,7 @@ function renderChanges(gen) {
         <h4 class="git-changes-section-title" data-section-toggle="working">
           <span class="section-chevron">▾</span>
           <span class="git-changes-section-icon unstaged">●</span>
-          Working Tree
+          <span class="git-changes-section-label">Working Tree</span>
           <span class="git-changes-count">${workingTree.length}</span>
           <div class="git-changes-section-actions">
             <button class="git-section-action-btn discard" data-action="discard-all" title="Discard all unstaged changes"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg></button>
@@ -638,7 +638,7 @@ function renderChanges(gen) {
         <h4 class="git-changes-section-title" data-section-toggle="staged">
           <span class="section-chevron">▾</span>
           <span class="git-changes-section-icon staged">●</span>
-          Staged Changes
+          <span class="git-changes-section-label">Staged Changes</span>
           <span class="git-changes-count">${staged.length}</span>
           <div class="git-changes-section-actions">
             <button class="git-section-action-btn unstage" data-action="unstage-all" title="Unstage all">−</button>
@@ -658,7 +658,7 @@ function renderChanges(gen) {
         <h4 class="git-changes-section-title" data-section-toggle="outgoing">
           <span class="section-chevron">▾</span>
           <span class="git-changes-section-icon outgoing">▲</span>
-          Outgoing Commits
+          <span class="git-changes-section-label">Outgoing Commits</span>
           <span class="git-changes-count">${outgoing.length}</span>
           <div class="git-changes-section-actions">
             <button class="git-section-action-btn undo" data-action="undo-last-commit" title="Undo last commit (keep changes staged)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10h10a5 5 0 0 1 0 10H14"/><polyline points="3 10 7 6"/><polyline points="3 10 7 14"/></svg></button>
@@ -677,7 +677,7 @@ function renderChanges(gen) {
         <h4 class="git-changes-section-title" data-section-toggle="local">
           <span class="section-chevron">▾</span>
           <span class="git-changes-section-icon outgoing">●</span>
-          Local Commits
+          <span class="git-changes-section-label">Local Commits</span>
           <span class="git-changes-count">${localCommits.length}</span>
           <div class="git-changes-section-actions">
             <button class="git-section-action-btn undo" data-action="undo-last-commit" title="Undo last commit (keep changes staged)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10h10a5 5 0 0 1 0 10H14"/><polyline points="3 10 7 6"/><polyline points="3 10 7 14"/></svg></button>
@@ -695,7 +695,7 @@ function renderChanges(gen) {
         <h4 class="git-changes-section-title">
           <span class="section-chevron">▾</span>
           <span class="git-changes-section-icon outgoing">▲</span>
-          Outgoing Commits
+          <span class="git-changes-section-label">Outgoing Commits</span>
         </h4>
         <div class="git-changes-tracking">No tracking branch configured</div>
       </div>
@@ -709,7 +709,7 @@ function renderChanges(gen) {
         <h4 class="git-changes-section-title" data-section-toggle="incoming">
           <span class="section-chevron">▾</span>
           <span class="git-changes-section-icon incoming">▼</span>
-          Incoming Commits
+          <span class="git-changes-section-label">Incoming Commits</span>
           <span class="git-changes-count">${incomingCommits.length}</span>
         </h4>
         <div class="git-changes-section-body">
@@ -1098,7 +1098,7 @@ async function loadStashSection(gen) {
         <h4 class="git-changes-section-title" data-section-toggle="stashes">
           <span class="section-chevron">▾</span>
           <span class="git-changes-section-icon" style="color: var(--info);">◆</span>
-          Stashes
+          <span class="git-changes-section-label">Stashes</span>
           <span class="git-changes-count">${result.stashes.length}</span>
         </h4>
         <div class="git-changes-section-body">

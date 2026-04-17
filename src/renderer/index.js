@@ -21,14 +21,6 @@ let _rendererInitialized = false;
 let _startToast = null;
 
 let _lastSidebarToggleAt = 0;
-let _autoCollapsedPanel = null;
-let _panelResizeTimer = null;
-let _panelResizeObserver = null;
-let _panelClassObserver = null;
-
-const PANEL_COLLAPSE_BUFFER = 12;
-const PANEL_RESTORE_BUFFER = 64;
-const DEFAULT_TERMINAL_MIN_WIDTH = 620;
 
 function toggleSidebarSafe() {
   // If both a menu accelerator and a DOM keydown handler fire, avoid double-toggle.
@@ -42,153 +34,6 @@ function toggleSidebarSafe() {
 
 // Expose layout toggle for renderer modules that should not depend on index.js directly.
 window.toggleSidebar = toggleSidebarSafe;
-
-function getPanelDescriptors() {
-  return [
-    {
-      id: 'history-panel',
-      show: historyPanel.showHistoryPanel,
-      hide: historyPanel.hideHistoryPanel,
-      isVisible: historyPanel.isHistoryVisible
-    },
-    {
-      id: 'plugins-panel',
-      show: pluginsPanel.show,
-      hide: pluginsPanel.hide,
-      isVisible: pluginsPanel.isVisible
-    },
-    {
-      id: 'github-panel',
-      show: githubPanel.show,
-      hide: githubPanel.hide,
-      isVisible: githubPanel.isVisible
-    },
-    {
-      id: 'saved-prompts-panel',
-      show: savedPromptsPanel.show,
-      hide: savedPromptsPanel.hide,
-      isVisible: savedPromptsPanel.isVisible
-    }
-  ].map((descriptor) => ({
-    ...descriptor,
-    element: document.getElementById(descriptor.id)
-  }));
-}
-
-function getVisiblePanel() {
-  return getPanelDescriptors().find(({ isVisible }) => isVisible());
-}
-
-function getCssPixelValue(element, propertyName, fallback = 0) {
-  if (!element) return fallback;
-  const value = parseFloat(window.getComputedStyle(element).getPropertyValue(propertyName));
-  return Number.isFinite(value) ? value : fallback;
-}
-
-function getPanelTargetWidth(panelElement) {
-  if (!panelElement) return 0;
-  const panelWidth = getCssPixelValue(panelElement, '--panel-width', 0);
-  const panelMinWidth = getCssPixelValue(panelElement, '--panel-min-width', panelWidth);
-  const renderedWidth = panelElement.getBoundingClientRect().width;
-  return Math.max(panelWidth, panelMinWidth, renderedWidth);
-}
-
-function getRequiredMainContentWidth(panelElement, buffer) {
-  const terminalContainer = document.getElementById('terminal-container');
-  if (!terminalContainer || !panelElement) return 0;
-
-  const terminalStyle = window.getComputedStyle(terminalContainer);
-  const terminalMinWidth = parseFloat(terminalStyle.minWidth) || DEFAULT_TERMINAL_MIN_WIDTH;
-  const terminalMargins = (parseFloat(terminalStyle.marginLeft) || 0) + (parseFloat(terminalStyle.marginRight) || 0);
-
-  return terminalMinWidth + terminalMargins + getPanelTargetWidth(panelElement) + buffer;
-}
-
-function syncPanelForAvailableWidth() {
-  const mainContent = document.getElementById('main-content');
-  if (!mainContent) return;
-
-  const availableWidth = mainContent.clientWidth;
-  const visiblePanel = getVisiblePanel();
-
-  if (_autoCollapsedPanel) {
-    if (visiblePanel?.element) {
-      const visibleCollapseWidth = getRequiredMainContentWidth(
-        visiblePanel.element,
-        PANEL_COLLAPSE_BUFFER
-      );
-      if (availableWidth < visibleCollapseWidth) {
-        _autoCollapsedPanel = visiblePanel.id;
-        visiblePanel.hide();
-      } else {
-        _autoCollapsedPanel = null;
-      }
-      return;
-    }
-
-    const autoCollapsedDescriptor = getPanelDescriptors()
-      .find(({ id }) => id === _autoCollapsedPanel);
-    if (!autoCollapsedDescriptor?.element) {
-      _autoCollapsedPanel = null;
-      return;
-    }
-
-    const restoreWidth = getRequiredMainContentWidth(
-      autoCollapsedDescriptor.element,
-      PANEL_RESTORE_BUFFER
-    );
-    if (availableWidth >= restoreWidth) {
-      autoCollapsedDescriptor.show();
-      _autoCollapsedPanel = null;
-    }
-    return;
-  }
-
-  if (!visiblePanel?.element) return;
-
-  const collapseWidth = getRequiredMainContentWidth(
-    visiblePanel.element,
-    PANEL_COLLAPSE_BUFFER
-  );
-  if (availableWidth < collapseWidth) {
-    _autoCollapsedPanel = visiblePanel.id;
-    visiblePanel.hide();
-  }
-}
-
-function schedulePanelWidthSync() {
-  if (_panelResizeTimer) clearTimeout(_panelResizeTimer);
-  _panelResizeTimer = setTimeout(() => {
-    _panelResizeTimer = null;
-    syncPanelForAvailableWidth();
-  }, 80);
-}
-
-function setupResponsivePanelCollapse() {
-  if (_panelResizeObserver || _panelClassObserver) return;
-
-  const mainContent = document.getElementById('main-content');
-  if (mainContent && typeof ResizeObserver !== 'undefined') {
-    _panelResizeObserver = new ResizeObserver(schedulePanelWidthSync);
-    _panelResizeObserver.observe(mainContent);
-  }
-
-  const panelElements = getPanelDescriptors()
-    .map(({ element }) => element)
-    .filter(Boolean);
-  if (panelElements.length && typeof MutationObserver !== 'undefined') {
-    _panelClassObserver = new MutationObserver(schedulePanelWidthSync);
-    panelElements.forEach((element) => {
-      _panelClassObserver.observe(element, {
-        attributes: true,
-        attributeFilter: ['class']
-      });
-    });
-  }
-
-  syncPanelForAvailableWidth();
-  window.addEventListener('resize', schedulePanelWidthSync);
-}
 
 /**
  * Initialize all modules
@@ -307,8 +152,6 @@ function init() {
   } catch (err) {
     console.error('Failed to initialize sidebar resize:', err);
   }
-
-  setupResponsivePanelCollapse();
 
   // Allow menu items (and other main-process actions) to toggle layout.
   try {

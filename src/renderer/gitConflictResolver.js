@@ -9,8 +9,8 @@ const { IPC } = require('../shared/ipcChannels');
 let _activeConflictState = null;
 
 // Callbacks (set by init)
-let _showToast = () => {};
-let _loadChanges = () => {};
+let _showToast = (_message, _type) => {};
+let _loadChanges = (_force) => {};
 
 function init({ showToast, loadChanges }) {
   _showToast = showToast;

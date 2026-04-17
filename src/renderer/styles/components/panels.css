@@ -458,6 +458,7 @@
   overflow: hidden;
   position: relative;
   flex: 0 0 auto;
+  container-type: inline-size;
 }
 
 #github-panel::before {
@@ -1607,6 +1608,13 @@
   margin-right: 2px;
 }
 
+.git-changes-section-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .git-changes-section.collapsed .section-chevron {
   transform: rotate(-90deg);
 }
@@ -1779,7 +1787,7 @@
 }
 
 .git-change-status.untracked {
-  color: var(--text-tertiary);
+  color: var(--success);
 }
 
 .git-change-status.conflict {
@@ -1808,6 +1816,15 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.git-change-item.is-uncommitted .git-change-filename,
+.git-change-item.is-uncommitted .git-change-dir {
+  color: var(--success);
+}
+
+.git-change-item.is-working-tree .git-change-filename {
+  font-weight: 700;
 }
 
 .git-change-actions {
@@ -3083,4 +3100,179 @@
 
 #saved-prompt-content-input:focus {
   border-color: var(--accent-primary);
+}
+
+@container (max-width: 980px) {
+  #history-panel.visible,
+  #plugins-panel.visible,
+  #github-panel.visible,
+  #saved-prompts-panel.visible {
+    bottom: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    z-index: 40;
+  }
+}
+
+@container (max-width: 380px) {
+  #history-panel.visible,
+  #plugins-panel.visible,
+  #github-panel.visible,
+  #saved-prompts-panel.visible {
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
+  #history-panel > *,
+  #plugins-panel > *,
+  #github-panel > *,
+  #saved-prompts-panel > * {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
+@container (max-width: 300px) {
+  #github-panel .panel-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px;
+  }
+
+  #github-panel .panel-title {
+    flex: 1 1 calc(100% - 38px);
+    min-width: 0;
+  }
+
+  #github-panel .panel-actions {
+    flex: 1 1 100%;
+    justify-content: stretch;
+    margin-left: 0;
+    min-width: 0;
+    width: 100%;
+  }
+
+  #github-panel .panel-header-dropdown {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  #github-panel .panel-header-dropdown-trigger {
+    justify-content: space-between;
+    padding-inline: 8px;
+    width: 100%;
+  }
+
+  #github-panel .panel-header-dropdown-label {
+    max-width: none;
+    min-width: 0;
+  }
+
+  #github-content {
+    padding: 8px;
+  }
+
+  #sc-activity-slot {
+    padding: 8px 8px 0;
+  }
+
+  #git-commit-area {
+    padding: 8px;
+  }
+
+  .git-commit-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .git-commit-toolbar-left {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .git-commit-toolbar-right {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .git-commit-toolbar-right > .btn {
+    justify-content: center;
+    min-width: 0;
+    padding-inline: 6px;
+    width: 100%;
+  }
+
+  .git-commit-split-btns {
+    grid-column: 1 / -1;
+    min-width: 0;
+    width: 100%;
+  }
+
+  #git-commit-btn {
+    flex: 1;
+    min-width: 0;
+  }
+
+  #git-commit-dropdown-btn {
+    flex: 0 0 30px;
+  }
+
+  .sc-overview-card,
+  .sc-activity-card {
+    margin-bottom: 8px;
+    padding: 8px;
+  }
+
+  .sc-overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sc-activity-sync {
+    justify-content: flex-start;
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .git-changes-section-title {
+    flex-wrap: wrap;
+    gap: 6px;
+    min-width: 0;
+    padding: 8px;
+  }
+
+  .git-changes-section-label {
+    flex: 1 1 auto;
+  }
+
+  .git-changes-section-actions {
+    justify-content: flex-end;
+    margin-left: 0;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .git-change-item {
+    align-items: flex-start;
+    gap: 6px;
+    margin-inline: 0;
+    padding: 6px 8px;
+  }
+
+  .git-change-status {
+    width: 18px;
+  }
+
+  .git-change-actions {
+    flex: 0 0 auto;
+    opacity: 1;
+  }
+
+  .git-change-action-btn {
+    height: 20px;
+    width: 20px;
+  }
 }

@@ -11,7 +11,7 @@ const { IPC } = require('../shared/ipcChannels');
 const { escapeHtml, escapeAttr } = require('./escapeHtml');
 
 // Module state
-let _diffViewMode = 'split';
+let _diffViewMode = 'unified';
 let _currentDiffState = null;
 let _diffSearchQuery = '';
 let _diffHideContext = false;
@@ -19,8 +19,8 @@ let _selectedHunkIndex = -1;
 let _hunkActionInProgress = false;
 
 // Callbacks (set by init)
-let _showToast = () => {};
-let _loadChanges = () => {};
+let _showToast = (_message, _type) => {};
+let _loadChanges = (_force) => {};
 
 function init({ showToast, loadChanges }) {
   _showToast = showToast;
@@ -33,8 +33,7 @@ function getDiffViewMode() {
 }
 
 function setDiffViewMode(mode) {
-  if (mode !== 'split' && mode !== 'unified') return;
-  _diffViewMode = mode;
+  _diffViewMode = 'unified';
   const modal = document.getElementById('git-diff-modal');
   if (!modal) return;
   modal.querySelectorAll('.diff-view-btn').forEach(btn => {
@@ -549,11 +548,6 @@ function parseDiff(diffText) {
  */
 function renderDiffContent(container, lines) {
   const sourceLines = Array.isArray(lines) ? lines : [];
-  if (_diffViewMode === 'split') {
-    renderSplitDiffContent(container, sourceLines);
-    return;
-  }
-
   const q = _diffSearchQuery.trim().toLowerCase();
   const filtered = sourceLines.filter(line => {
     if (_diffHideContext && line.type === 'context') return false;
@@ -601,134 +595,6 @@ function renderDiffContent(container, lines) {
   container.innerHTML = `<div class="diff-content unified">${htmlParts.join('')}</div>`;
 }
 
-function buildSplitRows(lines) {
-  const rows = [];
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-
-    if (line.type === 'meta' || line.type === 'header' || line.type === 'warning') {
-      rows.push({ kind: 'meta', line, hunkIndex: line.hunkIndex ?? -1 });
-      continue;
-    }
-
-    if (line.type === 'context') {
-      rows.push({ kind: 'code', rowType: 'context', oldLine: line, newLine: line, hunkIndex: line.hunkIndex ?? -1 });
-      continue;
-    }
-
-    if (line.type === 'remove') {
-      const next = lines[i + 1];
-      if (next && next.type === 'add') {
-        rows.push({ kind: 'code', rowType: 'modify', oldLine: line, newLine: next, hunkIndex: line.hunkIndex ?? -1 });
-        i++;
-      } else {
-        rows.push({ kind: 'code', rowType: 'remove', oldLine: line, newLine: null, hunkIndex: line.hunkIndex ?? -1 });
-      }
-      continue;
-    }
-
-    if (line.type === 'add') {
-      rows.push({ kind: 'code', rowType: 'add', oldLine: null, newLine: line, hunkIndex: line.hunkIndex ?? -1 });
-    }
-  }
-  return rows;
-}
-
-function getRenderedLineLength(line) {
-  if (!line) return 0;
-  const prefix = line.type === 'add' ? '+' : line.type === 'remove' ? '-' : ' ';
-  return `${prefix}${String(line.content || '')}`.length;
-}
-
-function getSplitColumnWidths(rows) {
-  let oldChars = 0;
-  let newChars = 0;
-
-  for (const row of rows) {
-    if (!row || row.kind !== 'code') continue;
-    oldChars = Math.max(oldChars, getRenderedLineLength(row.oldLine));
-    newChars = Math.max(newChars, getRenderedLineLength(row.newLine));
-  }
-
-  const MIN_CH = 44;
-  const MAX_CH = 140;
-  return {
-    oldCh: Math.max(MIN_CH, Math.min(oldChars + 8, MAX_CH)),
-    newCh: Math.max(MIN_CH, Math.min(newChars + 8, MAX_CH))
-  };
-}
-
-function renderSplitSide(line, side, contentHtml = null) {
-  if (!line) {
-    return `<div class="diff-split-cell ${escapeAttr(side)} empty"><span class="diff-split-num"></span><span class="diff-split-text"></span></div>`;
-  }
-  const num = side === 'old' ? line.oldNum : line.newNum;
-  const text = contentHtml != null
-    ? contentHtml
-    : escapeHtml(`${line.type === 'add' ? '+' : line.type === 'remove' ? '-' : ' '}${line.content}`);
-  return `<div class="diff-split-cell ${escapeAttr(side)}"><span class="diff-split-num">${num !== '' ? num : ''}</span><span class="diff-split-text">${text}</span></div>`;
-}
-
-/**
- * Render split diff view. All interpolated values are escaped — safe for innerHTML.
- */
-function renderSplitDiffContent(container, lines) {
-  const q = _diffSearchQuery.trim().toLowerCase();
-  const rows = buildSplitRows(lines).filter(row => {
-    if (row.kind === 'code' && _diffHideContext && row.rowType === 'context') return false;
-    if (!q) return true;
-    if (row.kind === 'meta') {
-      if (row.line.type === 'header') return true;
-      return String(row.line.content || '').toLowerCase().includes(q);
-    }
-    const oldText = row.oldLine ? String(row.oldLine.content || '').toLowerCase() : '';
-    const newText = row.newLine ? String(row.newLine.content || '').toLowerCase() : '';
-    return oldText.includes(q) || newText.includes(q);
-  });
-  const { oldCh, newCh } = getSplitColumnWidths(rows);
-
-  const html = rows.map(row => {
-    const selectedClass = row.hunkIndex === _selectedHunkIndex ? ' selected-hunk' : '';
-    if (row.kind === 'meta') {
-      const isHunkHeader = row.line.type === 'header' && row.hunkIndex >= 0;
-      const hunkAttr = isHunkHeader ? ` data-hunk-index="${row.hunkIndex}"` : '';
-      return `<div class="diff-split-row meta diff-${escapeAttr(row.line.type)}${selectedClass}"${hunkAttr}><div class="diff-split-meta">${escapeHtml(row.line.content)}</div></div>`;
-    }
-
-    let oldSide = renderSplitSide(row.oldLine, 'old');
-    let newSide = renderSplitSide(row.newLine, 'new');
-    if (row.rowType === 'modify' && row.oldLine && row.newLine) {
-      const highlighted = highlightModifiedPair(row.oldLine.content, row.newLine.content);
-      oldSide = renderSplitSide(row.oldLine, 'old', highlighted.oldHtml);
-      newSide = renderSplitSide(row.newLine, 'new', highlighted.newHtml);
-    }
-
-    return `
-      <div class="diff-split-row ${escapeAttr(row.rowType)}${selectedClass}">
-        ${oldSide}
-        ${newSide}
-      </div>
-    `;
-  }).join('');
-
-  // Safe: all values escaped above
-  container.innerHTML = `
-    <div class="diff-content split" style="--diff-split-old-width: ${oldCh}ch; --diff-split-new-width: ${newCh}ch;">
-      <div class="diff-split-head" aria-hidden="true">
-        <div class="diff-split-pane-title old">
-          <span class="diff-split-pane-badge old">Before</span>
-          <span class="diff-split-pane-caption">Original</span>
-        </div>
-        <div class="diff-split-pane-title new">
-          <span class="diff-split-pane-badge new">After</span>
-          <span class="diff-split-pane-caption">Changed</span>
-        </div>
-      </div>
-      ${html}
-    </div>
-  `;
-}
-
 function tokenizeForWordDiff(text) {
   const tokens = String(text || '').match(/\w+|\s+|[^\w\s]+/g);
   return tokens && tokens.length ? tokens : [''];
@@ -763,8 +629,8 @@ function highlightModifiedPair(oldText, newText) {
   const newMid = newTokens.slice(start, endNew + 1).join('');
   const newSuffix = newTokens.slice(endNew + 1).join('');
 
-  const oldHtml = `${escapeHtml(`-${oldPrefix}`)}${oldMid ? `<span class="diff-word-remove">${escapeHtml(oldMid)}</span>` : ''}${escapeHtml(oldSuffix)}`;
-  const newHtml = `${escapeHtml(`+${newPrefix}`)}${newMid ? `<span class="diff-word-add">${escapeHtml(newMid)}</span>` : ''}${escapeHtml(newSuffix)}`;
+  const oldHtml = `${escapeHtml(oldPrefix)}${oldMid ? `<span class="diff-word-remove">${escapeHtml(oldMid)}</span>` : ''}${escapeHtml(oldSuffix)}`;
+  const newHtml = `${escapeHtml(newPrefix)}${newMid ? `<span class="diff-word-add">${escapeHtml(newMid)}</span>` : ''}${escapeHtml(newSuffix)}`;
   return { oldHtml, newHtml };
 }
 

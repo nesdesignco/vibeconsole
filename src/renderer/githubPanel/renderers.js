@@ -27,6 +27,12 @@ function renderChangeItem(file, diffType, pathApi) {
   const fileName = pathApi.basename(file.path);
   const dirName = pathApi.dirname(file.path);
   const dirPath = dirName && dirName !== '.' ? `${dirName}${pathApi.sep}` : '';
+  const changeClasses = [
+    'git-change-item',
+    `diff-${diffType}`,
+    diffType === 'unstaged' || diffType === 'untracked' || diffType === 'conflict' ? 'is-working-tree' : '',
+    diffType === 'staged' || diffType === 'unstaged' || diffType === 'untracked' || diffType === 'conflict' ? 'is-uncommitted' : ''
+  ].filter(Boolean).join(' ');
   const statusClass = diffType === 'conflict'
     ? 'conflict'
     : file.status === 'M'
@@ -55,7 +61,7 @@ function renderChangeItem(file, diffType, pathApi) {
     : '';
 
   return `
-    <div class="git-change-item" data-path="${escapeAttr(file.path)}" data-diff-type="${diffType}">
+    <div class="${changeClasses}" data-path="${escapeAttr(file.path)}" data-diff-type="${diffType}">
       <span class="git-change-status ${statusClass}">${escapeHtml(file.status)}</span>
       <div class="git-change-file">
         <span class="git-change-filename">${escapeHtml(fileName)}</span>
