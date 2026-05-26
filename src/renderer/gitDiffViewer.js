@@ -10,6 +10,119 @@ const { ipcRenderer, pathApi } = require('./electronBridge');
 const { IPC } = require('../shared/ipcChannels');
 const { escapeHtml, escapeAttr } = require('./escapeHtml');
 
+const IMAGE_EXTENSIONS = new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico', 'svg']);
+
+function getExtension(filePath) {
+  const base = String(filePath || '').replace(/\\/g, '/').split('/').pop() || '';
+  const idx = base.lastIndexOf('.');
+  return idx === -1 ? '' : base.slice(idx + 1).toLowerCase();
+}
+
+function isImagePath(filePath) {
+  return IMAGE_EXTENSIONS.has(getExtension(filePath));
+}
+
+function formatByteSize(bytes) {
+  if (!bytes || bytes < 0) return '0 B';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+function buildLoadingNode(text) {
+  const wrap = document.createElement('div');
+  wrap.className = 'github-loading';
+  const spinner = document.createElement('div');
+  spinner.className = 'github-loading-spinner';
+  wrap.appendChild(spinner);
+  const p = document.createElement('p');
+  p.textContent = text;
+  wrap.appendChild(p);
+  return wrap;
+}
+
+async function renderImageDiff(bodyEl, modal, filePath, diffType) {
+  const state = require('./state');
+  const projectPath = state.getProjectPath();
+  bodyEl.textContent = '';
+  bodyEl.appendChild(buildLoadingNode('Loading image...'));
+
+  let result;
+  try {
+    result = await ipcRenderer.invoke(IPC.LOAD_GIT_IMAGE_DIFF, { projectPath, filePath, diffType });
+  } catch {
+    bodyEl.textContent = '';
+    const errDiv = document.createElement('div');
+    errDiv.className = 'diff-binary-message';
+    errDiv.textContent = 'Failed to load image preview';
+    bodyEl.appendChild(errDiv);
+    return;
+  }
+
+  if (!result || result.error) {
+    bodyEl.textContent = '';
+    const errDiv = document.createElement('div');
+    errDiv.className = 'diff-binary-message';
+    errDiv.textContent = (result && result.error) || 'Image content unavailable';
+    bodyEl.appendChild(errDiv);
+    return;
+  }
+
+  bodyEl.textContent = '';
+  const wrapper = document.createElement('div');
+  wrapper.className = 'diff-image-compare';
+
+  const buildSide = (label, dataUrl, sizeBytes, sideClass) => {
+    const side = document.createElement('div');
+    side.className = `diff-image-side ${sideClass}`;
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'diff-image-label';
+    titleEl.textContent = label;
+    side.appendChild(titleEl);
+
+    const frame = document.createElement('div');
+    frame.className = 'diff-image-frame';
+    if (dataUrl) {
+      const img = document.createElement('img');
+      img.alt = label;
+      img.src = dataUrl;
+      frame.appendChild(img);
+    } else {
+      const empty = document.createElement('div');
+      empty.className = 'diff-image-empty';
+      empty.textContent = '(no file)';
+      frame.appendChild(empty);
+    }
+    side.appendChild(frame);
+
+    const meta = document.createElement('div');
+    meta.className = 'diff-image-meta';
+    meta.textContent = dataUrl ? formatByteSize(sizeBytes) : '—';
+    side.appendChild(meta);
+
+    return side;
+  };
+
+  if (diffType === 'untracked') {
+    wrapper.appendChild(buildSide('New file', result.newDataUrl, result.newSize, 'new'));
+  } else {
+    wrapper.appendChild(buildSide('Before', result.oldDataUrl, result.oldSize, 'old'));
+    wrapper.appendChild(buildSide('After', result.newDataUrl, result.newSize, 'new'));
+  }
+
+  bodyEl.appendChild(wrapper);
+
+  const statsEl = modal.querySelector('.diff-modal-stats');
+  if (statsEl) {
+    statsEl.textContent = '';
+    const span = document.createElement('span');
+    span.className = 'diff-stat-image';
+    span.textContent = result.mime || 'image';
+    statsEl.appendChild(span);
+  }
+}
+
 // Module state
 let _diffViewMode = 'unified';
 let _currentDiffState = null;
@@ -246,6 +359,10 @@ async function showDiffModal(filePath, diffType) {
     }
 
     if (result.diff === 'Binary file') {
+      if (isImagePath(filePath)) {
+        await renderImageDiff(bodyEl, modal, filePath, diffType);
+        return;
+      }
       bodyEl.textContent = '';
       const binDiv = document.createElement('div');
       binDiv.className = 'diff-binary-message';

@@ -13,6 +13,7 @@ const PROJECT_PATH_ERROR = 'Path is outside project directory or targets protect
 // Shared utilities
 const {
   execFileGit,
+  execFileGitBuffer,
   formatGitError,
   execGitWithStdin,
   execFileCmd,
@@ -22,6 +23,23 @@ const {
   extractHunkPatches,
   formatLocalDate
 } = require('./gitExecUtils');
+
+const IMAGE_EXT_TO_MIME = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  bmp: 'image/bmp',
+  ico: 'image/x-icon',
+  svg: 'image/svg+xml'
+};
+const MAX_IMAGE_DIFF_BYTES = 10 * 1024 * 1024; // 10MB per side
+
+function getImageMimeForPath(filePath) {
+  const ext = path.extname(filePath || '').slice(1).toLowerCase();
+  return IMAGE_EXT_TO_MIME[ext] || null;
+}
 
 // Domain operations
 const gitStashOps = require('./gitStashOps');
@@ -704,6 +722,88 @@ async function loadDiff(projectPath, filePath, diffType) {
 }
 
 /**
+ * Load binary content from a git revision spec (e.g. 'HEAD:path', ':path' for index).
+ * Returns null if missing or oversized.
+ */
+async function readGitRevisionBytes(projectPath, revSpec) {
+  try {
+    const { stdout } = await execFileGitBuffer(['show', revSpec], projectPath, MAX_IMAGE_DIFF_BYTES, 15000);
+    return Buffer.isBuffer(stdout) ? stdout : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Read a file from disk as Buffer, capped at MAX_IMAGE_DIFF_BYTES. Returns null on error/oversize.
+ */
+function readWorkingTreeBytes(fullPath) {
+  try {
+    const stats = fs.statSync(fullPath);
+    if (!stats.isFile() || stats.size > MAX_IMAGE_DIFF_BYTES) return null;
+    return fs.readFileSync(fullPath);
+  } catch {
+    return null;
+  }
+}
+
+function bufferToDataUrl(buffer, mime) {
+  if (!buffer || !mime) return null;
+  return `data:${mime};base64,${buffer.toString('base64')}`;
+}
+
+/**
+ * Load image content for both sides of a diff for image files.
+ * diffType: 'staged', 'unstaged', 'untracked', 'conflict'
+ * Returns { error, oldDataUrl, newDataUrl, oldSize, newSize, mime, filePath }
+ */
+async function loadImageDiff(projectPath, filePath, diffType) {
+  if (!projectPath || !filePath) {
+    return { error: 'Missing parameters' };
+  }
+  if (!isRelativePathWithinProjectContent(projectPath, filePath)) {
+    return { error: PROJECT_PATH_ERROR };
+  }
+
+  const mime = getImageMimeForPath(filePath);
+  if (!mime) {
+    return { error: 'Not an image file' };
+  }
+
+  const fullPath = path.join(projectPath, filePath);
+
+  let oldBuf;
+  let newBuf;
+
+  if (diffType === 'untracked') {
+    oldBuf = null;
+    newBuf = readWorkingTreeBytes(fullPath);
+  } else if (diffType === 'staged') {
+    oldBuf = await readGitRevisionBytes(projectPath, `HEAD:${filePath}`);
+    newBuf = await readGitRevisionBytes(projectPath, `:${filePath}`);
+  } else {
+    // 'unstaged' or 'conflict': compare index (or HEAD) against working tree
+    oldBuf = await readGitRevisionBytes(projectPath, `:${filePath}`);
+    if (!oldBuf) oldBuf = await readGitRevisionBytes(projectPath, `HEAD:${filePath}`);
+    newBuf = readWorkingTreeBytes(fullPath);
+  }
+
+  if (!oldBuf && !newBuf) {
+    return { error: 'Image content unavailable' };
+  }
+
+  return {
+    error: null,
+    oldDataUrl: bufferToDataUrl(oldBuf, mime),
+    newDataUrl: bufferToDataUrl(newBuf, mime),
+    oldSize: oldBuf ? oldBuf.length : 0,
+    newSize: newBuf ? newBuf.length : 0,
+    mime,
+    filePath
+  };
+}
+
+/**
  * Stage a file
  */
 async function stageFile(projectPath, filePath) {
@@ -912,6 +1012,10 @@ function setupIPC(ipcMain) {
     return await loadDiff(projectPath, filePath, diffType);
   });
 
+  ipcMain.handle(IPC.LOAD_GIT_IMAGE_DIFF, async (event, { projectPath, filePath, diffType }) => {
+    return await loadImageDiff(projectPath, filePath, diffType);
+  });
+
   ipcMain.handle(IPC.APPLY_GIT_HUNK, async (event, { projectPath, filePath, diffType, action, hunkPatch }) => {
     const result = await applyGitHunk(projectPath, filePath, diffType, action, hunkPatch);
     return invalidateOnSuccess(projectPath, result, { status: true, aheadBehind: false });
@@ -1032,6 +1136,7 @@ module.exports = {
   init,
   loadChanges,
   loadDiff,
+  loadImageDiff,
   loadCommitDiff,
   loadSyncCommits,
   loadCommitGraph,

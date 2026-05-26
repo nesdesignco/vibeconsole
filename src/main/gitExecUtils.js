@@ -92,6 +92,56 @@ function execGitWithStdin(args, input, projectPath, timeout = 10000) {
 }
 
 /**
+ * Execute git command capturing stdout as a raw Buffer (for binary content like `git show :file`).
+ */
+function execFileGitBuffer(args, projectPath, maxBufferBytes = 20 * 1024 * 1024, timeout = 10000) {
+  return new Promise((resolve, reject) => {
+    const env = buildExecEnv();
+    const gitCmd = resolveCommandPath('git', env.PATH) || 'git';
+    const child = spawn(gitCmd, args, { cwd: projectPath, stdio: ['ignore', 'pipe', 'pipe'], env });
+    const stdoutChunks = [];
+    let stdoutSize = 0;
+    let stderr = '';
+    let finished = false;
+    let aborted = false;
+    const timer = setTimeout(() => {
+      if (!finished) {
+        aborted = true;
+        child.kill('SIGTERM');
+      }
+    }, timeout);
+
+    child.stdout.on('data', (chunk) => {
+      stdoutSize += chunk.length;
+      if (stdoutSize > maxBufferBytes) {
+        aborted = true;
+        child.kill('SIGTERM');
+        return;
+      }
+      stdoutChunks.push(chunk);
+    });
+    child.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
+    child.on('error', (err) => {
+      clearTimeout(timer);
+      reject({ error: err.message, stderr });
+    });
+    child.on('close', (code) => {
+      clearTimeout(timer);
+      finished = true;
+      if (aborted) {
+        reject({ error: stdoutSize > maxBufferBytes ? 'Output too large' : 'Command timed out', stderr });
+        return;
+      }
+      if (code === 0) {
+        resolve({ stdout: Buffer.concat(stdoutChunks), stderr: stderr.trim() });
+      } else {
+        reject({ error: `git exited with code ${code}`, stderr: stderr.trim() });
+      }
+    });
+  });
+}
+
+/**
  * Execute a non-git command safely using execFile
  */
 function execFileCmd(cmd, args, projectPath, maxBuffer = 1024 * 1024, timeout = 10000) {
@@ -230,6 +280,7 @@ function formatLocalDate(date) {
 module.exports = {
   isValidStashRef,
   execFileGit,
+  execFileGitBuffer,
   formatGitError,
   execGitWithStdin,
   execFileCmd,

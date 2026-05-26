@@ -86,6 +86,7 @@ const IPC = {
   // Git Changes
   LOAD_GIT_CHANGES: 'load-git-changes',
   LOAD_GIT_DIFF: 'load-git-diff',
+  LOAD_GIT_IMAGE_DIFF: 'load-git-image-diff',
   LOAD_COMMIT_DIFF: 'load-commit-diff',
   APPLY_GIT_HUNK: 'apply-git-hunk',
   LOAD_GIT_CONFLICT: 'load-git-conflict',
