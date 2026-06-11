@@ -128,12 +128,18 @@ const IPC = {
 
   // Auto Update
   CHECK_FOR_UPDATES: 'check-for-updates',
+  UPDATE_CHECKING: 'update-checking',
   UPDATE_AVAILABLE: 'update-available',
+  UPDATE_NOT_AVAILABLE: 'update-not-available',
   DOWNLOAD_UPDATE: 'download-update',
   UPDATE_DOWNLOAD_PROGRESS: 'update-download-progress',
   UPDATE_DOWNLOADED: 'update-downloaded',
   UPDATE_ERROR: 'update-error',
+  UPDATE_CANCEL: 'update-cancel',
+  UPDATE_CANCELLED: 'update-cancelled',
   INSTALL_UPDATE: 'install-update',
+  GET_UPDATE_STATE: 'get-update-state',
+  OPEN_UPDATER_MODAL: 'open-updater-modal',
 
   // External URLs
   OPEN_EXTERNAL_URL: 'open-external-url'

@@ -14,6 +14,7 @@ const editor = require('./editor');
 const sidebarResize = require('./sidebarResize');
 const aiToolSelector = require('./aiToolSelector');
 const savedPromptsPanel = require('./savedPromptsPanel');
+const updaterModal = require('./updaterModal');
 const { createToast } = require('./toast');
 const { ipcRenderer, pathApi } = require('./electronBridge');
 const { IPC } = require('../shared/ipcChannels');
@@ -143,6 +144,9 @@ function init() {
 
   // Initialize saved prompts panel
   try { savedPromptsPanel.init(); } catch (err) { console.error('Failed to initialize saved prompts panel:', err); }
+
+  // Initialize updater modal
+  try { updaterModal.init(); } catch (err) { console.error('Failed to initialize updater modal:', err); }
 
   // Initialize sidebar resize
   try {

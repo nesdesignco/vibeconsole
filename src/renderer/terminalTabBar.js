@@ -9,6 +9,7 @@ const { escapeHtml, escapeAttr } = require('./escapeHtml');
 const pluginsPanel = require('./pluginsPanel');
 const githubPanel = require('./githubPanel');
 const savedPromptsPanel = require('./savedPromptsPanel');
+const updaterModal = require('./updaterModal');
 const { AI_TOOL_ICONS } = require('./aiToolSelector');
 const { createToast } = require('./toast');
 
@@ -65,8 +66,8 @@ class TerminalTabBar {
   }
 
   _addIpcListener(channel, listener) {
-    ipcRenderer.on(channel, listener);
-    this._ipcCleanup.push(() => ipcRenderer.removeListener(channel, listener));
+    const cleanup = ipcRenderer.on(channel, listener);
+    this._ipcCleanup.push(typeof cleanup === 'function' ? cleanup : () => {});
   }
 
   _injectStyles() {
@@ -761,71 +762,154 @@ class TerminalTabBar {
   }
 
   /**
-   * Setup auto-update button and IPC listeners
+   * Setup auto-update toolbar button.
+   *
+   * Button is a status indicator only; all interactions (download, install,
+   * cancel, retry, release notes) live in the updater modal — clicking the
+   * button just opens it.
    */
   _setupAutoUpdate() {
     const btn = this.element.querySelector('.btn-upgrade');
     const badge = btn.querySelector('.upgrade-badge');
-    let updateState = 'idle'; // idle | available | downloading | ready
+    const svg = btn.querySelector('svg');
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    let lastKnownVersion = '';
 
-    // Update available - show button with version badge
-    this._addIpcListener(IPC.UPDATE_AVAILABLE, (event, data) => {
-      updateState = 'available';
-      btn.style.display = '';
+    const setIconShape = (kind) => {
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      if (kind === 'ready') {
+        const poly = document.createElementNS(SVG_NS, 'polyline');
+        poly.setAttribute('points', '20 6 9 17 4 12');
+        svg.appendChild(poly);
+      } else if (kind === 'error') {
+        const c = document.createElementNS(SVG_NS, 'circle');
+        c.setAttribute('cx', '12'); c.setAttribute('cy', '12'); c.setAttribute('r', '10');
+        const l1 = document.createElementNS(SVG_NS, 'line');
+        l1.setAttribute('x1', '12'); l1.setAttribute('y1', '8'); l1.setAttribute('x2', '12'); l1.setAttribute('y2', '13');
+        const l2 = document.createElementNS(SVG_NS, 'line');
+        l2.setAttribute('x1', '12'); l2.setAttribute('y1', '16'); l2.setAttribute('x2', '12.01'); l2.setAttribute('y2', '16');
+        svg.appendChild(c); svg.appendChild(l1); svg.appendChild(l2);
+      } else {
+        const p = document.createElementNS(SVG_NS, 'path');
+        p.setAttribute('d', 'M12 5v14M19 12l-7 7-7-7');
+        svg.appendChild(p);
+      }
+    };
+
+    const hideButton = () => {
+      btn.style.display = 'none';
       btn.className = 'toolbar-btn btn-upgrade';
-      btn.title = `Update available: ${data.version}`;
+      btn.title = 'Check for updates';
       btn.disabled = false;
-      badge.textContent = data.version.replace(/^v/, '');
-      badge.style.display = 'flex';
-      // Restore download arrow icon
-      btn.querySelector('svg').innerHTML = '<path d="M12 5v14M19 12l-7 7-7-7"/>';
+      badge.textContent = '';
+      badge.style.display = 'none';
+      setIconShape('');
+    };
+
+    const normalizeVersionLabel = (version) => (
+      typeof version === 'string' ? version.replace(/^v/, '') : ''
+    );
+
+    const renderState = (mode, label, badgeText) => {
+      btn.style.display = '';
+      btn.className = `toolbar-btn btn-upgrade${mode ? ` ${mode}` : ''}`;
+      btn.title = label;
+      btn.disabled = false;
+      badge.textContent = badgeText || '';
+      badge.style.display = badgeText ? 'flex' : 'none';
+      setIconShape(mode);
+    };
+
+    const renderAvailableState = (version) => {
+      if (typeof version === 'string' && version) {
+        lastKnownVersion = version;
+      }
+      const versionLabel = normalizeVersionLabel(lastKnownVersion);
+      renderState('', `Update available: ${lastKnownVersion || 'new version'}`, versionLabel);
+    };
+
+    const syncState = async () => {
+      try {
+        const remote = await ipcRenderer.invoke(IPC.GET_UPDATE_STATE);
+        if (!remote || remote.supported === false) {
+          lastKnownVersion = '';
+          hideButton();
+          return;
+        }
+
+        const version = remote.updateInfo && remote.updateInfo.version;
+        if (typeof version === 'string' && version) {
+          lastKnownVersion = version;
+        }
+
+        switch (remote.status) {
+          case 'available':
+            renderAvailableState(version);
+            break;
+          case 'downloading': {
+            const percent = Number.isFinite(remote.progress && remote.progress.percent)
+              ? remote.progress.percent
+              : 0;
+            renderState('downloading', `Downloading update… ${percent}%`, `${percent}%`);
+            break;
+          }
+          case 'downloaded':
+            renderState('ready', 'Update ready — Click to install', '✓');
+            break;
+          case 'error':
+            renderState('error', 'Update failed — Click for details', '!');
+            break;
+          case 'checking':
+          case 'idle':
+          case 'not-available':
+          default:
+            lastKnownVersion = '';
+            hideButton();
+            break;
+        }
+      } catch {
+        hideButton();
+      }
+    };
+
+    this._addIpcListener(IPC.UPDATE_AVAILABLE, (event, data) => {
+      renderAvailableState(data && data.version);
     });
 
-    // Download progress
     this._addIpcListener(IPC.UPDATE_DOWNLOAD_PROGRESS, (event, data) => {
-      updateState = 'downloading';
-      btn.className = 'toolbar-btn btn-upgrade downloading';
-      btn.title = `Downloading update... ${data.percent}%`;
-      btn.disabled = true;
-      badge.textContent = `${data.percent}%`;
+      const percent = Number.isFinite(data && data.percent) ? data.percent : 0;
+      renderState('downloading', `Downloading update… ${percent}%`, `${percent}%`);
     });
 
-    // Download complete - switch to ready state
-    this._addIpcListener(IPC.UPDATE_DOWNLOADED, () => {
-      updateState = 'ready';
-      btn.className = 'toolbar-btn btn-upgrade ready';
-      btn.title = 'Update ready - Click to restart & install';
-      btn.disabled = false;
-      badge.textContent = '✓';
-      // Swap icon to checkmark
-      btn.querySelector('svg').innerHTML = '<polyline points="20 6 9 17 4 12"/>';
+    this._addIpcListener(IPC.UPDATE_DOWNLOADED, (event, data) => {
+      if (data && data.version) {
+        lastKnownVersion = data.version;
+      }
+      renderState('ready', 'Update ready — Click to install', '✓');
     });
 
-    // Error - revert to available state
     this._addIpcListener(IPC.UPDATE_ERROR, () => {
-      if (updateState === 'downloading') {
-        updateState = 'available';
-        btn.className = 'toolbar-btn btn-upgrade';
-        btn.title = 'Download failed - Click to retry';
-        btn.disabled = false;
-        badge.textContent = '!';
-        btn.querySelector('svg').innerHTML = '<path d="M12 5v14M19 12l-7 7-7-7"/>';
+      renderState('error', 'Update failed — Click for details', '!');
+    });
+
+    this._addIpcListener(IPC.UPDATE_NOT_AVAILABLE, () => {
+      lastKnownVersion = '';
+      hideButton();
+    });
+
+    this._addIpcListener(IPC.UPDATE_CANCELLED, () => {
+      if (lastKnownVersion) {
+        renderAvailableState(lastKnownVersion);
+      } else {
+        syncState();
       }
     });
 
-    // Click handler
     btn.addEventListener('click', () => {
-      if (updateState === 'available') {
-        ipcRenderer.send(IPC.DOWNLOAD_UPDATE);
-        updateState = 'downloading';
-        btn.className = 'toolbar-btn btn-upgrade downloading';
-        btn.title = 'Downloading update...';
-        btn.disabled = true;
-        badge.textContent = '0%';
-      } else if (updateState === 'ready') {
-        ipcRenderer.send(IPC.INSTALL_UPDATE);
-      }
+      updaterModal.openModal();
     });
+
+    syncState();
   }
 
   _startRename(tabElement) {

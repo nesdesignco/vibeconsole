@@ -8,10 +8,21 @@ const { Menu, shell } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { IPC } = require('../shared/ipcChannels');
+const autoUpdaterModule = require('./autoUpdater');
 
 let mainWindow = null;
 let appPath = null;
 let aiToolManager = null;
+
+function checkForUpdatesFromMenu() {
+  // Open the modal first so the user immediately sees a "checking" state,
+  // then trigger the check. The autoUpdater module sends its own UPDATE_CHECKING
+  // event which the modal subscribes to.
+  autoUpdaterModule.requestOpenModal();
+  autoUpdaterModule.triggerManualCheck().catch(() => {
+    /* errors are surfaced via UPDATE_ERROR */
+  });
+}
 
 /**
  * Initialize menu module
@@ -24,6 +35,7 @@ function init(window, app, toolManager) {
 
 /**
  * Get menu template based on active AI tool
+ * @returns {import('electron').MenuItemConstructorOptions[]}
  */
 function getMenuTemplate() {
   const activeTool = aiToolManager ? aiToolManager.getActiveTool() : {
@@ -34,6 +46,7 @@ function getMenuTemplate() {
 
   const aiCommandsSubmenu = buildAICommandsSubmenu(activeTool);
 
+  /** @type {import('electron').MenuItemConstructorOptions[]} */
   const template = [
     {
       label: activeTool.menuLabel,
@@ -72,19 +85,27 @@ function getMenuTemplate() {
 
   // macOS app menu
   if (process.platform === 'darwin') {
+    /** @type {import('electron').MenuItemConstructorOptions[]} */
+    const macAppSubmenu = [
+      { role: 'about' },
+      { type: 'separator' },
+      {
+        label: 'Check for Updates…',
+        click: checkForUpdatesFromMenu
+      },
+      { type: 'separator' },
+      { role: 'services' },
+      { type: 'separator' },
+      { role: 'hide' },
+      { role: 'hideOthers' },
+      { role: 'unhide' },
+      { type: 'separator' },
+      { role: 'quit' }
+    ];
+
     template.unshift({
       label: 'Vibe Console',
-      submenu: [
-        { role: 'about' },
-        { type: 'separator' },
-        { role: 'services' },
-        { type: 'separator' },
-        { role: 'hide' },
-        { role: 'hideOthers' },
-        { role: 'unhide' },
-        { type: 'separator' },
-        { role: 'quit' }
-      ]
+      submenu: macAppSubmenu
     });
   }
 
@@ -93,8 +114,10 @@ function getMenuTemplate() {
 
 /**
  * Build AI commands submenu based on active tool
+ * @returns {import('electron').MenuItemConstructorOptions[]}
  */
 function buildAICommandsSubmenu(tool) {
+  /** @type {import('electron').MenuItemConstructorOptions[]} */
   const submenu = [];
 
   // Tool-specific commands
@@ -181,6 +204,7 @@ function buildAICommandsSubmenu(tool) {
 
 /**
  * Build tool switcher submenu
+ * @returns {import('electron').MenuItemConstructorOptions[]}
  */
 function buildToolSwitcherSubmenu() {
   const tools = aiToolManager.getAvailableTools();

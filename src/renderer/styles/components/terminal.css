@@ -724,4 +724,10 @@
 
 .toolbar-btn.btn-upgrade.ready .upgrade-badge {
   background: var(--success);
+  color: var(--white);
+}
+
+.toolbar-btn.btn-upgrade.error .upgrade-badge {
+  background: var(--error);
+  color: var(--white);
 }

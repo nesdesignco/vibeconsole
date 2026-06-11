@@ -23,7 +23,7 @@
     "prepare": "git config core.hooksPath .githooks || true",
     "dist": "npm run build:renderer && electron-builder --mac --dir",
     "dist:mac": "npm run build",
-    "dist:mac:package": "electron-builder --mac && rm -f release/*.blockmap release/*.yml release/*.yaml",
+    "dist:mac:package": "electron-builder --mac",
     "dist:mac:unsigned": "npm run build:renderer && CSC_IDENTITY_AUTO_DISCOVERY=false electron-builder --mac"
   },
   "keywords": [
@@ -53,6 +53,7 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "builder-util-runtime": "^9.5.1",
     "electron-updater": "^6.3.0",
     "node-pty": "^1.0.0",
     "xterm": "^5.3.0",
@@ -66,7 +67,8 @@
       "category": "public.app-category.developer-tools",
       "icon": "build/icon.icns",
       "target": [
-        "dmg"
+        "dmg",
+        "zip"
       ],
       "hardenedRuntime": true,
       "gatekeeperAssess": false

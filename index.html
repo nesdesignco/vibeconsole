@@ -516,6 +516,65 @@
     </div>
   </div>
 
+  <!-- Updater Modal -->
+  <div id="updater-modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="updater-modal-title">
+    <div class="modal-container updater-modal-container">
+      <div class="modal-header updater-modal-header">
+        <div class="updater-modal-title-group">
+          <div class="updater-modal-icon" id="updater-modal-icon" aria-hidden="true"></div>
+          <div>
+            <h3 id="updater-modal-title">Vibe Console</h3>
+            <div class="updater-modal-subtitle" id="updater-modal-subtitle"></div>
+          </div>
+        </div>
+        <button class="btn btn-close" id="updater-modal-close" data-size="icon-sm" data-variant="danger" title="Close" aria-label="Close">&#10005;</button>
+      </div>
+      <div class="modal-body updater-modal-body">
+        <div class="updater-version-row" id="updater-version-row">
+          <div class="updater-version-cell">
+            <div class="updater-version-label">Current</div>
+            <div class="updater-version-value" id="updater-current-version">—</div>
+          </div>
+          <div class="updater-version-arrow" aria-hidden="true">→</div>
+          <div class="updater-version-cell">
+            <div class="updater-version-label">New</div>
+            <div class="updater-version-value updater-version-new" id="updater-new-version">—</div>
+          </div>
+          <div class="updater-version-spacer"></div>
+          <div class="updater-release-date" id="updater-release-date"></div>
+        </div>
+
+        <div class="updater-notes-section" id="updater-notes-section">
+          <div class="updater-notes-heading">What's new</div>
+          <div class="updater-release-notes" id="updater-release-notes"></div>
+        </div>
+
+        <div class="updater-progress-section" id="updater-progress-section">
+          <div class="updater-progress-row">
+            <span class="updater-progress-label" id="updater-progress-label">Downloading…</span>
+            <span class="updater-progress-percent" id="updater-progress-percent">0%</span>
+          </div>
+          <div class="updater-progress-track">
+            <div class="updater-progress-fill" id="updater-progress-fill" style="width: 0%"></div>
+          </div>
+          <div class="updater-progress-meta" id="updater-progress-meta"></div>
+        </div>
+
+        <div class="updater-status-section" id="updater-status-section">
+          <div class="updater-status-icon" id="updater-status-icon" aria-hidden="true"></div>
+          <div class="updater-status-text" id="updater-status-text"></div>
+        </div>
+      </div>
+      <div class="modal-footer updater-modal-footer" id="updater-modal-footer">
+        <a class="updater-modal-link" id="updater-release-link" href="#" target="_blank" rel="noopener" style="display:none;">Open release page</a>
+        <div class="updater-modal-actions">
+          <button type="button" class="modal-btn modal-btn-cancel" id="updater-btn-secondary">Later</button>
+          <button type="button" class="modal-btn modal-btn-primary" id="updater-btn-primary">Download</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script src="dist/renderer.js"></script>
 </body>
 </html>

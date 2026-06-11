@@ -1,7 +1,7 @@
 {
   "version": "1.1",
   "description": "Claude Code IDE - Module structure and IPC communication map",
-  "lastUpdated": "2026-04-17",
+  "lastUpdated": "2026-06-10",
   "architecture": {
     "type": "electron",
     "mainProcess": "src/main/index.js",
@@ -172,11 +172,15 @@
         "electron",
         "fs",
         "path",
-        "shared/ipcChannels"
+        "shared/ipcChannels",
+        "autoUpdater"
       ],
       "functions": {
+        "checkForUpdatesFromMenu": {
+          "line": 17
+        },
         "init": {
-          "line": 19,
+          "line": 30,
           "params": [
             "window",
             "app",
@@ -185,41 +189,41 @@
           "purpose": "Initialize menu module"
         },
         "getMenuTemplate": {
-          "line": 28,
+          "line": 40,
           "purpose": "Get menu template based on active AI tool"
         },
         "buildAICommandsSubmenu": {
-          "line": 97,
+          "line": 119,
           "params": [
             "tool"
           ],
           "purpose": "Build AI commands submenu based on active tool"
         },
         "buildToolSwitcherSubmenu": {
-          "line": 185,
+          "line": 209,
           "purpose": "Build tool switcher submenu"
         },
         "sendCommand": {
-          "line": 204,
+          "line": 228,
           "params": [
             "command"
           ],
           "purpose": "Send command to terminal"
         },
         "toggleHistoryPanel": {
-          "line": 213,
+          "line": 237,
           "purpose": "Toggle history panel"
         },
         "toggleSidebar": {
-          "line": 222,
+          "line": 246,
           "purpose": "Toggle sidebar visibility"
         },
         "openHistoryFile": {
-          "line": 231,
+          "line": 255,
           "purpose": "Open history file in default editor"
         },
         "createMenu": {
-          "line": 245,
+          "line": 269,
           "purpose": "Create and set application menu"
         }
       },
@@ -578,24 +582,25 @@
         "sidebarResize",
         "aiToolSelector",
         "savedPromptsPanel",
+        "updaterModal",
         "toast",
         "electronBridge",
         "shared/ipcChannels"
       ],
       "functions": {
         "toggleSidebarSafe": {
-          "line": 25
+          "line": 26
         },
         "init": {
-          "line": 41,
+          "line": 42,
           "purpose": "Initialize all modules"
         },
         "setupButtonHandlers": {
-          "line": 252,
+          "line": 256,
           "purpose": "Setup button click handlers"
         },
         "setupKeyboardShortcuts": {
-          "line": 320,
+          "line": 324,
           "purpose": "Setup keyboard shortcuts"
         }
       },
@@ -1679,6 +1684,7 @@
         "pluginsPanel",
         "githubPanel",
         "savedPromptsPanel",
+        "updaterModal",
         "aiToolSelector",
         "toast",
         "state"
@@ -1691,9 +1697,7 @@
         "emits": [
           "LOAD_AI_USAGE",
           "REFRESH_AI_USAGE",
-          "LOAD_AI_USAGE",
-          "DOWNLOAD_UPDATE",
-          "INSTALL_UPDATE"
+          "LOAD_AI_USAGE"
         ]
       }
     },
@@ -2605,6 +2609,7 @@
         "init",
         "loadChanges",
         "loadDiff",
+        "loadImageDiff",
         "loadCommitDiff",
         "loadSyncCommits",
         "loadCommitGraph",
@@ -2643,53 +2648,59 @@
         "gitCommitOps"
       ],
       "functions": {
+        "getImageMimeForPath": {
+          "line": 39,
+          "params": [
+            "filePath"
+          ]
+        },
         "init": {
-          "line": 43,
+          "line": 61,
           "params": [
             "_window"
           ],
           "purpose": "Initialize manager"
         },
         "getActivityCacheKey": {
-          "line": 48,
+          "line": 66,
           "params": [
             "projectPath",
             "days"
           ]
         },
         "getRepoCacheKey": {
-          "line": 52,
+          "line": 70,
           "params": [
             "projectPath"
           ]
         },
         "invalidateActivityCache": {
-          "line": 61,
+          "line": 79,
           "params": [
             "projectPath"
           ]
         },
         "invalidateRepoStatusCache": {
-          "line": 69,
+          "line": 87,
           "params": [
             "projectPath"
           ]
         },
         "invalidateAheadBehindCache": {
-          "line": 76,
+          "line": 94,
           "params": [
             "projectPath"
           ]
         },
         "invalidateRepoCaches": {
-          "line": 83,
+          "line": 101,
           "params": [
             "projectPath",
             "options = {}"
           ]
         },
         "loadLocalCommits": {
-          "line": 93,
+          "line": 111,
           "params": [
             "projectPath",
             "maxCount = 20"
@@ -2697,14 +2708,14 @@
           "purpose": "Load recent commits from HEAD (used when no upstream/tracking branch is configured)."
         },
         "loadSyncCommits": {
-          "line": 111,
+          "line": 129,
           "params": [
             "projectPath"
           ],
           "purpose": "Load outgoing (ahead) and incoming (behind) commits relative to upstream."
         },
         "loadCommitGraph": {
-          "line": 160,
+          "line": 178,
           "params": [
             "projectPath",
             "maxCount = 200"
@@ -2712,14 +2723,14 @@
           "purpose": "Load ASCII lane graph for recent commits."
         },
         "expandUntrackedEntries": {
-          "line": 187,
+          "line": 205,
           "params": [
             "projectPath",
             "relativePath"
           ]
         },
         "loadGitActivity": {
-          "line": 232,
+          "line": 250,
           "params": [
             "projectPath",
             "days = ACTIVITY_LOOKBACK_DAYS"
@@ -2727,7 +2738,7 @@
           "purpose": "Load GitHub-style daily commit activity for the last N days."
         },
         "gitFetch": {
-          "line": 288,
+          "line": 306,
           "params": [
             "projectPath",
             "prune = true"
@@ -2735,7 +2746,7 @@
           "purpose": "Fetch remote refs for accurate incoming/outgoing calculations."
         },
         "gitPush": {
-          "line": 303,
+          "line": 321,
           "params": [
             "projectPath",
             "branch",
@@ -2743,7 +2754,7 @@
           ]
         },
         "gitPull": {
-          "line": 318,
+          "line": 336,
           "params": [
             "projectPath",
             "branch",
@@ -2751,7 +2762,7 @@
           ]
         },
         "applyGitHunk": {
-          "line": 336,
+          "line": 354,
           "params": [
             "projectPath",
             "filePath",
@@ -2762,7 +2773,7 @@
           "purpose": "Apply a single hunk patch to index and/or working tree."
         },
         "loadGitConflict": {
-          "line": 375,
+          "line": 393,
           "params": [
             "projectPath",
             "filePath"
@@ -2770,7 +2781,7 @@
           "purpose": "Load base/ours/theirs versions for a conflicted file."
         },
         "resolveGitConflict": {
-          "line": 410,
+          "line": 428,
           "params": [
             "projectPath",
             "filePath",
@@ -2779,7 +2790,7 @@
           "purpose": "Save resolved conflict content and stage file."
         },
         "loadCommitDiff": {
-          "line": 428,
+          "line": 446,
           "params": [
             "projectPath",
             "commitHash"
@@ -2787,21 +2798,21 @@
           "purpose": "Load diff for a specific commit"
         },
         "loadChanges": {
-          "line": 485,
+          "line": 503,
           "params": [
             "projectPath"
           ],
           "purpose": "Load git changes (status)"
         },
         "loadChangesCached": {
-          "line": 608,
+          "line": 626,
           "params": [
             "projectPath",
             "options = {}"
           ]
         },
         "loadDiff": {
-          "line": 641,
+          "line": 659,
           "params": [
             "projectPath",
             "filePath",
@@ -2809,8 +2820,39 @@
           ],
           "purpose": "diffType: 'staged', 'unstaged', 'untracked', 'conflict'"
         },
+        "readGitRevisionBytes": {
+          "line": 728,
+          "params": [
+            "projectPath",
+            "revSpec"
+          ],
+          "purpose": "Returns null if missing or oversized."
+        },
+        "readWorkingTreeBytes": {
+          "line": 740,
+          "params": [
+            "fullPath"
+          ],
+          "purpose": "Read a file from disk as Buffer, capped at MAX_IMAGE_DIFF_BYTES. Returns null on error/oversize."
+        },
+        "bufferToDataUrl": {
+          "line": 750,
+          "params": [
+            "buffer",
+            "mime"
+          ]
+        },
+        "loadImageDiff": {
+          "line": 760,
+          "params": [
+            "projectPath",
+            "filePath",
+            "diffType"
+          ],
+          "purpose": "Returns { error, oldDataUrl, newDataUrl, oldSize, newSize, mime, filePath }"
+        },
         "stageFile": {
-          "line": 709,
+          "line": 809,
           "params": [
             "projectPath",
             "filePath"
@@ -2818,7 +2860,7 @@
           "purpose": "Stage a file"
         },
         "unstageFile": {
-          "line": 729,
+          "line": 829,
           "params": [
             "projectPath",
             "filePath"
@@ -2826,7 +2868,7 @@
           "purpose": "Unstage a file"
         },
         "discardFile": {
-          "line": 750,
+          "line": 850,
           "params": [
             "projectPath",
             "filePath",
@@ -2835,42 +2877,42 @@
           "purpose": "diffType: 'staged', 'unstaged', 'untracked'"
         },
         "discardAllUnstaged": {
-          "line": 780,
+          "line": 880,
           "params": [
             "projectPath"
           ],
           "purpose": "Discard all unstaged changes"
         },
         "stageAll": {
-          "line": 799,
+          "line": 899,
           "params": [
             "projectPath"
           ],
           "purpose": "Stage all files"
         },
         "unstageAll": {
-          "line": 815,
+          "line": 915,
           "params": [
             "projectPath"
           ],
           "purpose": "Unstage all files"
         },
         "gitAheadBehind": {
-          "line": 841,
+          "line": 941,
           "params": [
             "projectPath"
           ],
           "purpose": "Get ahead/behind count relative to upstream tracking branch"
         },
         "gitAheadBehindCached": {
-          "line": 867,
+          "line": 967,
           "params": [
             "projectPath",
             "options = {}"
           ]
         },
         "setupIPC": {
-          "line": 899,
+          "line": 999,
           "params": [
             "ipcMain"
           ],
@@ -2881,6 +2923,7 @@
         "listens": [
           "LOAD_GIT_CHANGES",
           "LOAD_GIT_DIFF",
+          "LOAD_GIT_IMAGE_DIFF",
           "APPLY_GIT_HUNK",
           "LOAD_GIT_CONFLICT",
           "RESOLVE_GIT_CONFLICT",
@@ -3167,57 +3210,72 @@
       "exports": [
         "init",
         "setupIPC",
-        "cleanup"
+        "cleanup",
+        "triggerManualCheck",
+        "requestOpenModal"
       ],
       "depends": [
         "electron",
         "electron-updater",
+        "builder-util-runtime",
         "shared/ipcChannels"
       ],
       "functions": {
         "isAutoUpdateSupported": {
-          "line": 17
+          "line": 27
         },
-        "sendUpdateError": {
-          "line": 21,
-          "params": [
-            "message"
-          ]
-        },
-        "ensureEventListeners": {
-          "line": 25
-        },
-        "init": {
-          "line": 62,
-          "params": [
-            "window"
-          ],
-          "purpose": "Initialize auto updater"
-        },
-        "setupIPC": {
-          "line": 89,
-          "params": [
-            "_ipcMain"
-          ],
-          "purpose": "Setup IPC handlers"
-        },
-        "send": {
-          "line": 127,
+        "safeSend": {
+          "line": 31,
           "params": [
             "channel",
             "data"
-          ],
-          "purpose": "Send message to renderer"
+          ]
+        },
+        "normalizeUpdateInfo": {
+          "line": 37,
+          "params": [
+            "info"
+          ]
+        },
+        "resetDownload": {
+          "line": 47
+        },
+        "handleDownloadCancelled": {
+          "line": 52
+        },
+        "ensureEventListeners": {
+          "line": 59
+        },
+        "init": {
+          "line": 132,
+          "params": [
+            "window"
+          ]
+        },
+        "triggerManualCheck": {
+          "line": 163,
+          "purpose": "can react immediately without waiting for events to bubble back."
+        },
+        "setupIPC": {
+          "line": 189,
+          "params": [
+            "_ipcMain"
+          ]
+        },
+        "requestOpenModal": {
+          "line": 259,
+          "purpose": "The renderer reads the current state via GET_UPDATE_STATE upon receiving this."
         },
         "cleanup": {
-          "line": 136,
-          "purpose": "Cleanup timers"
+          "line": 263
         }
       },
       "ipc": {
         "listens": [
           "CHECK_FOR_UPDATES",
+          "GET_UPDATE_STATE",
           "DOWNLOAD_UPDATE",
+          "UPDATE_CANCEL",
           "INSTALL_UPDATE"
         ],
         "emits": [
@@ -3673,6 +3731,7 @@
       "exports": [
         "isValidStashRef",
         "execFileGit",
+        "execFileGitBuffer",
         "formatGitError",
         "execGitWithStdin",
         "execFileCmd",
@@ -3722,8 +3781,18 @@
           ],
           "purpose": "Execute git with stdin payload (used for hunk-level patch operations)."
         },
-        "execFileCmd": {
+        "execFileGitBuffer": {
           "line": 97,
+          "params": [
+            "args",
+            "projectPath",
+            "maxBufferBytes = 20 * 1024 * 1024",
+            "timeout = 10000"
+          ],
+          "purpose": "Execute git command capturing stdout as a raw Buffer (for binary content like `git show :file`)."
+        },
+        "execFileCmd": {
+          "line": 147,
           "params": [
             "cmd",
             "args",
@@ -3734,14 +3803,14 @@
           "purpose": "Execute a non-git command safely using execFile"
         },
         "parseStatusLine": {
-          "line": 123,
+          "line": 173,
           "params": [
             "line"
           ],
           "purpose": "X = staged status, Y = unstaged status"
         },
         "isUnmergedStatus": {
-          "line": 146,
+          "line": 196,
           "params": [
             "x",
             "y"
@@ -3749,28 +3818,28 @@
           "purpose": "See git status short format: DD, AU, UD, UA, DU, AA, UU."
         },
         "parseCommitList": {
-          "line": 154,
+          "line": 204,
           "params": [
             "stdout"
           ],
           "purpose": "Parse commit list from a null-delimited git log format."
         },
         "parseHunkHeaderLine": {
-          "line": 175,
+          "line": 225,
           "params": [
             "line"
           ],
           "purpose": "Parse hunk header line for labels."
         },
         "extractHunkPatches": {
-          "line": 189,
+          "line": 239,
           "params": [
             "diffText"
           ],
           "purpose": "Extract standalone hunk patches from a unified diff."
         },
         "formatLocalDate": {
-          "line": 223,
+          "line": 273,
           "params": [
             "date"
           ]
@@ -4110,51 +4179,84 @@
         "editor"
       ],
       "functions": {
-        "init": {
+        "getExtension": {
+          "line": 15,
+          "params": [
+            "filePath"
+          ]
+        },
+        "isImagePath": {
+          "line": 21,
+          "params": [
+            "filePath"
+          ]
+        },
+        "formatByteSize": {
           "line": 25,
+          "params": [
+            "bytes"
+          ]
+        },
+        "buildLoadingNode": {
+          "line": 32,
+          "params": [
+            "text"
+          ]
+        },
+        "renderImageDiff": {
+          "line": 44,
+          "params": [
+            "bodyEl",
+            "modal",
+            "filePath",
+            "diffType"
+          ]
+        },
+        "init": {
+          "line": 138,
           "params": [
             "{ showToast",
             "loadChanges }"
           ]
         },
         "getDiffViewMode": {
-          "line": 31
+          "line": 144
         },
         "setDiffViewMode": {
-          "line": 35,
+          "line": 148,
           "params": [
             "mode"
           ]
         },
         "setCurrentDiffState": {
-          "line": 49,
+          "line": 162,
           "params": [
             "nextState"
           ]
         },
         "clearCurrentDiffState": {
-          "line": 57
+          "line": 170
         },
         "extractDiffHunks": {
-          "line": 63,
+          "line": 176,
           "params": [
             "diffText"
           ]
         },
         "syncDiffControls": {
-          "line": 96
+          "line": 209
         },
         "syncDiffSearchControls": {
-          "line": 150
+          "line": 263
         },
         "applySelectedHunk": {
-          "line": 159,
+          "line": 272,
           "params": [
             "action"
           ]
         },
         "showDiffModal": {
-          "line": 196,
+          "line": 309,
           "params": [
             "filePath",
             "diffType"
@@ -4162,32 +4264,32 @@
           "purpose": "Show diff modal for a file"
         },
         "showCommitDiffModal": {
-          "line": 303,
+          "line": 420,
           "params": [
             "commitHash"
           ],
           "purpose": "Show diff modal for a commit"
         },
         "showStashDiffModal": {
-          "line": 404,
+          "line": 521,
           "params": [
             "stashRef"
           ],
           "purpose": "Show diff modal for a stash"
         },
         "hideDiffModal": {
-          "line": 484,
+          "line": 601,
           "purpose": "Hide diff modal"
         },
         "parseDiff": {
-          "line": 495,
+          "line": 612,
           "params": [
             "diffText"
           ],
           "purpose": "Parse unified diff into structured lines"
         },
         "renderDiffContent": {
-          "line": 549,
+          "line": 666,
           "params": [
             "container",
             "lines"
@@ -4195,24 +4297,24 @@
           "purpose": "All interpolated values are escaped via escapeHtml/escapeAttr — safe for innerHTML."
         },
         "tokenizeForWordDiff": {
-          "line": 598,
+          "line": 715,
           "params": [
             "text"
           ]
         },
         "highlightModifiedPair": {
-          "line": 603,
+          "line": 720,
           "params": [
             "oldText",
             "newText"
           ]
         },
         "setupDiffModalListeners": {
-          "line": 640,
+          "line": 757,
           "purpose": "Setup diff modal event listeners"
         },
         "_showToast": {
-          "line": 22,
+          "line": 135,
           "params": [
             "_message",
             "_type"
@@ -4220,7 +4322,7 @@
           "purpose": "Callbacks (set by init)"
         },
         "_loadChanges": {
-          "line": 23,
+          "line": 136,
           "params": [
             "_force"
           ]
@@ -4507,6 +4609,155 @@
             "id"
           ]
         }
+      }
+    },
+    "renderer/updaterModal": {
+      "file": "src/renderer/updaterModal.js",
+      "description": "U",
+      "exports": [
+        "init",
+        "openModal",
+        "closeModal",
+        "getStatus"
+      ],
+      "depends": [
+        "electronBridge",
+        "shared/ipcChannels",
+        "escapeHtml"
+      ],
+      "functions": {
+        "init": {
+          "line": 62
+        },
+        "setupListeners": {
+          "line": 93
+        },
+        "setupIpcSubscriptions": {
+          "line": 121
+        },
+        "refreshStateFromMain": {
+          "line": 179
+        },
+        "maybeAutoOpen": {
+          "line": 196,
+          "params": [
+            "info"
+          ]
+        },
+        "openModal": {
+          "line": 209
+        },
+        "closeModal": {
+          "line": 217
+        },
+        "canDismiss": {
+          "line": 223
+        },
+        "handlePrimary": {
+          "line": 227
+        },
+        "handleSecondary": {
+          "line": 252
+        },
+        "formatBytes": {
+          "line": 276,
+          "params": [
+            "bytes"
+          ]
+        },
+        "formatDuration": {
+          "line": 284,
+          "params": [
+            "seconds"
+          ]
+        },
+        "formatReleaseDate": {
+          "line": 292,
+          "params": [
+            "iso"
+          ]
+        },
+        "normalizeReleaseNotes": {
+          "line": 303,
+          "params": [
+            "notes"
+          ]
+        },
+        "renderMinimalMarkdown": {
+          "line": 316,
+          "params": [
+            "raw"
+          ]
+        },
+        "setIcon": {
+          "line": 362,
+          "params": [
+            "target",
+            "html",
+            "modifier"
+          ]
+        },
+        "setStatusIcon": {
+          "line": 367,
+          "params": [
+            "html"
+          ]
+        },
+        "showVersionRow": {
+          "line": 371,
+          "params": [
+            "show"
+          ]
+        },
+        "showNotesSection": {
+          "line": 374,
+          "params": [
+            "show"
+          ]
+        },
+        "showProgressSection": {
+          "line": 377,
+          "params": [
+            "show"
+          ]
+        },
+        "showStatusSection": {
+          "line": 380,
+          "params": [
+            "show",
+            "modifier"
+          ]
+        },
+        "renderReleaseNotes": {
+          "line": 390,
+          "params": [
+            "info"
+          ]
+        },
+        "render": {
+          "line": 395
+        },
+        "getStatus": {
+          "line": 522
+        }
+      },
+      "ipc": {
+        "listens": [
+          "UPDATE_CHECKING",
+          "UPDATE_AVAILABLE",
+          "UPDATE_NOT_AVAILABLE",
+          "UPDATE_DOWNLOAD_PROGRESS",
+          "UPDATE_DOWNLOADED",
+          "UPDATE_CANCELLED",
+          "UPDATE_ERROR",
+          "OPEN_UPDATER_MODAL"
+        ],
+        "emits": [
+          "OPEN_EXTERNAL_URL",
+          "DOWNLOAD_UPDATE",
+          "INSTALL_UPDATE",
+          "UPDATE_CANCEL"
+        ]
       }
     }
   },

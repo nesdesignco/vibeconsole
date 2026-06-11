@@ -27,6 +27,8 @@ CODEX.md
 # Environment files
 .env
 .env.local
+.env.development
+.env.production
 .env.*.local
 
 # Local AI tool configs
