@@ -32,8 +32,6 @@ jobs:
         run: npm test
 
       - name: Build unsigned DMG
-        # --publish never: uploading is handled by the release action below,
-        # otherwise electron-builder tries to publish itself and needs GH_TOKEN
         run: npm run dist:mac:unsigned -- --publish never
 
       - name: Create GitHub Release
