@@ -23,12 +23,15 @@ function init(window) {
   mainWindow = window;
   cachedShells = null;
 
-  // Pre-warm shell cache so first terminal creation doesn't block on execSync
-  try {
-    getAvailableShells();
-  } catch (err) {
-    console.warn('Failed to pre-warm shell cache:', err.message);
-  }
+  // Pre-warm shell cache so first terminal creation doesn't block on execSync.
+  // Deferred so the execSync probes don't delay window startup.
+  setTimeout(() => {
+    try {
+      getAvailableShells();
+    } catch (err) {
+      console.warn('Failed to pre-warm shell cache:', err.message);
+    }
+  }, 0);
 }
 
 /**

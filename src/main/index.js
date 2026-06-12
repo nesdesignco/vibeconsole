@@ -76,6 +76,18 @@ function createWindow() {
     mainWindow.webContents.openDevTools();
   }
 
+  // Smoke test hook: report renderer load result and exit (used by test/smoke.js)
+  if (process.env.VIBE_SMOKE === '1') {
+    mainWindow.webContents.on('did-finish-load', () => {
+      console.log('VIBE_SMOKE_OK');
+      app.exit(0);
+    });
+    mainWindow.webContents.on('did-fail-load', (_e, code, desc) => {
+      console.error('VIBE_SMOKE_FAIL', code, desc);
+      app.exit(1);
+    });
+  }
+
   mainWindow.on('closed', () => {
     ptyManager.destroyAll();
     claudeUsageManager.cleanup();
@@ -152,29 +164,31 @@ function setupAllIPC() {
   // Generic AI usage routing - routes to correct provider based on toolId
   // Returns cached data immediately if available, then refreshes in background
   ipcMain.on(IPC.LOAD_AI_USAGE, async (event, toolId) => {
-    const manager = toolId === 'codex' ? codexUsageManager : claudeUsageManager;
-    const cached = manager.getCachedUsage();
-    if (cached && !event.sender.isDestroyed()) {
-      event.sender.send(IPC.AI_USAGE_DATA, { toolId: toolId || 'claude', ...cached });
-    }
-    // Always fetch fresh data in background
-    const usage = await manager.fetchUsage();
-    if (!event.sender.isDestroyed()) {
-      event.sender.send(IPC.AI_USAGE_DATA, { toolId: toolId || 'claude', ...usage });
+    try {
+      const manager = toolId === 'codex' ? codexUsageManager : claudeUsageManager;
+      const cached = manager.getCachedUsage();
+      if (cached && !event.sender.isDestroyed()) {
+        event.sender.send(IPC.AI_USAGE_DATA, { toolId: toolId || 'claude', ...cached });
+      }
+      // Always fetch fresh data in background
+      const usage = await manager.fetchUsage();
+      if (!event.sender.isDestroyed()) {
+        event.sender.send(IPC.AI_USAGE_DATA, { toolId: toolId || 'claude', ...usage });
+      }
+    } catch (err) {
+      console.error('LOAD_AI_USAGE failed:', err);
     }
   });
 
   ipcMain.on(IPC.REFRESH_AI_USAGE, async (event, toolId) => {
-    if (toolId === 'codex') {
-      const usage = await codexUsageManager.fetchUsage();
+    try {
+      const manager = toolId === 'codex' ? codexUsageManager : claudeUsageManager;
+      const usage = await manager.fetchUsage();
       if (!event.sender.isDestroyed()) {
-        event.sender.send(IPC.AI_USAGE_DATA, { toolId: 'codex', ...usage });
+        event.sender.send(IPC.AI_USAGE_DATA, { toolId: toolId === 'codex' ? 'codex' : 'claude', ...usage });
       }
-    } else {
-      const usage = await claudeUsageManager.fetchUsage();
-      if (!event.sender.isDestroyed()) {
-        event.sender.send(IPC.AI_USAGE_DATA, { toolId: 'claude', ...usage });
-      }
+    } catch (err) {
+      console.error('REFRESH_AI_USAGE failed:', err);
     }
   });
   // Open external URLs from renderer (e.g. clickable terminal links)

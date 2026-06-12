@@ -91,7 +91,11 @@ async function showNewProjectDialog(event, projectName) {
  */
 function setupIPC(ipcMain) {
   ipcMain.on(IPC.SELECT_PROJECT_FOLDER, async (event) => {
-    await showFolderPicker(event);
+    try {
+      await showFolderPicker(event);
+    } catch (err) {
+      console.error('SELECT_PROJECT_FOLDER failed:', err);
+    }
   });
 
   ipcMain.handle(IPC.CREATE_NEW_PROJECT, async (event, payload = {}) => {
