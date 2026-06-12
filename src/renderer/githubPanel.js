@@ -18,6 +18,7 @@ const gitWorktreesTab = require('./gitWorktreesTab');
 const { createEmptyChangesData } = require('./githubPanel/state');
 const { renderCommitItem, renderChangeItem } = require('./githubPanel/renderers');
 const { bindDelegatedEvents } = require('./githubPanel/delegatedEvents');
+const { createGitOperations } = require('./githubPanel/operations');
 
 let gitAutoRefreshInterval = null;
 let changesData = createEmptyChangesData();
@@ -57,6 +58,7 @@ let branchBarElement = null;
 let tabDropdownControl = null;
 let _toast = null;
 let _panel = null;
+let gitOps = null;
 
 const PANEL_ID = 'github';
 const GIT_CHANGES_COUNT_EVENT = 'vibe:git-changes-count';
@@ -87,6 +89,16 @@ function init() {
     }
   });
   registerPanel(PANEL_ID, _panel);
+
+  gitOps = createGitOperations({
+    ipcRenderer,
+    IPC,
+    showToast,
+    loadChanges,
+    getProjectPath: () => require('./state').getProjectPath(),
+    isBusy: () => operationInProgress,
+    setBusy: (value) => { operationInProgress = value; }
+  });
 
   setupEventListeners();
   setupContentDelegation();
@@ -199,37 +211,37 @@ function setupContentDelegation() {
     onChangeAction: async (classList, filePath, diffType) => {
       if (!classList) return;
       if (classList.contains('stage') && filePath) {
-        await handleStageFile(filePath);
+        await gitOps.stageFile(filePath);
       } else if (classList.contains('unstage') && filePath) {
-        await handleUnstageFile(filePath);
+        await gitOps.unstageFile(filePath);
       } else if (classList.contains('discard') && filePath && diffType) {
-        await handleDiscardFile(filePath, diffType);
+        await gitOps.discardFile(filePath, diffType);
       } else if (classList.contains('stash-file') && filePath) {
-        await handleStashFile(filePath);
+        await gitOps.stashFile(filePath);
       }
     },
     onCommitAction: async (classList, hash) => {
       if (classList?.contains('revert') && hash) {
-        await handleRevertCommit(hash);
+        await gitOps.revertCommit(hash);
       }
     },
     onSectionAction: async (action) => {
       switch (action) {
-        case 'stage-all': await handleStageAll(); break;
-        case 'unstage-all': await handleUnstageAll(); break;
-        case 'discard-all': await handleDiscardAllUnstaged(); break;
-        case 'stash-all': await handleStashAll(); break;
-        case 'undo-last-commit': await handleUndoLastCommit(); break;
+        case 'stage-all': await gitOps.stageAll(); break;
+        case 'unstage-all': await gitOps.unstageAll(); break;
+        case 'discard-all': await gitOps.discardAllUnstaged(); break;
+        case 'stash-all': await gitOps.stashAll(); break;
+        case 'undo-last-commit': await gitOps.undoLastCommit(); break;
       }
     },
     onStashAction: async (classList, stashRef) => {
       if (!classList || !stashRef) return;
       if (classList.contains('apply')) {
-        await handleStashApply(stashRef);
+        await gitOps.stashApply(stashRef);
       } else if (classList.contains('pop')) {
-        await handleStashPop(stashRef);
+        await gitOps.stashPop(stashRef);
       } else if (classList.contains('drop')) {
-        await handleStashDrop(stashRef);
+        await gitOps.stashDrop(stashRef);
       }
     }
   });
@@ -737,344 +749,6 @@ function toggleSection(sectionId) {
   }
   const el = contentElement.querySelector(`[data-section="${sectionId}"]`);
   if (el) el.classList.toggle('collapsed');
-}
-
-/**
- * Handle staging a file
- */
-async function handleStageFile(filePath) {
-  if (operationInProgress) return;
-  operationInProgress = true;
-  const state = require('./state');
-  const projectPath = state.getProjectPath();
-
-  try {
-    const result = await ipcRenderer.invoke(IPC.STAGE_GIT_FILE, { projectPath, filePath });
-    if (result.error) {
-      showToast('Operation failed', 'error');
-      return;
-    }
-    showToast('File staged', 'success');
-    await loadChanges(true);
-  } catch {
-    showToast('Failed to stage file', 'error');
-  } finally {
-    operationInProgress = false;
-  }
-}
-
-/**
- * Handle unstaging a file
- */
-async function handleUnstageFile(filePath) {
-  if (operationInProgress) return;
-  operationInProgress = true;
-  const state = require('./state');
-  const projectPath = state.getProjectPath();
-
-  try {
-    const result = await ipcRenderer.invoke(IPC.UNSTAGE_GIT_FILE, { projectPath, filePath });
-    if (result.error) {
-      showToast('Operation failed', 'error');
-      return;
-    }
-    showToast('File unstaged', 'success');
-    await loadChanges(true);
-  } catch {
-    showToast('Failed to unstage file', 'error');
-  } finally {
-    operationInProgress = false;
-  }
-}
-
-/**
- * Handle discarding changes for a file
- */
-async function handleDiscardFile(filePath, diffType) {
-  if (operationInProgress) return;
-  const label = diffType === 'untracked' ? 'delete' : 'discard changes for';
-  if (!confirm(`Are you sure you want to ${label} "${filePath}"?\n\nThis cannot be undone.`)) return;
-
-  operationInProgress = true;
-  const state = require('./state');
-  const projectPath = state.getProjectPath();
-
-  try {
-    const result = await ipcRenderer.invoke(IPC.DISCARD_GIT_FILE, { projectPath, filePath, diffType });
-    if (result.error) {
-      showToast('Operation failed', 'error');
-      return;
-    }
-    showToast('Changes discarded', 'success');
-    await loadChanges(true);
-  } catch {
-    showToast('Failed to discard changes', 'error');
-  } finally {
-    operationInProgress = false;
-  }
-}
-
-/**
- * Handle stashing a single file
- */
-async function handleStashFile(filePath) {
-  if (operationInProgress) return;
-  const message = prompt('Stash message (optional):');
-  if (message === null) return; // cancelled
-
-  operationInProgress = true;
-  const state = require('./state');
-  const projectPath = state.getProjectPath();
-
-  try {
-    const result = await ipcRenderer.invoke(IPC.STASH_CHANGES, { projectPath, filePath, message: message || undefined });
-    if (result.error) {
-      showToast('Operation failed', 'error');
-      return;
-    }
-    showToast('File stashed', 'success');
-    await loadChanges(true);
-  } catch {
-    showToast('Failed to stash file', 'error');
-  } finally {
-    operationInProgress = false;
-  }
-}
-
-/**
- * Handle staging all files
- */
-async function handleStageAll() {
-  if (operationInProgress) return;
-  operationInProgress = true;
-  const state = require('./state');
-  const projectPath = state.getProjectPath();
-
-  try {
-    const result = await ipcRenderer.invoke(IPC.STAGE_ALL_GIT, projectPath);
-    if (result.error) {
-      showToast('Operation failed', 'error');
-      return;
-    }
-    showToast('All files staged', 'success');
-    await loadChanges(true);
-  } catch {
-    showToast('Failed to stage all', 'error');
-  } finally {
-    operationInProgress = false;
-  }
-}
-
-/**
- * Handle unstaging all files
- */
-async function handleUnstageAll() {
-  if (operationInProgress) return;
-  operationInProgress = true;
-  const state = require('./state');
-  const projectPath = state.getProjectPath();
-
-  try {
-    const result = await ipcRenderer.invoke(IPC.UNSTAGE_ALL_GIT, projectPath);
-    if (result.error) {
-      showToast('Operation failed', 'error');
-      return;
-    }
-    showToast('All files unstaged', 'success');
-    await loadChanges(true);
-  } catch {
-    showToast('Failed to unstage all', 'error');
-  } finally {
-    operationInProgress = false;
-  }
-}
-
-/**
- * Handle discarding all unstaged changes
- */
-async function handleDiscardAllUnstaged() {
-  if (operationInProgress) return;
-  if (!confirm('Discard ALL unstaged changes?\n\nThis cannot be undone.')) return;
-
-  operationInProgress = true;
-  const state = require('./state');
-  const projectPath = state.getProjectPath();
-
-  try {
-    const result = await ipcRenderer.invoke(IPC.DISCARD_ALL_UNSTAGED, projectPath);
-    if (result.error) {
-      showToast('Operation failed', 'error');
-      return;
-    }
-    showToast('All unstaged changes discarded', 'success');
-    await loadChanges(true);
-  } catch {
-    showToast('Failed to discard changes', 'error');
-  } finally {
-    operationInProgress = false;
-  }
-}
-
-/**
- * Handle stashing all changes
- */
-async function handleStashAll() {
-  if (operationInProgress) return;
-  const message = prompt('Stash message (optional):');
-  if (message === null) return; // cancelled
-
-  operationInProgress = true;
-  const state = require('./state');
-  const projectPath = state.getProjectPath();
-
-  try {
-    const result = await ipcRenderer.invoke(IPC.STASH_CHANGES, { projectPath, message: message || undefined });
-    if (result.error) {
-      showToast('Operation failed', 'error');
-      return;
-    }
-    showToast('Changes stashed', 'success');
-    await loadChanges(true);
-  } catch {
-    showToast('Failed to stash changes', 'error');
-  } finally {
-    operationInProgress = false;
-  }
-}
-
-/**
- * Handle undoing the last commit
- */
-async function handleUndoLastCommit() {
-  if (operationInProgress) return;
-  if (!confirm('Undo last commit?\n\nChanges will be kept staged.')) return;
-
-  operationInProgress = true;
-  const state = require('./state');
-  const projectPath = state.getProjectPath();
-
-  try {
-    const result = await ipcRenderer.invoke(IPC.UNDO_LAST_COMMIT, projectPath);
-    if (result.error) {
-      showToast(result.error || 'Operation failed', 'error');
-      return;
-    }
-    showToast('Commit undone, changes kept staged', 'success');
-    await loadChanges(true);
-  } catch {
-    showToast('Failed to undo commit', 'error');
-  } finally {
-    operationInProgress = false;
-  }
-}
-
-/**
- * Handle reverting a specific commit
- */
-async function handleRevertCommit(hash) {
-  if (operationInProgress) return;
-  const shortHash = hash.substring(0, 7);
-  if (!confirm(`Revert commit ${shortHash}?\n\nThis will create a new commit that undoes the changes.`)) return;
-
-  operationInProgress = true;
-  const state = require('./state');
-  const projectPath = state.getProjectPath();
-
-  try {
-    const result = await ipcRenderer.invoke(IPC.REVERT_COMMIT, { projectPath, commitHash: hash });
-    if (result.error) {
-      showToast(result.error || 'Operation failed', 'error');
-      return;
-    }
-    showToast(`Commit ${shortHash} reverted`, 'success');
-    await loadChanges(true);
-  } catch {
-    showToast('Failed to revert commit', 'error');
-  } finally {
-    operationInProgress = false;
-  }
-}
-
-/**
- * Handle applying a stash
- */
-async function handleStashApply(stashRef) {
-  if (operationInProgress) return;
-  operationInProgress = true;
-  const state = require('./state');
-  const projectPath = state.getProjectPath();
-
-  try {
-    const result = await ipcRenderer.invoke(IPC.STASH_APPLY, { projectPath, stashRef });
-    if (result.error) {
-      showToast('Operation failed', 'error');
-      return;
-    }
-    if (result.conflicts) {
-      showToast('Applied with conflicts - resolve manually', 'error');
-    } else {
-      showToast('Stash applied', 'success');
-    }
-    await loadChanges(true);
-  } catch {
-    showToast('Failed to apply stash', 'error');
-  } finally {
-    operationInProgress = false;
-  }
-}
-
-/**
- * Handle popping a stash
- */
-async function handleStashPop(stashRef) {
-  if (operationInProgress) return;
-  operationInProgress = true;
-  const state = require('./state');
-  const projectPath = state.getProjectPath();
-
-  try {
-    const result = await ipcRenderer.invoke(IPC.STASH_POP, { projectPath, stashRef });
-    if (result.error) {
-      showToast('Operation failed', 'error');
-      return;
-    }
-    if (result.conflicts) {
-      showToast('Popped with conflicts - stash kept', 'error');
-    } else {
-      showToast('Stash popped', 'success');
-    }
-    await loadChanges(true);
-  } catch {
-    showToast('Failed to pop stash', 'error');
-  } finally {
-    operationInProgress = false;
-  }
-}
-
-/**
- * Handle dropping a stash
- */
-async function handleStashDrop(stashRef) {
-  if (operationInProgress) return;
-  if (!confirm(`Drop ${stashRef}?\n\nThis cannot be undone.`)) return;
-
-  operationInProgress = true;
-  const state = require('./state');
-  const projectPath = state.getProjectPath();
-
-  try {
-    const result = await ipcRenderer.invoke(IPC.STASH_DROP, { projectPath, stashRef });
-    if (result.error) {
-      showToast('Operation failed', 'error');
-      return;
-    }
-    showToast('Stash dropped', 'success');
-    await loadChanges(true);
-  } catch {
-    showToast('Failed to drop stash', 'error');
-  } finally {
-    operationInProgress = false;
-  }
 }
 
 /**

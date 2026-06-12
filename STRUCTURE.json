@@ -1967,44 +1967,45 @@
         "githubPanel/state",
         "githubPanel/renderers",
         "githubPanel/delegatedEvents",
+        "githubPanel/operations",
         "state",
         "escapeHtml"
       ],
       "functions": {
         "init": {
-          "line": 69,
+          "line": 71,
           "purpose": "Initialize GitHub panel"
         },
         "setupGitWatcher": {
-          "line": 133,
+          "line": 145,
           "purpose": "Setup .git directory watcher for auto-refresh when panel is visible"
         },
         "setupEventListeners": {
-          "line": 163,
+          "line": 175,
           "purpose": "Setup event listeners"
         },
         "setupContentDelegation": {
-          "line": 192
+          "line": 204
         },
         "setupIPCListeners": {
-          "line": 241,
+          "line": 253,
           "purpose": "Setup IPC listeners"
         },
         "refreshIssues": {
-          "line": 250,
+          "line": 262,
           "purpose": "Refresh current tab"
         },
         "show": {
-          "line": 267
+          "line": 279
         },
         "hide": {
-          "line": 271
+          "line": 283
         },
         "toggle": {
-          "line": 275
+          "line": 287
         },
         "setTab": {
-          "line": 282,
+          "line": 294,
           "params": [
             "tab",
             "options = {}"
@@ -2012,21 +2013,21 @@
           "purpose": "Set active tab"
         },
         "renderLoading": {
-          "line": 321,
+          "line": 333,
           "params": [
             "message = 'Loading...'"
           ],
           "purpose": "Render loading state"
         },
         "renderError": {
-          "line": 338,
+          "line": 350,
           "params": [
             "message"
           ],
           "purpose": "Render error state"
         },
         "showToast": {
-          "line": 362,
+          "line": 374,
           "params": [
             "message",
             "type = 'info'"
@@ -2034,35 +2035,35 @@
           "purpose": "Show toast notification (delegates to shared toast utility)"
         },
         "publishGitChangesCount": {
-          "line": 366,
+          "line": 378,
           "params": [
             "count"
           ]
         },
         "loadAutoStagePreference": {
-          "line": 373
+          "line": 385
         },
         "persistAutoStagePreference": {
-          "line": 384
+          "line": 396
         },
         "syncAutoStageToggle": {
-          "line": 392
+          "line": 404
         },
         "computeChangesHash": {
-          "line": 406,
+          "line": 418,
           "params": [
             "data"
           ],
           "purpose": "==================== CHANGES FUNCTIONALITY ===================="
         },
         "clearActivitySlot": {
-          "line": 426
+          "line": 438
         },
         "getActivityRenderOptions": {
-          "line": 432
+          "line": 444
         },
         "renderActivitySlot": {
-          "line": 439,
+          "line": 451,
           "params": [
             "activity",
             "totalHint = null",
@@ -2070,187 +2071,110 @@
           ]
         },
         "setActivityPending": {
-          "line": 463,
+          "line": 475,
           "params": [
             "pending"
           ]
         },
         "loadChanges": {
-          "line": 470,
+          "line": 482,
           "params": [
             "force"
           ]
         },
         "_loadChangesImpl": {
-          "line": 477
+          "line": 489
         },
         "renderChanges": {
-          "line": 522,
+          "line": 534,
           "params": [
             "gen"
           ],
           "purpose": "Render source control sections with clear separation (merge, working tree, staged, sync)."
         },
         "toggleSection": {
-          "line": 732,
+          "line": 744,
           "params": [
             "sectionId"
           ],
           "purpose": "Toggle a collapsible section"
         },
-        "handleStageFile": {
-          "line": 745,
-          "params": [
-            "filePath"
-          ],
-          "purpose": "Handle staging a file"
-        },
-        "handleUnstageFile": {
-          "line": 769,
-          "params": [
-            "filePath"
-          ],
-          "purpose": "Handle unstaging a file"
-        },
-        "handleDiscardFile": {
-          "line": 793,
-          "params": [
-            "filePath",
-            "diffType"
-          ],
-          "purpose": "Handle discarding changes for a file"
-        },
-        "handleStashFile": {
-          "line": 820,
-          "params": [
-            "filePath"
-          ],
-          "purpose": "Handle stashing a single file"
-        },
-        "handleStageAll": {
-          "line": 847,
-          "purpose": "Handle staging all files"
-        },
-        "handleUnstageAll": {
-          "line": 871,
-          "purpose": "Handle unstaging all files"
-        },
-        "handleDiscardAllUnstaged": {
-          "line": 895,
-          "purpose": "Handle discarding all unstaged changes"
-        },
-        "handleStashAll": {
-          "line": 921,
-          "purpose": "Handle stashing all changes"
-        },
-        "handleUndoLastCommit": {
-          "line": 948,
-          "purpose": "Handle undoing the last commit"
-        },
-        "handleRevertCommit": {
-          "line": 974,
-          "params": [
-            "hash"
-          ],
-          "purpose": "Handle reverting a specific commit"
-        },
-        "handleStashApply": {
-          "line": 1001,
-          "params": [
-            "stashRef"
-          ],
-          "purpose": "Handle applying a stash"
-        },
-        "handleStashPop": {
-          "line": 1029,
-          "params": [
-            "stashRef"
-          ],
-          "purpose": "Handle popping a stash"
-        },
-        "handleStashDrop": {
-          "line": 1057,
-          "params": [
-            "stashRef"
-          ],
-          "purpose": "Handle dropping a stash"
-        },
         "loadStashSection": {
-          "line": 1083,
+          "line": 757,
           "params": [
             "gen"
           ],
           "purpose": "Load and render stash section"
         },
         "renderChangesError": {
-          "line": 1133,
+          "line": 807,
           "params": [
             "message"
           ],
           "purpose": "Render changes error"
         },
         "setupCommitArea": {
-          "line": 1155,
+          "line": 829,
           "purpose": "Setup commit area event listeners"
         },
         "syncRemoteButtonsState": {
-          "line": 1317
+          "line": 991
         },
         "setDescriptionVisibility": {
-          "line": 1338,
+          "line": 1012,
           "params": [
             "visible"
           ]
         },
         "updateCommitBtnState": {
-          "line": 1362,
+          "line": 1036,
           "purpose": "Update commit button enabled/disabled state"
         },
         "updateCommitArea": {
-          "line": 1390,
+          "line": 1064,
           "purpose": "Update commit area visibility and button labels"
         },
         "buildCommitMessage": {
-          "line": 1424,
+          "line": 1098,
           "purpose": "Build full commit message from summary + description"
         },
         "clearCommitInputs": {
-          "line": 1434,
+          "line": 1108,
           "purpose": "Clear commit inputs"
         },
         "handleCommit": {
-          "line": 1450,
+          "line": 1124,
           "purpose": "Handle creating a commit (native execFile)"
         },
         "handleCommitAndPush": {
-          "line": 1517,
+          "line": 1191,
           "purpose": "Handle commit and push"
         },
         "handleAmendCommit": {
-          "line": 1525,
+          "line": 1199,
           "purpose": "Handle amending the last commit"
         },
         "handleFetch": {
-          "line": 1557,
+          "line": 1231,
           "params": [
             "options = {}"
           ],
           "purpose": "Fetch remote refs and refresh sync indicators."
         },
         "handlePull": {
-          "line": 1590,
+          "line": 1264,
           "purpose": "Handle pull (IPC background)"
         },
         "handlePush": {
-          "line": 1631,
+          "line": 1305,
           "purpose": "Handle push (IPC background)"
         },
         "updateSyncStatus": {
-          "line": 1670,
+          "line": 1344,
           "purpose": "Update sync status (ahead/behind counts)"
         },
         "renderBranchBar": {
-          "line": 1692,
+          "line": 1366,
           "purpose": "Branch/upstream info now lives in the activity header."
         }
       },
@@ -4779,6 +4703,29 @@
           "INSTALL_UPDATE",
           "UPDATE_CANCEL"
         ]
+      }
+    },
+    "renderer/githubPanel/operations": {
+      "file": "src/renderer/githubPanel/operations.js",
+      "description": "G",
+      "exports": [
+        "createGitOperations"
+      ],
+      "depends": [],
+      "functions": {
+        "createGitOperations": {
+          "line": 8,
+          "params": [
+            "{ ipcRenderer",
+            "IPC",
+            "showToast",
+            "loadChanges",
+            "getProjectPath",
+            "isBusy",
+            "setBusy }"
+          ],
+          "purpose": "outcome, then force-reload changes."
+        }
       }
     }
   },
