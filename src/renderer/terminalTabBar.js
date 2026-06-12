@@ -858,10 +858,10 @@ class TerminalTabBar {
             break;
           }
           case 'downloaded':
-            renderState('ready', 'Update ready — Click to install', '✓');
+            renderState('ready', 'Update ready — Click to install', '');
             break;
           case 'error':
-            renderState('error', 'Update failed — Click for details', '!');
+            renderState('error', 'Update failed — Click for details', '');
             break;
           case 'checking':
           case 'idle':
@@ -889,11 +889,11 @@ class TerminalTabBar {
       if (data && data.version) {
         lastKnownVersion = data.version;
       }
-      renderState('ready', 'Update ready — Click to install', '✓');
+      renderState('ready', 'Update ready — Click to install', '');
     });
 
     this._addIpcListener(IPC.UPDATE_ERROR, () => {
-      renderState('error', 'Update failed — Click for details', '!');
+      renderState('error', 'Update failed — Click for details', '');
     });
 
     this._addIpcListener(IPC.UPDATE_NOT_AVAILABLE, () => {
