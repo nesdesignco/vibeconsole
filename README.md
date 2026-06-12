@@ -125,10 +125,20 @@ npm test             # Run tests
 ### Build for Distribution
 
 ```bash
-npm run dist:mac     # Create signed macOS DMG
+npm run dist:mac     # Create macOS DMG
 ```
 
-> **Requirements:** Node.js 18+ • macOS • Git
+> **Requirements:** Node.js 22.12+ • macOS • Git
+
+### Installing a Downloaded Release
+
+Release builds are not code-signed, so macOS Gatekeeper blocks the first launch with an "app is damaged or can't be opened" warning. After moving VibeConsole to Applications, clear the quarantine flag:
+
+```bash
+xattr -d com.apple.quarantine /Applications/VibeConsole.app
+```
+
+Alternatively, right-click the app and choose **Open** on first launch.
 
 ---
 

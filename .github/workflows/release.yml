@@ -34,6 +34,14 @@ jobs:
       - name: Build unsigned DMG
         run: npm run dist:mac:unsigned -- --publish never
 
+      - name: Verify update metadata
+        # latest-mac.yml + zip are required by electron-updater; fail the
+        # release if electron-builder didn't produce them
+        run: |
+          test -f release/latest-mac.yml
+          ls release/*.zip
+          ls release/*.dmg
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:

@@ -26,9 +26,15 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Typecheck
+        run: npm run typecheck
+
       - name: Test
         run: npm test
 
       - name: Build Renderer
         run: npm run build:fast
+
+      - name: Smoke Test
+        run: xvfb-run -a npm run test:smoke
 
