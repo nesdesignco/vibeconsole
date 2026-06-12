@@ -1,7 +1,7 @@
 {
   "name": "vibeconsole",
   "productName": "VibeConsole",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "Vibe Console - Project Management IDE for Claude Code",
   "author": "Nes <contact@nesdesign.co>",
   "main": "src/main/index.js",
