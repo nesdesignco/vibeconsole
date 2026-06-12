@@ -173,6 +173,20 @@ class TerminalManager {
     instance.scrollBtn.classList.toggle('visible', !isAtBottom);
   }
 
+  _writeKeepingBottom(instance, data) {
+    const wasAtBottom = this._isAtOrNearBottom(instance.terminal, 2);
+    instance.terminal.write(data, () => {
+      if (wasAtBottom) {
+        instance.terminal.scrollToBottom();
+      }
+      if (typeof instance.scheduleSyncScrollBtn === 'function') {
+        instance.scheduleSyncScrollBtn();
+      } else {
+        this._syncScrollDownButton(instance);
+      }
+    });
+  }
+
   /**
    * Set current project context
    * @param {string|null} projectPath - Project path or null for global
@@ -650,9 +664,7 @@ class TerminalManager {
       requestAnimationFrame(() => {
         setTimeout(() => {
           if (!this._isInDOM(instance)) return;
-          instance.fitAddon.fit();
-          this._sendResize(terminalId);
-          this._syncScrollDownButton(instance);
+          this._fitInstance(terminalId, instance);
           // Focus if this is the active terminal
           if (this.activeTerminalId === terminalId) {
             instance.terminal.focus();
@@ -834,6 +846,21 @@ class TerminalManager {
     return { ...instance.state };
   }
 
+  _fitInstance(terminalId, instance) {
+    const wasAtBottom = this._isAtOrNearBottom(instance.terminal, 2);
+    const colsBefore = instance.terminal.cols;
+    const rowsBefore = instance.terminal.rows;
+    instance.fitAddon.fit();
+    const sizeChanged = colsBefore !== instance.terminal.cols || rowsBefore !== instance.terminal.rows;
+    if (sizeChanged) {
+      this._sendResize(terminalId);
+    }
+    if (wasAtBottom) {
+      instance.terminal.scrollToBottom();
+    }
+    this._syncScrollDownButton(instance);
+  }
+
   /**
    * Fit all mounted terminals and push resize events only when geometry changed.
    */
@@ -841,18 +868,7 @@ class TerminalManager {
     for (const [id, instance] of this.terminals) {
       if (instance.opened && this._isInDOM(instance)) {
         try {
-          const colsBefore = instance.terminal.cols;
-          const rowsBefore = instance.terminal.rows;
-          instance.fitAddon.fit();
-          const colsAfter = instance.terminal.cols;
-          const rowsAfter = instance.terminal.rows;
-          const sizeChanged = colsBefore !== colsAfter || rowsBefore !== rowsAfter;
-          if (!sizeChanged) {
-            this._syncScrollDownButton(instance);
-            continue;
-          }
-          this._sendResize(id);
-          this._syncScrollDownButton(instance);
+          this._fitInstance(id, instance);
         } catch (err) {
           console.error(`Failed to fit terminal ${id}:`, err);
         }
@@ -866,18 +882,7 @@ class TerminalManager {
   fitTerminal(terminalId) {
     const instance = this.terminals.get(terminalId);
     if (instance && instance.opened && this._isInDOM(instance)) {
-      const colsBefore = instance.terminal.cols;
-      const rowsBefore = instance.terminal.rows;
-      instance.fitAddon.fit();
-      const colsAfter = instance.terminal.cols;
-      const rowsAfter = instance.terminal.rows;
-      const sizeChanged = colsBefore !== colsAfter || rowsBefore !== rowsAfter;
-      if (!sizeChanged) {
-        this._syncScrollDownButton(instance);
-        return;
-      }
-      this._sendResize(terminalId);
-      this._syncScrollDownButton(instance);
+      this._fitInstance(terminalId, instance);
     }
   }
 
@@ -888,13 +893,7 @@ class TerminalManager {
     if (this.activeTerminalId) {
       const instance = this.terminals.get(this.activeTerminalId);
       if (instance) {
-        instance.terminal.write(data, () => {
-          if (typeof instance.scheduleSyncScrollBtn === 'function') {
-            instance.scheduleSyncScrollBtn();
-          } else {
-            this._syncScrollDownButton(instance);
-          }
-        });
+        this._writeKeepingBottom(instance, data);
       }
     }
   }
@@ -1094,13 +1093,7 @@ class TerminalManager {
     ipcRenderer.on(IPC.TERMINAL_OUTPUT_ID, (event, { terminalId, data }) => {
       const instance = this.terminals.get(terminalId);
       if (instance) {
-        instance.terminal.write(data, () => {
-          if (typeof instance.scheduleSyncScrollBtn === 'function') {
-            instance.scheduleSyncScrollBtn();
-          } else {
-            this._syncScrollDownButton(instance);
-          }
-        });
+        this._writeKeepingBottom(instance, data);
       }
     });
 
