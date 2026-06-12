@@ -54,7 +54,7 @@
     "esbuild": "^0.28.1",
     "eslint": "^10.4.1",
     "globals": "^17.6.0",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.3"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.11.0",
