@@ -3,7 +3,7 @@
  * Exposes a minimal, explicit API surface with contextIsolation enabled.
  */
 
-const { contextBridge, ipcRenderer, clipboard } = require('electron');
+const { contextBridge, ipcRenderer, clipboard, webUtils } = require('electron');
 const { IPC } = require('../shared/ipcChannels');
 
 // Allowlist is derived from the single source of truth (ipcChannels.js).
@@ -37,5 +37,8 @@ contextBridge.exposeInMainWorld('vibe', {
   clipboard: {
     readText: () => clipboard.readText(),
     writeText: (text) => clipboard.writeText(text)
+  },
+  file: {
+    getPathForFile: (file) => webUtils.getPathForFile(file)
   }
 });

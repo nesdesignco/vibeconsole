@@ -26,6 +26,9 @@ declare global {
         relative: (fromPath: string, toPath: string) => string;
         sep: string;
       };
+      file?: {
+        getPathForFile: (file: File) => string;
+      };
     };
   }
 

@@ -194,8 +194,21 @@ const clipboard = preload?.clipboard ? {
 
 const pathApi = preload?.path || pathFallback;
 
+function getPathForFile(file) {
+  if (preload?.file?.getPathForFile) {
+    try {
+      return preload.file.getPathForFile(file);
+    } catch {
+      return '';
+    }
+  }
+  // Fallback for environments where File.path still exists (legacy Electron).
+  return file?.path || '';
+}
+
 module.exports = {
   ipcRenderer,
   clipboard,
-  pathApi
+  pathApi,
+  getPathForFile
 };

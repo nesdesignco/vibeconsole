@@ -3,10 +3,10 @@
  * Manages multiple terminal instances in the renderer
  */
 
-const { ipcRenderer, clipboard } = require('./electronBridge');
-const { Terminal } = require('xterm');
-const { FitAddon } = require('xterm-addon-fit');
-const { WebLinksAddon } = require('xterm-addon-web-links');
+const { ipcRenderer, clipboard, getPathForFile } = require('./electronBridge');
+const { Terminal } = require('@xterm/xterm');
+const { FitAddon } = require('@xterm/addon-fit');
+const { WebLinksAddon } = require('@xterm/addon-web-links');
 const { IPC } = require('../shared/ipcChannels');
 const { writeClipboardText } = require('./clipboardWrite');
 const { shellQuote } = require('./shellEscape');
@@ -462,9 +462,14 @@ class TerminalManager {
       // 2. OS file drag
       const files = e.dataTransfer.files;
       if (files.length > 0) {
-        const paths = Array.from(files).map(f => shellQuote(f.path));
-        this._pasteInChunks(terminal, paths.join(' ') + ' ');
-        return;
+        const paths = Array.from(files)
+          .map(f => getPathForFile(f))
+          .filter(Boolean)
+          .map(p => shellQuote(p));
+        if (paths.length > 0) {
+          this._pasteInChunks(terminal, paths.join(' ') + ' ');
+          return;
+        }
       }
 
       // 3. Fallback: plain text

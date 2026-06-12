@@ -1,7 +1,7 @@
 {
   "version": "1.1",
   "description": "Claude Code IDE - Module structure and IPC communication map",
-  "lastUpdated": "2026-06-10",
+  "lastUpdated": "2026-06-12",
   "architecture": {
     "type": "electron",
     "mainProcess": "src/main/index.js",
@@ -43,29 +43,29 @@
           "purpose": "Create main application window"
         },
         "isTrustedAppUrl": {
-          "line": 103,
+          "line": 115,
           "params": [
             "rawUrl"
           ],
           "purpose": "Allow only local app URLs to load inside the app window."
         },
         "openExternalSafely": {
-          "line": 126,
+          "line": 138,
           "params": [
             "rawUrl"
           ],
           "purpose": "Avoid forwarding file/custom scheme URLs to the OS."
         },
         "setupAllIPC": {
-          "line": 140,
+          "line": 152,
           "purpose": "Setup all IPC handlers"
         },
         "init": {
-          "line": 194,
+          "line": 208,
           "purpose": "Initialize application"
         },
         "initModulesWithWindow": {
-          "line": 205,
+          "line": 219,
           "params": [
             "window"
           ],
@@ -1341,9 +1341,9 @@
       ],
       "depends": [
         "electronBridge",
-        "xterm",
-        "xterm-addon-fit",
-        "xterm-addon-web-links",
+        "@xterm/xterm",
+        "@xterm/addon-fit",
+        "@xterm/addon-web-links",
         "shared/ipcChannels",
         "clipboardWrite",
         "shellEscape",
@@ -1491,15 +1491,15 @@
           "purpose": "Initialize PTY manager with window reference"
         },
         "getDefaultShell": {
-          "line": 37,
+          "line": 40,
           "purpose": "Get default shell based on platform"
         },
         "getAvailableShells": {
-          "line": 54,
+          "line": 57,
           "purpose": "Get available shells on the system"
         },
         "createTerminal": {
-          "line": 143,
+          "line": 146,
           "params": [
             "workingDir = null",
             "projectPath = null",
@@ -1507,21 +1507,21 @@
           ]
         },
         "getTerminalsByProject": {
-          "line": 218,
+          "line": 221,
           "params": [
             "projectPath"
           ],
           "purpose": "Get terminals for a specific project"
         },
         "getTerminalInfo": {
-          "line": 233,
+          "line": 236,
           "params": [
             "terminalId"
           ],
           "purpose": "Get terminal info"
         },
         "writeToTerminal": {
-          "line": 244,
+          "line": 247,
           "params": [
             "terminalId",
             "data"
@@ -1529,7 +1529,7 @@
           "purpose": "Write data to specific terminal"
         },
         "resizeTerminal": {
-          "line": 254,
+          "line": 257,
           "params": [
             "terminalId",
             "cols",
@@ -1538,33 +1538,33 @@
           "purpose": "Resize specific terminal"
         },
         "destroyTerminal": {
-          "line": 264,
+          "line": 267,
           "params": [
             "terminalId"
           ],
           "purpose": "Destroy specific terminal"
         },
         "destroyAll": {
-          "line": 276,
+          "line": 279,
           "purpose": "Destroy all terminals"
         },
         "getTerminalCount": {
-          "line": 287,
+          "line": 290,
           "purpose": "Get terminal count"
         },
         "getTerminalIds": {
-          "line": 294,
+          "line": 297,
           "purpose": "Get all terminal IDs"
         },
         "hasTerminal": {
-          "line": 301,
+          "line": 304,
           "params": [
             "terminalId"
           ],
           "purpose": "Check if terminal exists"
         },
         "setupIPC": {
-          "line": 308,
+          "line": 311,
           "params": [
             "ipcMain"
           ],
@@ -3575,7 +3575,8 @@
       "exports": [
         "ipcRenderer",
         "clipboard",
-        "pathApi"
+        "pathApi",
+        "getPathForFile"
       ],
       "depends": [],
       "functions": {
@@ -3644,6 +3645,12 @@
         },
         "getPathFallback": {
           "line": 154
+        },
+        "getPathForFile": {
+          "line": 197,
+          "params": [
+            "file"
+          ]
         }
       }
     },
