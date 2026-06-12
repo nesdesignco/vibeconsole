@@ -51,17 +51,17 @@
     "@eslint/js": "^10.0.1",
     "electron": "^42.4.0",
     "electron-builder": "^26.15.2",
-    "esbuild": "^0.27.2",
-    "eslint": "^10.0.0",
-    "globals": "^17.3.0",
+    "esbuild": "^0.28.1",
+    "eslint": "^10.4.1",
+    "globals": "^17.6.0",
     "typescript": "^5.9.3"
   },
   "dependencies": {
-    "@xterm/addon-fit": "^0.10.0",
-    "@xterm/addon-web-links": "^0.11.0",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-web-links": "^0.12.0",
     "@xterm/xterm": "^5.5.0",
-    "builder-util-runtime": "^9.5.1",
-    "electron-updater": "^6.3.0",
+    "builder-util-runtime": "^9.7.0",
+    "electron-updater": "^6.8.9",
     "node-pty": "^1.1.0"
   },
   "build": {
