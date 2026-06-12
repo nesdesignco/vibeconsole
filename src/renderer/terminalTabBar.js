@@ -789,6 +789,10 @@ class TerminalTabBar {
         const l2 = document.createElementNS(SVG_NS, 'line');
         l2.setAttribute('x1', '12'); l2.setAttribute('y1', '16'); l2.setAttribute('x2', '12.01'); l2.setAttribute('y2', '16');
         svg.appendChild(c); svg.appendChild(l1); svg.appendChild(l2);
+      } else if (kind === 'downloading') {
+        const p = document.createElementNS(SVG_NS, 'path');
+        p.setAttribute('d', 'M21 12a9 9 0 1 1-6.219-8.56');
+        svg.appendChild(p);
       } else {
         const p = document.createElementNS(SVG_NS, 'path');
         p.setAttribute('d', 'M12 5v14M19 12l-7 7-7-7');
