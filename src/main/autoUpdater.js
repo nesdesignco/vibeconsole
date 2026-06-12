@@ -7,6 +7,13 @@ const { app } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const { CancellationToken } = require('builder-util-runtime');
 const { IPC } = require('../shared/ipcChannels');
+const { spawn, execFile } = require('child_process');
+const { promisify } = require('util');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+const execFileAsync = promisify(execFile);
 
 let mainWindow = null;
 let checkInterval = null;
@@ -14,6 +21,8 @@ let initialCheckTimeout = null;
 let listenersRegistered = false;
 let cancellationToken = null;
 let downloadInFlight = false;
+let downloadedFile = null;
+let installRequested = false;
 
 // Persistent state for renderer queries (when modal opens after the event fired)
 let state = {
@@ -102,6 +111,7 @@ function ensureEventListeners() {
   autoUpdater.on('update-downloaded', (info) => {
     state.status = 'downloaded';
     state.updateInfo = normalizeUpdateInfo(info) || state.updateInfo;
+    downloadedFile = (info && info.downloadedFile) || null;
     resetDownload();
     safeSend(IPC.UPDATE_DOWNLOADED, state.updateInfo);
   });
@@ -116,10 +126,15 @@ function ensureEventListeners() {
       return;
     }
     // A failed background check must not invalidate an update that is already
-    // downloaded and ready to install.
+    // downloaded and ready to install. But if the user just asked to install,
+    // surface the failure instead of silently doing nothing.
     if (state.status === 'downloaded') {
       resetDownload();
       console.error('Auto-update error (update already downloaded, keeping state):', message);
+      if (installRequested) {
+        installRequested = false;
+        safeSend(IPC.UPDATE_ERROR, { message: `Install failed: ${message}` });
+      }
       return;
     }
     state.status = 'error';
@@ -239,7 +254,7 @@ function setupIPC(_ipcMain) {
     }
   });
 
-  _ipcMain.on(IPC.INSTALL_UPDATE, () => {
+  _ipcMain.on(IPC.INSTALL_UPDATE, async () => {
     if (!isAutoUpdateSupported()) {
       safeSend(IPC.UPDATE_ERROR, { message: 'Updates are only available in packaged builds' });
       return;
@@ -248,8 +263,76 @@ function setupIPC(_ipcMain) {
       safeSend(IPC.UPDATE_ERROR, { message: 'No downloaded update is ready to install' });
       return;
     }
+
+    // Squirrel.Mac refuses unsigned/ad-hoc-signed apps, which makes
+    // quitAndInstall a silent no-op on our unsigned builds. Replace the app
+    // bundle from the downloaded zip ourselves in that case.
+    if (process.platform === 'darwin' && !(await isProperlySignedApp())) {
+      installMacUpdateManually();
+      return;
+    }
+
+    installRequested = true;
     autoUpdater.quitAndInstall(false, true);
   });
+}
+
+function getAppBundlePath() {
+  // .../VibeConsole.app/Contents/MacOS/VibeConsole -> .../VibeConsole.app
+  const bundlePath = path.resolve(app.getPath('exe'), '..', '..', '..');
+  return bundlePath.endsWith('.app') ? bundlePath : null;
+}
+
+async function isProperlySignedApp() {
+  const bundlePath = getAppBundlePath();
+  if (!bundlePath) return true; // unexpected layout — let Squirrel try
+  try {
+    // codesign -dv reports "flags=...(adhoc)" for ad-hoc signatures and
+    // fails entirely for unsigned bundles; both can't go through Squirrel.
+    const { stderr } = await execFileAsync('/usr/bin/codesign', ['-dv', bundlePath]);
+    return !/adhoc/i.test(stderr || '');
+  } catch {
+    return false;
+  }
+}
+
+const MANUAL_INSTALL_SCRIPT = `#!/bin/sh
+PID="$1"; ZIP="$2"; APP="$3"
+while kill -0 "$PID" 2>/dev/null; do sleep 0.2; done
+EXTRACT=$(mktemp -d) || exit 1
+ditto -xk "$ZIP" "$EXTRACT" || exit 1
+NEW_APP=$(find "$EXTRACT" -maxdepth 1 -name '*.app' -print | head -n 1)
+[ -n "$NEW_APP" ] || exit 1
+rm -rf "$APP" || exit 1
+mv "$NEW_APP" "$APP" || exit 1
+xattr -dr com.apple.quarantine "$APP" 2>/dev/null
+rm -rf "$EXTRACT"
+rm -f "$0"
+open "$APP"
+`;
+
+function installMacUpdateManually() {
+  try {
+    const bundlePath = getAppBundlePath();
+    if (!bundlePath || !fs.existsSync(bundlePath)) {
+      throw new Error('Could not locate the application bundle');
+    }
+    if (!downloadedFile || !fs.existsSync(downloadedFile)) {
+      throw new Error('Downloaded update file is missing — please download again');
+    }
+
+    const scriptPath = path.join(os.tmpdir(), `vibeconsole-update-${process.pid}.sh`);
+    fs.writeFileSync(scriptPath, MANUAL_INSTALL_SCRIPT, { mode: 0o700 });
+
+    const child = spawn('/bin/sh', [scriptPath, String(process.pid), downloadedFile, bundlePath], {
+      detached: true,
+      stdio: 'ignore'
+    });
+    child.unref();
+    app.quit();
+  } catch (err) {
+    safeSend(IPC.UPDATE_ERROR, { message: `Install failed: ${err.message}` });
+  }
 }
 
 /**

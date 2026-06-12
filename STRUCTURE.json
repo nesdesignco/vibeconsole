@@ -3218,56 +3218,70 @@
         "electron",
         "electron-updater",
         "builder-util-runtime",
-        "shared/ipcChannels"
+        "shared/ipcChannels",
+        "child_process",
+        "util",
+        "fs",
+        "os",
+        "path"
       ],
       "functions": {
         "isAutoUpdateSupported": {
-          "line": 27
+          "line": 36
         },
         "safeSend": {
-          "line": 31,
+          "line": 40,
           "params": [
             "channel",
             "data"
           ]
         },
         "normalizeUpdateInfo": {
-          "line": 37,
+          "line": 46,
           "params": [
             "info"
           ]
         },
         "resetDownload": {
-          "line": 47
+          "line": 56
         },
         "handleDownloadCancelled": {
-          "line": 52
+          "line": 61
         },
         "ensureEventListeners": {
-          "line": 59
+          "line": 68
         },
         "init": {
-          "line": 132,
+          "line": 147,
           "params": [
             "window"
           ]
         },
         "triggerManualCheck": {
-          "line": 163,
+          "line": 178,
           "purpose": "can react immediately without waiting for events to bubble back."
         },
         "setupIPC": {
-          "line": 189,
+          "line": 204,
           "params": [
             "_ipcMain"
           ]
         },
+        "getAppBundlePath": {
+          "line": 280
+        },
+        "isProperlySignedApp": {
+          "line": 286
+        },
+        "installMacUpdateManually": {
+          "line": 314
+        },
         "requestOpenModal": {
-          "line": 259,
+          "line": 342,
           "purpose": "The renderer reads the current state via GET_UPDATE_STATE upon receiving this."
         },
         "cleanup": {
-          "line": 263
+          "line": 346
         }
       },
       "ipc": {
