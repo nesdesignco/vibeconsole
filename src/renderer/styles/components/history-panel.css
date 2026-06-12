@@ -1,0 +1,95 @@
+/* ==================== HISTORY PANEL ==================== */
+#history-panel {
+  --panel-width: 340px;
+  --panel-min-width: 340px;
+  width: 0;
+  min-width: 0;
+  max-width: var(--panel-width);
+  background: linear-gradient(180deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+  border-left: 1px solid transparent;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  flex: 0 0 auto;
+}
+
+#history-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(180deg, var(--accent-glow) 0%, transparent 50%, var(--accent-glow) 100%);
+  pointer-events: none;
+}
+
+#history-panel.visible {
+  width: var(--panel-width);
+  min-width: var(--panel-min-width);
+  border-left-color: var(--border-subtle);
+}
+
+#history-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-md);
+}
+
+.history-item {
+  margin-bottom: var(--space-md);
+  padding: var(--space-md);
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-subtle);
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.history-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--accent-primary);
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+  opacity: 0.5;
+  transition: opacity var(--transition-fast);
+}
+
+.history-item:hover {
+  border-color: var(--border-default);
+  background: var(--bg-elevated);
+}
+
+.history-item:hover::before {
+  opacity: 1;
+}
+
+.history-timestamp {
+  color: var(--text-tertiary);
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--space-xs);
+}
+
+.history-command {
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  word-break: break-word;
+  line-height: 1.6;
+}
+
+/* History Empty State */
+.history-empty-state {
+  color: var(--text-tertiary);
+  padding: 10px;
+  text-align: center;
+}
+

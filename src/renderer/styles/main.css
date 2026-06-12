@@ -24,5 +24,13 @@
 /* 5. Terminal Component */
 @import 'components/terminal.css';
 
-/* 6. Panels (History, Plugins, GitHub) */
+/* 6. Panels (shared slide animation + one file per panel, in cascade order) */
 @import 'components/panels.css';
+@import 'components/history-panel.css';
+@import 'components/plugins-panel.css';
+@import 'components/github-panel.css';
+@import 'components/modals.css';
+@import 'components/git-changes.css';
+@import 'components/git-diff-modal.css';
+@import 'components/git-conflict-modal.css';
+@import 'components/saved-prompts-panel.css';
