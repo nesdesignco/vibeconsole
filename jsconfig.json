@@ -4,14 +4,13 @@
     "noEmit": true,
     "strict": false,
     "target": "ES2022",
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "module": "preserve",
+    "moduleResolution": "bundler",
     "allowJs": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "baseUrl": ".",
     "paths": {
-      "*": ["src/*"]
+      "*": ["./src/*"]
     }
   },
   "include": ["src/**/*.js", "src/types/**/*.d.ts"],
