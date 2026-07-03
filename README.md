@@ -132,13 +132,9 @@ npm run dist:mac     # Create macOS DMG
 
 ### Installing a Downloaded Release
 
-Release builds are not code-signed, so macOS Gatekeeper blocks the first launch with an "app is damaged or can't be opened" warning. After moving VibeConsole to Applications, clear the quarantine flag:
+Release builds are signed and notarized for macOS Gatekeeper. If macOS reports that the app is damaged, download the latest release again from the official GitHub Releases page.
 
-```bash
-xattr -d com.apple.quarantine /Applications/VibeConsole.app
-```
-
-Alternatively, right-click the app and choose **Open** on first launch.
+Unsigned local builds are available for development with `npm run dist:mac:unsigned`.
 
 ---
 

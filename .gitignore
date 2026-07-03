@@ -14,6 +14,12 @@ coverage/
 builder-debug.yml
 electron-builder-debug.yml
 *.blockmap
+*.p12
+*.pem
+*.cer
+*.certSigningRequest
+CSC_LINK.txt
+p12_password.txt
 
 # OS files
 .DS_Store
