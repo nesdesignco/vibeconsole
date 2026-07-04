@@ -21,6 +21,7 @@ const fileTree = require('./fileTree');
 const promptLogger = require('./promptLogger');
 const workspace = require('./workspace');
 const fileEditor = require('./fileEditor');
+const droppedFiles = require('./droppedFiles');
 const pluginsManager = require('./pluginsManager');
 const claudeUsageManager = require('./claudeUsageManager');
 const codexUsageManager = require('./codexUsageManager');
@@ -157,6 +158,7 @@ function setupAllIPC() {
   promptLogger.setupIPC(ipcMain);
   workspace.setupIPC(ipcMain);
   fileEditor.setupIPC(ipcMain);
+  droppedFiles.setupIPC(ipcMain);
   pluginsManager.setupIPC(ipcMain);
   claudeUsageManager.setupIPC(ipcMain);
   codexUsageManager.setupIPC(ipcMain);

@@ -158,6 +158,106 @@ class TerminalManager {
     return true;
   }
 
+  /**
+   * Resolve a drop payload to shell-quoted paths (or fallback text) and paste.
+   * Handles: internal file-tree drags, OS files with real paths, in-memory
+   * files without paths (saved to temp), file:///data:/http(s) URI lists,
+   * and plain text.
+   */
+  async _handleTerminalDrop(terminal, { vibeconsoleFile, files, uriList, html, text }) {
+    // 1. Internal drag from file tree (custom MIME)
+    if (vibeconsoleFile) {
+      this._pasteInChunks(terminal, shellQuote(vibeconsoleFile) + ' ');
+      return;
+    }
+
+    // 2. File objects: real path when available, otherwise materialize the
+    // in-memory contents (screenshots, images dragged from other apps) to temp.
+    if (files.length > 0) {
+      const paths = [];
+      for (const file of files) {
+        const realPath = getPathForFile(file);
+        const resolved = realPath || await this._saveDroppedFileToTemp(file);
+        if (resolved) paths.push(shellQuote(resolved));
+      }
+      if (paths.length > 0) {
+        this._pasteInChunks(terminal, paths.join(' ') + ' ');
+        return;
+      }
+    }
+
+    // 3. URI list: local file URLs become paths; data:/remote image URLs are
+    // materialized to temp files (e.g. images dragged out of a browser).
+    if (uriList) {
+      const uris = uriList.split(/\r?\n/).map(u => u.trim()).filter(u => u && !u.startsWith('#'));
+      const looksLikeImageDrag = /<img[\s>]/i.test(html || '') || uris.some(u => /\.(png|jpe?g|gif|webp|bmp|svg|tiff?|heic|avif)(\?|#|$)/i.test(u));
+      const paths = [];
+      for (const uri of uris) {
+        const resolved = await this._resolveDroppedUri(uri, looksLikeImageDrag);
+        if (resolved) paths.push(shellQuote(resolved));
+      }
+      if (paths.length > 0) {
+        this._pasteInChunks(terminal, paths.join(' ') + ' ');
+        return;
+      }
+    }
+
+    // 4. Fallback: plain text (also covers non-image URL drags)
+    if (text) {
+      this._pasteInChunks(terminal, text + ' ');
+    }
+  }
+
+  async _saveDroppedFileToTemp(file) {
+    try {
+      const data = new Uint8Array(await file.arrayBuffer());
+      const result = await ipcRenderer.invoke(IPC.SAVE_DROPPED_FILE, {
+        name: file.name || 'dropped-file',
+        data
+      });
+      return result?.success ? result.path : null;
+    } catch {
+      return null;
+    }
+  }
+
+  async _resolveDroppedUri(uri, downloadRemote) {
+    if (uri.startsWith('file://')) {
+      try {
+        return decodeURIComponent(new URL(uri).pathname);
+      } catch {
+        return null;
+      }
+    }
+    if (uri.startsWith('data:')) {
+      const file = this._dataUrlToFile(uri);
+      return file ? this._saveDroppedFileToTemp(file) : null;
+    }
+    if (downloadRemote && /^https?:\/\//i.test(uri)) {
+      try {
+        const result = await ipcRenderer.invoke(IPC.DOWNLOAD_URL_TO_TEMP, uri);
+        return result?.success ? result.path : null;
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  }
+
+  _dataUrlToFile(dataUrl) {
+    try {
+      const match = /^data:([^;,]*)(;base64)?,(.*)$/s.exec(dataUrl);
+      if (!match) return null;
+      const [, mime, isBase64, payload] = match;
+      const raw = isBase64 ? atob(payload) : decodeURIComponent(payload);
+      const bytes = Uint8Array.from(raw, c => c.charCodeAt(0));
+      const ext = (mime.split('/')[1] || 'bin').split('+')[0];
+      return new File([bytes], `dropped-image.${ext}`, { type: mime || 'application/octet-stream' });
+    } catch {
+      return null;
+    }
+  }
+
   _isAtOrNearBottom(terminal, thresholdLines = 1) {
     if (!terminal) return true;
     const buf = terminal.buffer?.active;
@@ -466,31 +566,16 @@ class TerminalManager {
       e.stopPropagation();
       element.classList.remove('drag-over');
 
-      // 1. Internal drag from file tree (custom MIME)
-      const vibeconsoleFile = e.dataTransfer.getData('application/x-vibeconsole-file');
-      if (vibeconsoleFile) {
-        this._pasteInChunks(terminal, shellQuote(vibeconsoleFile) + ' ');
-        return;
-      }
-
-      // 2. OS file drag
-      const files = e.dataTransfer.files;
-      if (files.length > 0) {
-        const paths = Array.from(files)
-          .map(f => getPathForFile(f))
-          .filter(Boolean)
-          .map(p => shellQuote(p));
-        if (paths.length > 0) {
-          this._pasteInChunks(terminal, paths.join(' ') + ' ');
-          return;
-        }
-      }
-
-      // 3. Fallback: plain text
-      const text = e.dataTransfer.getData('text/plain');
-      if (text) {
-        this._pasteInChunks(terminal, text + ' ');
-      }
+      // dataTransfer is only readable during the event; capture everything
+      // synchronously, then resolve paths asynchronously.
+      const payload = {
+        vibeconsoleFile: e.dataTransfer.getData('application/x-vibeconsole-file'),
+        files: Array.from(e.dataTransfer.files || []),
+        uriList: e.dataTransfer.getData('text/uri-list'),
+        html: e.dataTransfer.getData('text/html'),
+        text: e.dataTransfer.getData('text/plain')
+      };
+      this._handleTerminalDrop(terminal, payload);
     });
 
     const isCodeMatch = (event, code) => event.code === code || event.key.toLowerCase() === code.slice(-1).toLowerCase();

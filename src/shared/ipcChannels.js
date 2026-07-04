@@ -142,7 +142,11 @@ const IPC = {
   OPEN_UPDATER_MODAL: 'open-updater-modal',
 
   // External URLs
-  OPEN_EXTERNAL_URL: 'open-external-url'
+  OPEN_EXTERNAL_URL: 'open-external-url',
+
+  // Drag & Drop
+  SAVE_DROPPED_FILE: 'save-dropped-file',
+  DOWNLOAD_URL_TO_TEMP: 'download-url-to-temp'
 };
 
 module.exports = { IPC };

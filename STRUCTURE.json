@@ -1,7 +1,7 @@
 {
   "version": "1.1",
   "description": "Claude Code IDE - Module structure and IPC communication map",
-  "lastUpdated": "2026-07-03",
+  "lastUpdated": "2026-07-04",
   "architecture": {
     "type": "electron",
     "mainProcess": "src/main/index.js",
@@ -28,6 +28,7 @@
         "promptLogger",
         "workspace",
         "fileEditor",
+        "droppedFiles",
         "pluginsManager",
         "claudeUsageManager",
         "codexUsageManager",
@@ -39,33 +40,33 @@
       ],
       "functions": {
         "createWindow": {
-          "line": 39,
+          "line": 40,
           "purpose": "Create main application window"
         },
         "isTrustedAppUrl": {
-          "line": 115,
+          "line": 116,
           "params": [
             "rawUrl"
           ],
           "purpose": "Allow only local app URLs to load inside the app window."
         },
         "openExternalSafely": {
-          "line": 138,
+          "line": 139,
           "params": [
             "rawUrl"
           ],
           "purpose": "Avoid forwarding file/custom scheme URLs to the OS."
         },
         "setupAllIPC": {
-          "line": 152,
+          "line": 153,
           "purpose": "Setup all IPC handlers"
         },
         "init": {
-          "line": 208,
+          "line": 210,
           "purpose": "Initialize application"
         },
         "initModulesWithWindow": {
-          "line": 219,
+          "line": 221,
           "params": [
             "window"
           ],
@@ -4726,6 +4727,69 @@
           ],
           "purpose": "outcome, then force-reload changes."
         }
+      }
+    },
+    "main/droppedFiles": {
+      "file": "src/main/droppedFiles.js",
+      "description": "D",
+      "exports": [
+        "setupIPC",
+        "sanitizeFilename",
+        "filenameFromUrl"
+      ],
+      "depends": [
+        "fs",
+        "os",
+        "path",
+        "electron",
+        "shared/ipcChannels"
+      ],
+      "functions": {
+        "sanitizeFilename": {
+          "line": 40,
+          "params": [
+            "name",
+            "fallback = 'dropped-file'"
+          ],
+          "purpose": "characters, bounded length) while keeping the original extension visible."
+        },
+        "createDropDir": {
+          "line": 53,
+          "purpose": "A per-drop directory keeps the original filename intact without collisions."
+        },
+        "saveDroppedFile": {
+          "line": 59,
+          "params": [
+            "{ name",
+            "data }"
+          ]
+        },
+        "filenameFromUrl": {
+          "line": 78,
+          "params": [
+            "url",
+            "contentType"
+          ]
+        },
+        "downloadUrlToTemp": {
+          "line": 94,
+          "params": [
+            "url"
+          ]
+        },
+        "setupIPC": {
+          "line": 133,
+          "params": [
+            "ipcMain"
+          ]
+        }
+      },
+      "ipc": {
+        "listens": [
+          "SAVE_DROPPED_FILE",
+          "DOWNLOAD_URL_TO_TEMP"
+        ],
+        "emits": []
       }
     }
   },
