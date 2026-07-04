@@ -7,6 +7,8 @@
 
 const fs = require('fs');
 const fsp = fs.promises;
+const dns = require('node:dns');
+const nodeNet = require('node:net');
 const os = require('os');
 const path = require('path');
 const { net } = require('electron');
@@ -91,42 +93,137 @@ function filenameFromUrl(url, contentType) {
   return sanitizeFilename(name, 'download');
 }
 
+/**
+ * True for addresses a drag-and-drop download must never reach:
+ * loopback, RFC1918 private ranges, link-local (incl. cloud metadata),
+ * unspecified, and multicast/reserved space.
+ */
+function isPrivateAddress(ip) {
+  if (nodeNet.isIPv4(ip)) {
+    const [a, b] = ip.split('.').map(Number);
+    return a === 0 || a === 10 || a === 127 ||
+      (a === 100 && b >= 64 && b <= 127) ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 198 && (b === 18 || b === 19)) ||
+      a >= 224;
+  }
+  const lower = ip.toLowerCase();
+  if (lower.startsWith('::ffff:')) return isPrivateAddress(lower.slice(7));
+  return lower === '::' || lower === '::1' ||
+    lower.startsWith('fe8') || lower.startsWith('fe9') ||
+    lower.startsWith('fea') || lower.startsWith('feb') ||
+    lower.startsWith('fc') || lower.startsWith('fd') ||
+    lower.startsWith('ff');
+}
+
+/**
+ * Reject URLs whose host is (or resolves to) a private/internal address.
+ * Applied to the initial URL and every redirect hop (SSRF hardening).
+ */
+async function assertPublicHttpUrl(urlString) {
+  let parsed;
+  try {
+    parsed = new URL(urlString);
+  } catch {
+    throw new Error('Invalid URL');
+  }
+  if (!/^https?:$/.test(parsed.protocol)) {
+    throw new Error('Only http(s) URLs are supported');
+  }
+  const hostname = parsed.hostname.replace(/^\[|\]$/g, '').replace(/\.$/, '');
+  if (!hostname || hostname === 'localhost' || hostname.endsWith('.localhost') || hostname.endsWith('.local')) {
+    throw new Error('Blocked host');
+  }
+  if (nodeNet.isIP(hostname)) {
+    if (isPrivateAddress(hostname)) throw new Error('Blocked host');
+    return;
+  }
+  const records = await dns.promises.lookup(hostname, { all: true, verbatim: true });
+  if (records.length === 0 || records.some(r => isPrivateAddress(r.address))) {
+    throw new Error('Blocked host');
+  }
+}
+
+const MAX_REDIRECTS = 5;
+
+/**
+ * Issue a single non-following request. Resolves with either
+ * { redirectUrl } (3xx, request aborted) or { buffer, contentType } (2xx).
+ * Electron requires followRedirect() to be called synchronously inside the
+ * redirect event, which precludes async host validation — so redirects are
+ * surfaced to the caller and re-requested after validation instead.
+ */
+function fetchOneHop(currentUrl, deadline) {
+  return new Promise((resolve, reject) => {
+    const request = net.request({ url: currentUrl, redirect: 'manual' });
+    let settled = false;
+    const settle = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      fn(value);
+    };
+    const fail = (err) => {
+      settle(reject, err);
+      request.abort();
+    };
+    const timer = setTimeout(() => fail(new Error('Download timed out')), Math.max(0, deadline - Date.now()));
+    request.on('redirect', (statusCode, method, redirectUrl) => {
+      settle(resolve, { redirectUrl });
+      request.abort();
+    });
+    request.on('response', (response) => {
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return fail(new Error(`Download failed (HTTP ${response.statusCode})`));
+      }
+      const rawType = response.headers['content-type'];
+      const contentType = Array.isArray(rawType) ? rawType[0] : rawType;
+      const chunks = [];
+      let total = 0;
+      response.on('data', (chunk) => {
+        total += chunk.length;
+        if (total > MAX_DOWNLOAD_BYTES) return fail(new Error('Download too large'));
+        chunks.push(chunk);
+      });
+      response.on('end', () => settle(resolve, { buffer: Buffer.concat(chunks), contentType }));
+      response.on('error', fail);
+    });
+    request.on('error', (err) => settle(reject, err));
+    request.end();
+  });
+}
+
 async function downloadUrlToTemp(url) {
   try {
     if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
       return { success: false, error: 'Only http(s) URLs are supported' };
     }
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT_MS);
-    try {
-      const response = await net.fetch(url, { signal: controller.signal });
-      if (!response.ok) {
-        return { success: false, error: `Download failed (HTTP ${response.status})` };
+    // Redirects are not followed in-request: each hop aborts, re-validates
+    // the target against private-host rules, then issues a fresh request.
+    // A public URL therefore cannot bounce us into localhost or the LAN.
+    const deadline = Date.now() + DOWNLOAD_TIMEOUT_MS;
+    let currentUrl = url;
+    let download = null;
+    for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+      await assertPublicHttpUrl(currentUrl);
+      const result = await fetchOneHop(currentUrl, deadline);
+      if (result.redirectUrl) {
+        currentUrl = new URL(result.redirectUrl, currentUrl).toString();
+        continue;
       }
-      const reader = response.body.getReader();
-      const chunks = [];
-      let total = 0;
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        total += value.byteLength;
-        if (total > MAX_DOWNLOAD_BYTES) {
-          controller.abort();
-          return { success: false, error: 'Download too large' };
-        }
-        chunks.push(Buffer.from(value));
-      }
-      const buffer = Buffer.concat(chunks);
-      if (buffer.length === 0) return { success: false, error: 'Empty download' };
-      const dir = await createDropDir();
-      const filePath = path.join(dir, filenameFromUrl(url, response.headers.get('content-type')));
-      await fsp.writeFile(filePath, buffer);
-      return { success: true, path: filePath };
-    } finally {
-      clearTimeout(timer);
+      download = result;
+      break;
     }
+    if (!download) return { success: false, error: 'Too many redirects' };
+    if (download.buffer.length === 0) return { success: false, error: 'Empty download' };
+    const dir = await createDropDir();
+    const filePath = path.join(dir, filenameFromUrl(currentUrl, download.contentType));
+    await fsp.writeFile(filePath, download.buffer);
+    return { success: true, path: filePath };
   } catch (err) {
-    return { success: false, error: err.name === 'AbortError' ? 'Download timed out' : err.message };
+    return { success: false, error: err.message };
   }
 }
 
@@ -135,4 +232,4 @@ function setupIPC(ipcMain) {
   ipcMain.handle(IPC.DOWNLOAD_URL_TO_TEMP, (event, url) => downloadUrlToTemp(url));
 }
 
-module.exports = { setupIPC, sanitizeFilename, filenameFromUrl };
+module.exports = { setupIPC, sanitizeFilename, filenameFromUrl, isPrivateAddress, assertPublicHttpUrl };

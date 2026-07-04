@@ -4735,10 +4735,14 @@
       "exports": [
         "setupIPC",
         "sanitizeFilename",
-        "filenameFromUrl"
+        "filenameFromUrl",
+        "isPrivateAddress",
+        "assertPublicHttpUrl"
       ],
       "depends": [
         "fs",
+        "node:dns",
+        "node:net",
         "os",
         "path",
         "electron",
@@ -4746,7 +4750,7 @@
       ],
       "functions": {
         "sanitizeFilename": {
-          "line": 40,
+          "line": 42,
           "params": [
             "name",
             "fallback = 'dropped-file'"
@@ -4754,31 +4758,53 @@
           "purpose": "characters, bounded length) while keeping the original extension visible."
         },
         "createDropDir": {
-          "line": 53,
+          "line": 55,
           "purpose": "A per-drop directory keeps the original filename intact without collisions."
         },
         "saveDroppedFile": {
-          "line": 59,
+          "line": 61,
           "params": [
             "{ name",
             "data }"
           ]
         },
         "filenameFromUrl": {
-          "line": 78,
+          "line": 80,
           "params": [
             "url",
             "contentType"
           ]
         },
+        "isPrivateAddress": {
+          "line": 101,
+          "params": [
+            "ip"
+          ],
+          "purpose": "unspecified, and multicast/reserved space."
+        },
+        "assertPublicHttpUrl": {
+          "line": 125,
+          "params": [
+            "urlString"
+          ],
+          "purpose": "Applied to the initial URL and every redirect hop (SSRF hardening)."
+        },
+        "fetchOneHop": {
+          "line": 158,
+          "params": [
+            "currentUrl",
+            "deadline"
+          ],
+          "purpose": "surfaced to the caller and re-requested after validation instead."
+        },
         "downloadUrlToTemp": {
-          "line": 94,
+          "line": 198,
           "params": [
             "url"
           ]
         },
         "setupIPC": {
-          "line": 133,
+          "line": 230,
           "params": [
             "ipcMain"
           ]
