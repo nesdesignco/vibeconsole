@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="node_modules/@xterm/xterm/css/xterm.css" />
   <link rel="stylesheet" href="vendor/fonts/fonts.css">
   <link rel="stylesheet" href="src/renderer/styles/main.css">
+  <link rel="stylesheet" href="dist/renderer.css">
 </head>
 <body>
   <!-- Sidebar -->
@@ -494,6 +495,19 @@
           </div>
           <button id="btn-editor-save" class="btn" data-size="sm" data-variant="primary">Save</button>
           <button
+            id="btn-editor-fullscreen"
+            class="btn"
+            data-size="sm"
+            data-variant="ghost"
+            type="button"
+            title="Use full app space"
+            aria-label="Use full app space"
+            aria-pressed="false"
+          >
+            <span class="editor-fullscreen-icon" data-fullscreen-icon="max"><i data-lucide="maximize-2"></i></span>
+            <span class="editor-fullscreen-icon" data-fullscreen-icon="min" hidden><i data-lucide="minimize-2"></i></span>
+          </button>
+          <button
             id="btn-editor-close"
             class="btn btn-close"
             data-size="icon-sm"
@@ -503,10 +517,68 @@
           >✕</button>
         </div>
       </div>
+      <div id="editor-toolbar" class="editor-toolbar" role="toolbar" aria-label="Editor tools">
+        <div class="editor-tool-group" aria-label="History">
+          <button id="btn-editor-undo" class="editor-tool-btn" type="button" title="Undo" aria-label="Undo">
+            <i data-lucide="undo-2"></i>
+          </button>
+          <button id="btn-editor-redo" class="editor-tool-btn" type="button" title="Redo" aria-label="Redo">
+            <i data-lucide="redo-2"></i>
+          </button>
+        </div>
+        <div class="editor-tool-group" aria-label="Search and navigation">
+          <button id="btn-editor-find" class="editor-tool-btn" type="button" title="Find" aria-label="Find">
+            <i data-lucide="search"></i>
+          </button>
+          <button id="btn-editor-replace" class="editor-tool-btn" type="button" title="Replace" aria-label="Replace">
+            <i data-lucide="replace"></i>
+          </button>
+          <button id="btn-editor-goto" class="editor-tool-btn" type="button" title="Go to line" aria-label="Go to line">
+            <i data-lucide="list"></i>
+          </button>
+        </div>
+        <div class="editor-tool-group" aria-label="Code actions">
+          <button id="btn-editor-command-palette" class="editor-tool-btn" type="button" title="Command palette" aria-label="Command palette">
+            <i data-lucide="command"></i>
+          </button>
+          <button id="btn-editor-format" class="editor-tool-btn" type="button" title="Format document" aria-label="Format document">
+            <i data-lucide="wand-sparkles"></i>
+          </button>
+        </div>
+        <div class="editor-toolbar-spacer"></div>
+        <div class="editor-tool-group" aria-label="View options">
+          <button id="btn-editor-wrap" class="editor-tool-btn editor-tool-toggle" type="button" title="Toggle word wrap" aria-label="Toggle word wrap" aria-pressed="false">
+            <i data-lucide="wrap-text"></i>
+          </button>
+          <button id="btn-editor-minimap" class="editor-tool-btn editor-tool-toggle" type="button" title="Toggle minimap" aria-label="Toggle minimap" aria-pressed="false">
+            <i data-lucide="map"></i>
+          </button>
+        </div>
+      </div>
+      <div id="editor-command-palette" class="editor-command-palette" role="dialog" aria-label="Command palette" hidden>
+        <div class="editor-command-panel">
+          <input
+            id="editor-command-input"
+            class="editor-command-input"
+            type="text"
+            autocomplete="off"
+            spellcheck="false"
+            placeholder="Run command..."
+            aria-label="Run command"
+          />
+          <div id="editor-command-list" class="editor-command-list" role="listbox" aria-label="Available commands"></div>
+          <div class="editor-command-footer" aria-hidden="true">
+            <span>Enter Run</span>
+            <span>Up/Down Navigate</span>
+            <span>Esc Close</span>
+          </div>
+        </div>
+      </div>
       <div id="editor-content">
         <div id="editor-preview" style="display: none;">
           <img id="editor-image" alt="File preview" />
         </div>
+        <div id="editor-code"></div>
         <textarea id="editor-textarea" spellcheck="false"></textarea>
       </div>
       <div id="editor-footer">

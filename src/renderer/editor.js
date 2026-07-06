@@ -6,19 +6,30 @@
 const { ipcRenderer } = require('./electronBridge');
 const { IPC } = require('../shared/ipcChannels');
 const state = require('./state');
+const codeEditor = require('./monacoEditor');
+const { renderEditorIcons } = require('./lucideIcons');
 
 let editorOverlay = null;
+let editorContainer = null;
 let editorTextarea = null;
+let editorCode = null;
 let editorFilename = null;
 let editorExt = null;
 let editorPath = null;
 let editorStatus = null;
 let editorPreview = null;
 let editorImage = null;
+let editorToolbar = null;
+let editorCommandPalette = null;
+let editorCommandInput = null;
+let editorCommandList = null;
 let editorViewToggles = null;
 let btnViewPreview = null;
 let btnViewText = null;
 let btnSave = null;
+let btnFullscreen = null;
+let btnWrap = null;
+let btnMinimap = null;
 
 let currentEditingFile = null;
 let originalContent = '';
@@ -28,27 +39,58 @@ let openedFromSource = null; // Track where the file was opened from ('fileTree'
 let pendingLineNav = null; // { line, col } to navigate to after file loads
 let pendingOpenFilePath = null;
 let currentMode = 'text'; // 'text' | 'image'
+let isFullscreen = false;
+let visibleCommands = [];
+let activeCommandIndex = 0;
 
 /**
  * Initialize editor module
  */
 function init(onRefreshFileTree) {
   editorOverlay = document.getElementById('editor-overlay');
+  editorContainer = document.getElementById('editor-container');
   editorTextarea = document.getElementById('editor-textarea');
+  editorCode = document.getElementById('editor-code');
   editorFilename = document.getElementById('editor-filename');
   editorExt = document.getElementById('editor-ext');
   editorPath = document.getElementById('editor-path');
   editorStatus = document.getElementById('editor-status');
   editorPreview = document.getElementById('editor-preview');
   editorImage = document.getElementById('editor-image');
+  editorToolbar = document.getElementById('editor-toolbar');
+  editorCommandPalette = document.getElementById('editor-command-palette');
+  editorCommandInput = document.getElementById('editor-command-input');
+  editorCommandList = document.getElementById('editor-command-list');
   editorViewToggles = document.getElementById('editor-view-toggles');
   btnViewPreview = document.getElementById('btn-editor-view-preview');
   btnViewText = document.getElementById('btn-editor-view-text');
   btnSave = document.getElementById('btn-editor-save');
+  btnFullscreen = document.getElementById('btn-editor-fullscreen');
+  btnWrap = document.getElementById('btn-editor-wrap');
+  btnMinimap = document.getElementById('btn-editor-minimap');
   onFileTreeRefreshCallback = onRefreshFileTree;
 
+  renderEditorIcons(editorContainer || document);
   setupEventHandlers();
   setupIPC();
+
+  try {
+    const ready = codeEditor.init(editorCode, {
+      onChange: checkModified,
+      onSave: saveFile,
+      onClose: closeEditor,
+      onCommandPalette: showCommandPalette,
+      onCursorChange: updateCursorStatus
+    });
+    if (ready && editorTextarea) {
+      editorTextarea.setAttribute('aria-hidden', 'true');
+    }
+    syncEditorToolState();
+  } catch (err) {
+    console.error('Failed to initialize Monaco editor, falling back to textarea:', err);
+    if (editorCode) editorCode.style.display = 'none';
+    if (editorTextarea) editorTextarea.style.display = 'block';
+  }
 }
 
 function getExtensionFromPath(filePath) {
@@ -82,7 +124,12 @@ function setActiveToggle(mode) {
 
 function setMode(mode) {
   currentMode = mode;
-  if (editorTextarea) editorTextarea.style.display = (mode === 'text') ? 'block' : 'none';
+  const showText = mode === 'text';
+  const useMonaco = codeEditor.isReady();
+  if (!showText) hideCommandPalette(false);
+  if (editorCode) editorCode.style.display = (showText && useMonaco) ? 'block' : 'none';
+  if (editorTextarea) editorTextarea.style.display = (showText && !useMonaco) ? 'block' : 'none';
+  if (editorToolbar) editorToolbar.style.display = (showText && useMonaco) ? 'flex' : 'none';
   if (editorPreview) editorPreview.style.display = (mode === 'image') ? 'flex' : 'none';
   if (btnSave) {
     const enableSave = (mode === 'text');
@@ -90,6 +137,229 @@ function setMode(mode) {
     btnSave.style.display = enableSave ? '' : 'none';
   }
   setActiveToggle(mode);
+  if (showText && useMonaco) {
+    setTimeout(() => codeEditor.layout(), 0);
+  }
+  syncEditorToolState();
+}
+
+function getEditorContent() {
+  if (codeEditor.isReady()) return codeEditor.getValue();
+  return editorTextarea ? editorTextarea.value : '';
+}
+
+function setEditorContent(content, filePath, extension) {
+  if (codeEditor.isReady()) {
+    codeEditor.setDocument({
+      content,
+      filePath,
+      extension,
+      line: pendingLineNav && pendingLineNav.line,
+      col: pendingLineNav && pendingLineNav.col
+    });
+  }
+  if (editorTextarea) editorTextarea.value = content || '';
+}
+
+function focusTextEditor() {
+  if (codeEditor.isReady()) {
+    codeEditor.focus();
+  } else if (editorTextarea) {
+    editorTextarea.focus();
+  }
+}
+
+function syncEditorToolState() {
+  if (btnWrap || btnMinimap) {
+    const viewState = codeEditor.getViewState ? codeEditor.getViewState() : { wordWrap: false, minimap: false };
+    if (btnWrap) btnWrap.setAttribute('aria-pressed', viewState.wordWrap ? 'true' : 'false');
+    if (btnMinimap) btnMinimap.setAttribute('aria-pressed', viewState.minimap ? 'true' : 'false');
+  }
+
+  if (btnFullscreen) {
+    const maxIcon = btnFullscreen.querySelector('[data-fullscreen-icon="max"]');
+    const minIcon = btnFullscreen.querySelector('[data-fullscreen-icon="min"]');
+    btnFullscreen.setAttribute('aria-pressed', isFullscreen ? 'true' : 'false');
+    btnFullscreen.title = isFullscreen ? 'Return to modal size' : 'Use full app space';
+    btnFullscreen.setAttribute('aria-label', btnFullscreen.title);
+    if (maxIcon) maxIcon.hidden = isFullscreen;
+    if (minIcon) minIcon.hidden = !isFullscreen;
+  }
+}
+
+function setFullscreen(enabled) {
+  isFullscreen = Boolean(enabled);
+  if (editorOverlay) {
+    editorOverlay.classList.toggle('editor-overlay-fullscreen', isFullscreen);
+  }
+  if (editorContainer) {
+    editorContainer.classList.toggle('fullscreen', isFullscreen);
+  }
+  syncEditorToolState();
+  setTimeout(() => codeEditor.layout(), 0);
+}
+
+function runEditorAction(actionId, fallbackStatus) {
+  if (!codeEditor.isReady()) return;
+  codeEditor.runAction(actionId).then((ran) => {
+    if (!ran && fallbackStatus) {
+      updateStatus(fallbackStatus, '');
+    }
+  }).catch((err) => {
+    console.error(`Editor action failed: ${actionId}`, err);
+    updateStatus(fallbackStatus || 'Editor action failed', fallbackStatus ? '' : 'modified');
+  });
+}
+
+function getCommandDefinitions() {
+  const viewState = codeEditor.getViewState ? codeEditor.getViewState() : { wordWrap: false, minimap: false };
+  return [
+    { id: 'save', icon: 'save', title: 'Save File', detail: 'Write current file to disk', shortcut: 'Cmd+S', run: saveFile },
+    { id: 'find', icon: 'search', title: 'Find', detail: 'Search in current file', shortcut: 'Cmd+F', run: () => runEditorAction('actions.find', 'Find is not available') },
+    { id: 'replace', icon: 'replace', title: 'Replace', detail: 'Find and replace in current file', shortcut: 'Cmd+Alt+F', run: () => runEditorAction('editor.action.startFindReplaceAction', 'Replace is not available') },
+    { id: 'line', icon: 'list', title: 'Go to Line', detail: 'Jump to line or line:column', shortcut: 'Line', run: showGoToLinePrompt },
+    { id: 'format', icon: 'wand-sparkles', title: 'Format Document', detail: 'Run available formatter', shortcut: 'Fmt', run: () => runEditorAction('editor.action.formatDocument', 'No formatter available for this file') },
+    { id: 'undo', icon: 'undo-2', title: 'Undo', detail: 'Undo last edit', shortcut: 'Cmd+Z', run: () => codeEditor.undo() },
+    { id: 'redo', icon: 'redo-2', title: 'Redo', detail: 'Redo last edit', shortcut: 'Shift+Cmd+Z', run: () => codeEditor.redo() },
+    { id: 'wrap', icon: 'wrap-text', title: 'Toggle Word Wrap', detail: viewState.wordWrap ? 'Currently on' : 'Currently off', shortcut: 'Wrap', run: toggleWordWrap },
+    { id: 'minimap', icon: 'map', title: 'Toggle Minimap', detail: viewState.minimap ? 'Currently on' : 'Currently off', shortcut: 'Map', run: toggleMinimap },
+    { id: 'fullscreen', icon: isFullscreen ? 'minimize-2' : 'maximize-2', title: isFullscreen ? 'Exit Fullscreen Editor' : 'Fullscreen Editor', detail: 'Use the full app window for editing', shortcut: 'Max', run: () => setFullscreen(!isFullscreen) }
+  ];
+}
+
+function commandMatches(command, query) {
+  if (!query) return true;
+  const haystack = `${command.title} ${command.detail}`.toLowerCase();
+  return haystack.includes(query.toLowerCase());
+}
+
+function renderCommandPaletteList() {
+  if (!editorCommandList || !editorCommandInput) return;
+
+  const query = editorCommandInput.value.trim();
+  visibleCommands = getCommandDefinitions().filter((command) => commandMatches(command, query));
+  if (activeCommandIndex >= visibleCommands.length) activeCommandIndex = Math.max(0, visibleCommands.length - 1);
+
+  editorCommandList.innerHTML = '';
+
+  if (visibleCommands.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'editor-command-empty';
+    empty.textContent = 'No commands';
+    editorCommandList.appendChild(empty);
+    return;
+  }
+
+  visibleCommands.forEach((command, index) => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = `editor-command-item${index === activeCommandIndex ? ' active' : ''}`;
+    item.setAttribute('role', 'option');
+    item.setAttribute('aria-selected', index === activeCommandIndex ? 'true' : 'false');
+    item.dataset.commandId = command.id;
+
+    const icon = document.createElement('span');
+    icon.className = 'editor-command-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    const iconMarker = document.createElement('i');
+    iconMarker.setAttribute('data-lucide', command.icon);
+    icon.appendChild(iconMarker);
+
+    const copy = document.createElement('span');
+    copy.className = 'editor-command-copy';
+
+    const title = document.createElement('span');
+    title.className = 'editor-command-title';
+    title.textContent = command.title;
+
+    const detail = document.createElement('span');
+    detail.className = 'editor-command-detail';
+    detail.textContent = command.detail;
+
+    copy.append(title, detail);
+
+    const shortcut = document.createElement('span');
+    shortcut.className = 'editor-command-shortcut';
+    shortcut.textContent = command.shortcut;
+
+    item.append(icon, copy, shortcut);
+    editorCommandList.appendChild(item);
+  });
+
+  renderEditorIcons(editorCommandList);
+}
+
+function runCommand(command) {
+  if (!command) return;
+  hideCommandPalette(false);
+  command.run();
+  syncEditorToolState();
+}
+
+function runCommandById(commandId) {
+  const command = getCommandDefinitions().find((item) => item.id === commandId);
+  runCommand(command);
+}
+
+function showCommandPalette() {
+  if (!editorCommandPalette || !editorCommandInput || currentMode !== 'text') return;
+  activeCommandIndex = 0;
+  editorCommandInput.value = '';
+  editorCommandPalette.hidden = false;
+  renderCommandPaletteList();
+  requestAnimationFrame(() => {
+    editorCommandInput.focus();
+    editorCommandInput.select();
+  });
+}
+
+function hideCommandPalette(restoreFocus = true) {
+  if (editorCommandPalette) editorCommandPalette.hidden = true;
+  if (restoreFocus) focusTextEditor();
+}
+
+function showGoToLinePrompt() {
+  if (!codeEditor.isReady()) return;
+
+  const position = codeEditor.getPosition ? codeEditor.getPosition() : null;
+  const currentLine = position && position.lineNumber ? position.lineNumber : 1;
+  const currentColumn = position && position.column ? position.column : 1;
+  const input = prompt('Go to line[:column]', `${currentLine}:${currentColumn}`);
+
+  if (input === null) return;
+
+  const match = String(input).trim().match(/^(\d+)(?::(\d+))?$/);
+  if (!match) {
+    updateStatus('Use line or line:column', 'modified');
+    return;
+  }
+
+  const line = Number(match[1]);
+  const col = match[2] ? Number(match[2]) : 1;
+  codeEditor.reveal(line, col);
+  codeEditor.focus();
+  updateStatus(`Line ${line}, Col ${col}`, '');
+}
+
+function toggleWordWrap() {
+  if (!codeEditor.isReady()) return;
+  const enabled = codeEditor.toggleWordWrap();
+  updateStatus(`Word Wrap ${enabled ? 'On' : 'Off'}`, '');
+}
+
+function toggleMinimap() {
+  if (!codeEditor.isReady()) return;
+  const enabled = codeEditor.toggleMinimap();
+  updateStatus(`Minimap ${enabled ? 'On' : 'Off'}`, '');
+}
+
+function bindEditorTool(id, handler) {
+  const button = document.getElementById(id);
+  if (!button) return;
+  button.addEventListener('click', () => {
+    handler();
+    syncEditorToolState();
+  });
 }
 
 /**
@@ -153,6 +423,7 @@ function closeEditor() {
   openedFromSource = null;
   pendingOpenFilePath = null;
   pendingLineNav = null;
+  hideCommandPalette(false);
   setViewTogglesVisible(false);
   setMode('text');
   if (editorImage) editorImage.src = '';
@@ -165,7 +436,7 @@ function saveFile() {
   if (!currentEditingFile) return;
   if (currentMode !== 'text') return;
 
-  const content = editorTextarea.value;
+  const content = getEditorContent();
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
   if (content.length > MAX_FILE_SIZE) {
     updateStatus('File too large to save (max 10MB)', 'modified');
@@ -192,7 +463,7 @@ function updateStatus(status, className = '') {
  * Check if content is modified
  */
 function checkModified() {
-  const content = editorTextarea.value;
+  const content = getEditorContent();
   isModified = content !== originalContent;
 
   if (isModified) {
@@ -202,12 +473,23 @@ function checkModified() {
   }
 }
 
+function updateCursorStatus(line, col) {
+  if (!isModified && currentMode === 'text') {
+    updateStatus(`Line ${line}, Col ${col}`, '');
+  }
+}
+
 /**
  * Navigate textarea to a specific line and column
  * @param {number} line - 1-based line number
  * @param {number} [col] - 1-based column number
  */
 function scrollToLine(line, col) {
+  if (codeEditor.isReady()) {
+    codeEditor.reveal(line, col);
+    return;
+  }
+
   if (!editorTextarea || !editorTextarea.value) return;
 
   const text = editorTextarea.value;
@@ -254,6 +536,100 @@ function setupEventHandlers() {
     btnSave.addEventListener('click', saveFile);
   }
 
+  if (btnFullscreen) {
+    btnFullscreen.addEventListener('click', () => {
+      setFullscreen(!isFullscreen);
+    });
+  }
+
+  bindEditorTool('btn-editor-undo', () => {
+    if (codeEditor.isReady()) codeEditor.undo();
+  });
+  bindEditorTool('btn-editor-redo', () => {
+    if (codeEditor.isReady()) codeEditor.redo();
+  });
+  bindEditorTool('btn-editor-find', () => {
+    runEditorAction('actions.find', 'Find is not available');
+  });
+  bindEditorTool('btn-editor-replace', () => {
+    runEditorAction('editor.action.startFindReplaceAction', 'Replace is not available');
+  });
+  bindEditorTool('btn-editor-goto', () => {
+    showGoToLinePrompt();
+  });
+  bindEditorTool('btn-editor-command-palette', () => {
+    showCommandPalette();
+  });
+  bindEditorTool('btn-editor-format', () => {
+    runEditorAction('editor.action.formatDocument', 'No formatter available for this file');
+  });
+  bindEditorTool('btn-editor-wrap', () => {
+    toggleWordWrap();
+  });
+  bindEditorTool('btn-editor-minimap', () => {
+    toggleMinimap();
+  });
+
+  if (editorCommandInput) {
+    editorCommandInput.addEventListener('input', () => {
+      activeCommandIndex = 0;
+      renderCommandPaletteList();
+    });
+    editorCommandInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        hideCommandPalette();
+        return;
+      }
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        activeCommandIndex = Math.min(activeCommandIndex + 1, Math.max(0, visibleCommands.length - 1));
+        renderCommandPaletteList();
+        return;
+      }
+
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        activeCommandIndex = Math.max(activeCommandIndex - 1, 0);
+        renderCommandPaletteList();
+        return;
+      }
+
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        runCommand(visibleCommands[activeCommandIndex]);
+      }
+    });
+  }
+
+  if (editorCommandList) {
+    editorCommandList.addEventListener('click', (e) => {
+      const item = e.target instanceof HTMLElement ? e.target.closest('[data-command-id]') : null;
+      if (!item) return;
+      runCommandById(item.dataset.commandId);
+    });
+    editorCommandList.addEventListener('mousemove', (e) => {
+      const item = e.target instanceof HTMLElement ? e.target.closest('[data-command-id]') : null;
+      if (!item || !editorCommandList) return;
+      const items = Array.from(editorCommandList.querySelectorAll('[data-command-id]'));
+      const index = items.indexOf(item);
+      if (index !== -1 && index !== activeCommandIndex) {
+        activeCommandIndex = index;
+        renderCommandPaletteList();
+      }
+    });
+  }
+
+  if (editorCommandPalette) {
+    editorCommandPalette.addEventListener('mousedown', (e) => {
+      if (e.target === editorCommandPalette) {
+        hideCommandPalette();
+      }
+    });
+  }
+
   // View toggles (SVG)
   if (btnViewPreview) {
     btnViewPreview.addEventListener('click', () => {
@@ -263,7 +639,7 @@ function setupEventHandlers() {
   if (btnViewText) {
     btnViewText.addEventListener('click', () => {
       setMode('text');
-      if (editorTextarea) editorTextarea.focus();
+      focusTextEditor();
     });
   }
 
@@ -310,7 +686,15 @@ function setupEventHandlers() {
   document.addEventListener('keydown', (e) => {
     const modKey = e.ctrlKey || e.metaKey;
     const key = e.key.toLowerCase();
+    if (modKey && e.shiftKey && key === 'p' && isEditorOpen() && currentMode === 'text') {
+      e.preventDefault();
+      e.stopPropagation();
+      showCommandPalette();
+      return;
+    }
+
     if (!modKey || key !== 'a' || !isEditorOpen() || !editorTextarea) return;
+    if (codeEditor.isReady()) return;
 
     const target = e.target;
     const isInput =
@@ -352,7 +736,7 @@ function setupIPC() {
       // Update UI
       if (editorFilename) editorFilename.textContent = result.fileName;
       if (editorExt) editorExt.textContent = result.extension.toUpperCase() || 'FILE';
-      if (editorTextarea) editorTextarea.value = result.content;
+      setEditorContent(result.content, result.filePath, result.extension);
       if (editorPath) editorPath.textContent = result.filePath;
       updateStatus('Ready', '');
 
@@ -360,8 +744,8 @@ function setupIPC() {
       editorOverlay.classList.add('visible');
 
       // Focus textarea and navigate to pending line
-      if (editorTextarea) {
-        if (currentMode === 'text') editorTextarea.focus();
+      if (currentMode === 'text') {
+        focusTextEditor();
         if (pendingLineNav) {
           scrollToLine(pendingLineNav.line, pendingLineNav.col);
           pendingLineNav = null;
@@ -393,7 +777,7 @@ function setupIPC() {
   // Receive save confirmation
   ipcRenderer.on(IPC.FILE_SAVED, (event, result) => {
     if (result.success) {
-      originalContent = editorTextarea.value;
+      originalContent = getEditorContent();
       isModified = false;
       updateStatus('Saved!', 'saved');
 

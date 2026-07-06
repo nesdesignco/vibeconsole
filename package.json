@@ -1,7 +1,7 @@
 {
   "name": "vibeconsole",
   "productName": "VibeConsole",
-  "version": "1.3.5",
+  "version": "1.3.6",
   "description": "Vibe Console - Project Management IDE for Claude Code",
   "author": "Nes <contact@nesdesign.co>",
   "main": "src/main/index.js",
@@ -17,9 +17,10 @@
     "check": "npm run lint",
     "build": "npm run build:renderer && npm run dist:mac:package",
     "build:preload": "esbuild src/main/preload.js --bundle --outfile=dist/preload.js --platform=node --external:electron --minify --sourcemap",
-    "build:renderer": "npm run lint && npm run build:preload && esbuild src/renderer/index.js --bundle --outfile=dist/renderer.js --platform=browser --minify --sourcemap",
-    "build:fast": "npm run build:preload && esbuild src/renderer/index.js --bundle --outfile=dist/renderer.js --platform=browser --minify --sourcemap",
-    "watch": "npm run build:preload && esbuild src/renderer/index.js --bundle --outfile=dist/renderer.js --platform=browser --sourcemap --watch",
+    "build:monaco": "node scripts/build-monaco.js",
+    "build:renderer": "npm run lint && npm run build:preload && npm run build:monaco && esbuild src/renderer/index.js --bundle --outfile=dist/renderer.js --platform=browser --loader:.ttf=file --minify --sourcemap",
+    "build:fast": "npm run build:preload && npm run build:monaco && esbuild src/renderer/index.js --bundle --outfile=dist/renderer.js --platform=browser --loader:.ttf=file --minify --sourcemap",
+    "watch": "npm run build:preload && npm run build:monaco && esbuild src/renderer/index.js --bundle --outfile=dist/renderer.js --platform=browser --loader:.ttf=file --sourcemap --watch",
     "start": "npm run build:renderer && electron .",
     "dev": "npm run build:preload && npm run watch & electron .",
     "structure": "node scripts/update-structure.js",
@@ -62,6 +63,8 @@
     "@xterm/xterm": "^5.5.0",
     "builder-util-runtime": "^9.7.0",
     "electron-updater": "^6.8.9",
+    "lucide": "^1.23.0",
+    "monaco-editor": "^0.55.1",
     "node-pty": "^1.1.0"
   },
   "build": {

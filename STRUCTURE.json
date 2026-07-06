@@ -1058,48 +1058,130 @@
       "depends": [
         "electronBridge",
         "shared/ipcChannels",
-        "state"
+        "state",
+        "monacoEditor",
+        "lucideIcons"
       ],
       "functions": {
         "init": {
-          "line": 35,
+          "line": 49,
           "params": [
             "onRefreshFileTree"
           ],
           "purpose": "Initialize editor module"
         },
         "getExtensionFromPath": {
-          "line": 54,
+          "line": 96,
           "params": [
             "filePath"
           ]
         },
         "isImageExt": {
-          "line": 61,
+          "line": 103,
           "params": [
             "extension"
           ]
         },
         "setViewTogglesVisible": {
-          "line": 65,
+          "line": 107,
           "params": [
             "visible"
           ]
         },
         "setActiveToggle": {
-          "line": 70,
+          "line": 112,
           "params": [
             "mode"
           ]
         },
         "setMode": {
-          "line": 83,
+          "line": 125,
           "params": [
             "mode"
           ]
         },
+        "getEditorContent": {
+          "line": 146
+        },
+        "setEditorContent": {
+          "line": 151,
+          "params": [
+            "content",
+            "filePath",
+            "extension"
+          ]
+        },
+        "focusTextEditor": {
+          "line": 164
+        },
+        "syncEditorToolState": {
+          "line": 172
+        },
+        "setFullscreen": {
+          "line": 190,
+          "params": [
+            "enabled"
+          ]
+        },
+        "runEditorAction": {
+          "line": 202,
+          "params": [
+            "actionId",
+            "fallbackStatus"
+          ]
+        },
+        "getCommandDefinitions": {
+          "line": 214
+        },
+        "commandMatches": {
+          "line": 230,
+          "params": [
+            "command",
+            "query"
+          ]
+        },
+        "renderCommandPaletteList": {
+          "line": 236
+        },
+        "runCommand": {
+          "line": 292,
+          "params": [
+            "command"
+          ]
+        },
+        "runCommandById": {
+          "line": 299,
+          "params": [
+            "commandId"
+          ]
+        },
+        "showCommandPalette": {
+          "line": 304
+        },
+        "hideCommandPalette": {
+          "line": 316,
+          "params": [
+            "restoreFocus = true"
+          ]
+        },
+        "showGoToLinePrompt": {
+          "line": 321
+        },
+        "toggleWordWrap": {
+          "line": 344
+        },
+        "toggleMinimap": {
+          "line": 350
+        },
+        "bindEditorTool": {
+          "line": 356,
+          "params": [
+            "id",
+            "handler"
+          ]
+        },
         "openFile": {
-          "line": 103,
+          "line": 373,
           "params": [
             "filePath",
             "source = 'terminal'",
@@ -1107,15 +1189,15 @@
           ]
         },
         "closeEditor": {
-          "line": 134,
+          "line": 404,
           "purpose": "Close editor"
         },
         "saveFile": {
-          "line": 164,
+          "line": 435,
           "purpose": "Save file"
         },
         "updateStatus": {
-          "line": 184,
+          "line": 455,
           "params": [
             "status",
             "className = ''"
@@ -1123,11 +1205,18 @@
           "purpose": "Update editor status"
         },
         "checkModified": {
-          "line": 194,
+          "line": 465,
           "purpose": "Check if content is modified"
         },
+        "updateCursorStatus": {
+          "line": 476,
+          "params": [
+            "line",
+            "col"
+          ]
+        },
         "scrollToLine": {
-          "line": 210,
+          "line": 487,
           "params": [
             "line",
             "col"
@@ -1135,19 +1224,19 @@
           "purpose": "Navigate textarea to a specific line and column"
         },
         "setupEventHandlers": {
-          "line": 245,
+          "line": 527,
           "purpose": "Setup event handlers"
         },
         "setupIPC": {
-          "line": 343,
+          "line": 727,
           "purpose": "Setup IPC listeners"
         },
         "isEditorOpen": {
-          "line": 420,
+          "line": 804,
           "purpose": "Check if editor is open"
         },
         "getCurrentFile": {
-          "line": 427,
+          "line": 811,
           "purpose": "Get currently editing file path"
         }
       },
@@ -4816,6 +4905,158 @@
           "DOWNLOAD_URL_TO_TEMP"
         ],
         "emits": []
+      }
+    },
+    "renderer/monacoEditor": {
+      "file": "src/renderer/monacoEditor.js",
+      "description": "M",
+      "exports": [
+        "init",
+        "setDocument",
+        "reveal",
+        "getValue",
+        "getPosition",
+        "runAction",
+        "undo",
+        "redo",
+        "toggleWordWrap",
+        "toggleMinimap",
+        "getViewState",
+        "focus",
+        "layout",
+        "isReady",
+        "dispose"
+      ],
+      "depends": [
+        "monaco-editor/esm/vs/editor/editor.all.js",
+        "monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneGotoLineQuickAccess.js",
+        "monaco-editor/esm/vs/editor/standalone/browser/quickAccess/standaloneCommandsQuickAccess.js",
+        "monaco-editor/esm/vs/language/json/monaco.contribution.js",
+        "monaco-editor/esm/vs/language/css/monaco.contribution.js",
+        "monaco-editor/esm/vs/language/html/monaco.contribution.js",
+        "monaco-editor/esm/vs/language/typescript/monaco.contribution.js",
+        "monaco-editor/esm/vs/basic-languages/markdown/markdown.contribution.js",
+        "monaco-editor/esm/vs/basic-languages/yaml/yaml.contribution.js",
+        "monaco-editor/esm/vs/basic-languages/shell/shell.contribution.js",
+        "monaco-editor/esm/vs/basic-languages/python/python.contribution.js",
+        "monaco-editor/esm/vs/basic-languages/go/go.contribution.js",
+        "monaco-editor/esm/vs/basic-languages/rust/rust.contribution.js",
+        "monaco-editor/esm/vs/basic-languages/java/java.contribution.js",
+        "monaco-editor/esm/vs/basic-languages/php/php.contribution.js",
+        "monaco-editor/esm/vs/basic-languages/ruby/ruby.contribution.js",
+        "monaco-editor/esm/vs/basic-languages/cpp/cpp.contribution.js",
+        "monaco-editor/esm/vs/basic-languages/csharp/csharp.contribution.js",
+        "monaco-editor/esm/vs/basic-languages/sql/sql.contribution.js",
+        "monaco-editor/esm/vs/basic-languages/dockerfile/dockerfile.contribution.js",
+        "monaco-editor/esm/vs/editor/editor.api.js"
+      ],
+      "functions": {
+        "distUrl": {
+          "line": 87,
+          "params": [
+            "fileName"
+          ]
+        },
+        "setupWorkers": {
+          "line": 91
+        },
+        "registerTheme": {
+          "line": 100
+        },
+        "languageForPath": {
+          "line": 135,
+          "params": [
+            "filePath",
+            "extension"
+          ]
+        },
+        "uriForPath": {
+          "line": 141,
+          "params": [
+            "filePath"
+          ]
+        },
+        "init": {
+          "line": 147,
+          "params": [
+            "target",
+            "options = {}"
+          ]
+        },
+        "setDocument": {
+          "line": 211,
+          "params": [
+            "{ content",
+            "filePath",
+            "extension",
+            "line",
+            "col }"
+          ]
+        },
+        "reveal": {
+          "line": 234,
+          "params": [
+            "line",
+            "col"
+          ]
+        },
+        "getPosition": {
+          "line": 242
+        },
+        "getValue": {
+          "line": 247
+        },
+        "runAction": {
+          "line": 252,
+          "params": [
+            "actionId"
+          ]
+        },
+        "undo": {
+          "line": 262
+        },
+        "redo": {
+          "line": 269
+        },
+        "toggleWordWrap": {
+          "line": 276
+        },
+        "toggleMinimap": {
+          "line": 284
+        },
+        "getViewState": {
+          "line": 292
+        },
+        "focus": {
+          "line": 299
+        },
+        "layout": {
+          "line": 303
+        },
+        "isReady": {
+          "line": 307
+        },
+        "dispose": {
+          "line": 311
+        }
+      }
+    },
+    "renderer/lucideIcons": {
+      "file": "src/renderer/lucideIcons.js",
+      "description": "S",
+      "exports": [
+        "renderEditorIcons"
+      ],
+      "depends": [
+        "lucide/dist/cjs/lucide"
+      ],
+      "functions": {
+        "renderEditorIcons": {
+          "line": 39,
+          "params": [
+            "root = document"
+          ]
+        }
       }
     }
   },

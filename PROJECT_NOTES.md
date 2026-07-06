@@ -2,6 +2,12 @@
 
 ## Session Notes
 
+### [2026-07-06] Monaco-Based Editor Upgrade
+- Replaced the file editor text surface with a Monaco-backed adapter while preserving the existing Electron IPC read/write path, SVG/image preview flow, and textarea fallback.
+- Added a dedicated Monaco worker build step so editor, JSON, CSS, HTML, and TypeScript workers are emitted into `dist/` for packaged Electron use.
+- Added a Lucide-backed editor tool strip for Monaco actions (`find`, `replace`, `go to line`, command palette, format, undo/redo), view toggles, and app-space fullscreen mode.
+- Set `maxNodeModuleJsDepth: 0` in `jsconfig.json` so `tsc --checkJs` continues checking application code without descending into Monaco's bundled dependency JavaScript.
+
 ### [2026-07-06] Stable macOS DMG Download Link
 - Added a fixed DMG artifact name for release builds so the public direct-download URL can remain stable across versions: `VibeConsole-mac.dmg`.
 - Made the release workflow explicitly overwrite same-named assets on reruns and fail when expected release files are missing.
