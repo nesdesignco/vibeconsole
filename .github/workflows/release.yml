@@ -61,6 +61,20 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
+      - name: Notarize and staple DMG
+        # electron-builder notarizes only the .app; the DMG container gets its
+        # own ticket here, then blockmap + latest-mac.yml are refreshed
+        run: node scripts/staple-dmg.js release
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+      - name: Gatekeeper-verify DMG
+        run: |
+          xcrun stapler validate release/*.dmg
+          spctl --assess --type open --context context:primary-signature --verbose=4 release/*.dmg
+
       - name: Verify update metadata
         # latest-mac.yml + zip are required by electron-updater; fail the
         # release if electron-builder didn't produce them
