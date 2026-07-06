@@ -54,7 +54,7 @@ function renderFileTree(files, parentElement, indent = 0) {
 
     const fileItem = document.createElement('div');
     fileItem.className = 'file-item' + (file.isDirectory ? ' folder' : '');
-    fileItem.style.paddingLeft = `${8 + indent * 16}px`;
+    fileItem.style.setProperty('--file-indent', `${Math.min(8 + indent * 16, 104)}px`);
     fileItem.tabIndex = 0; // Make focusable
     fileItem.dataset.path = file.path;
 
@@ -84,7 +84,9 @@ function renderFileTree(files, parentElement, indent = 0) {
 
     // File name
     const name = document.createElement('span');
+    name.className = 'file-name';
     name.textContent = file.name;
+    name.title = file.name;
 
     fileItem.appendChild(icon);
     fileItem.appendChild(name);

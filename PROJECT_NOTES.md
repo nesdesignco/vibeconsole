@@ -2,6 +2,12 @@
 
 ## Session Notes
 
+### [2026-07-06] Updater Notes and Sidebar Layout Hardening
+- Added a safe release-notes renderer for GitHub HTML so update modals do not expose raw `<h2>`, `<ul>`, or anchor markup.
+- Kept updater release-note links on the existing external-url IPC path and added regression coverage for GitHub HTML, fallback HTML stripping, and Markdown rendering.
+- Reworked the toolbar update badge into an inline pill to avoid titlebar clipping.
+- Stabilized sidebar project/file-tree scroll gutters and constrained deep file-tree indentation so nested paths truncate instead of causing horizontal sidebar movement.
+
 ### [2026-07-06] Monaco-Based Editor Upgrade
 - Replaced the file editor text surface with a Monaco-backed adapter while preserving the existing Electron IPC read/write path, SVG/image preview flow, and textarea fallback.
 - Added a dedicated Monaco worker build step so editor, JSON, CSS, HTML, and TypeScript workers are emitted into `dist/` for packaged Electron use.

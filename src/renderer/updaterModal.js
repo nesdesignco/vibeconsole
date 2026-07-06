@@ -6,14 +6,14 @@
  * Drives off the main process autoUpdater module via IPC. The modal is the
  * only place where DOWNLOAD_UPDATE / INSTALL_UPDATE / UPDATE_CANCEL are sent.
  *
- * innerHTML usage runs over output produced by renderMinimalMarkdown —
- * every interpolated value is passed through escapeHtml first, so the
- * resulting string only contains explicitly whitelisted tags.
+ * innerHTML usage runs over output produced by renderReleaseNotesMarkup —
+ * every interpolated value is passed through escapeHtml/escapeAttr first, so
+ * the resulting string only contains explicitly whitelisted tags.
  */
 
 const { ipcRenderer } = require('./electronBridge');
 const { IPC } = require('../shared/ipcChannels');
-const { escapeHtml } = require('./escapeHtml');
+const { escapeHtml, escapeAttr } = require('./escapeHtml');
 
 const DISMISS_STORAGE_KEY = 'vibe.updater.dismissedVersion';
 const RELEASE_URL_TEMPLATE = 'https://github.com/nesdesignco/vibeconsole/releases/tag/v{version}';
@@ -113,6 +113,16 @@ function setupListeners() {
     e.preventDefault();
     const href = releaseLinkEl.getAttribute('data-href') || releaseLinkEl.href;
     if (href && href !== '#') {
+      ipcRenderer.send(IPC.OPEN_EXTERNAL_URL, href);
+    }
+  });
+
+  notesEl.addEventListener('click', (e) => {
+    const link = e.target.closest('.updater-notes-link');
+    if (!link || !notesEl.contains(link)) return;
+    e.preventDefault();
+    const href = link.getAttribute('data-href') || link.href;
+    if (href) {
       ipcRenderer.send(IPC.OPEN_EXTERNAL_URL, href);
     }
   });
@@ -313,6 +323,28 @@ function normalizeReleaseNotes(notes) {
   return '';
 }
 
+function isProbablyHtml(raw) {
+  return /<\/?(?:a|br|code|div|em|h[1-6]|li|ol|p|strong|tt|ul)\b/i.test(raw);
+}
+
+function normalizeReleaseNotesHref(href) {
+  if (!href || typeof href !== 'string') return '';
+  try {
+    const url = new URL(href, 'https://github.com');
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return '';
+    return url.href;
+  } catch {
+    return '';
+  }
+}
+
+function renderSafeLink(href, labelHtml) {
+  const safeHref = normalizeReleaseNotesHref(href);
+  if (!safeHref) return labelHtml;
+  const escapedHref = escapeAttr(safeHref);
+  return `<a class="updater-notes-link" href="${escapedHref}" data-href="${escapedHref}">${labelHtml}</a>`;
+}
+
 function renderMinimalMarkdown(raw) {
   if (!raw) return '<div class="updater-notes-empty">No release notes provided.</div>';
   const lines = raw.replace(/\r\n/g, '\n').split('\n');
@@ -359,6 +391,83 @@ function renderMinimalMarkdown(raw) {
   return out.join('');
 }
 
+function renderHtmlNode(node) {
+  if (!node) return '';
+  if (node.nodeType === Node.TEXT_NODE) {
+    const text = node.textContent || '';
+    return text.trim() ? escapeHtml(text) : '';
+  }
+  if (node.nodeType !== Node.ELEMENT_NODE) return '';
+
+  const tag = String(node.tagName || '').toLowerCase();
+  if (tag === 'script' || tag === 'style' || tag === 'template') return '';
+
+  const children = Array.from(node.childNodes || []).map(renderHtmlNode).join('');
+  switch (tag) {
+    case 'h1':
+    case 'h2':
+    case 'h3':
+    case 'h4':
+    case 'h5':
+    case 'h6':
+      return children ? `<div class="updater-notes-heading-inline"><strong>${children}</strong></div>` : '';
+    case 'p':
+    case 'div':
+    case 'section':
+      return children ? `<div>${children}</div>` : '';
+    case 'ul':
+    case 'ol':
+      return children ? `<${tag}>${children}</${tag}>` : '';
+    case 'li':
+      return children ? `<li>${children}</li>` : '';
+    case 'strong':
+    case 'b':
+      return children ? `<strong>${children}</strong>` : '';
+    case 'em':
+    case 'i':
+      return children ? `<em>${children}</em>` : '';
+    case 'code':
+    case 'tt':
+      return children ? `<code>${children}</code>` : '';
+    case 'a':
+      return renderSafeLink(node.getAttribute('href'), children || escapeHtml(node.getAttribute('href') || 'Link'));
+    case 'br':
+      return '<br>';
+    default:
+      return children;
+  }
+}
+
+function htmlToPlainTextFallback(raw) {
+  return raw
+    .replace(/<\s*br\s*\/?>/gi, '\n')
+    .replace(/<\s*\/(?:h[1-6]|p|div|section|ul|ol)\s*>/gi, '\n')
+    .replace(/<\s*li\b[^>]*>/gi, '- ')
+    .replace(/<\s*\/li\s*>/gi, '\n')
+    .replace(/<\s*\/?(?:strong|b)\b[^>]*>/gi, '**')
+    .replace(/<\s*\/?(?:em|i)\b[^>]*>/gi, '*')
+    .replace(/<\s*\/?(?:code|tt)\b[^>]*>/gi, '`')
+    .replace(/<\s*a\b[^>]*href=["']([^"']+)["'][^>]*>(.*?)<\s*\/a\s*>/gis, '$2')
+    .replace(/<\s*(script|style|template)\b[^>]*>[\s\S]*?<\s*\/\1\s*>/gi, '')
+    .replace(/<[^>]+>/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function renderHtmlReleaseNotes(raw) {
+  if (typeof DOMParser !== 'function') {
+    return renderMinimalMarkdown(htmlToPlainTextFallback(raw));
+  }
+  const doc = new DOMParser().parseFromString(raw, 'text/html');
+  const html = Array.from(doc.body.childNodes || []).map(renderHtmlNode).join('');
+  return html || '<div class="updater-notes-empty">No release notes provided.</div>';
+}
+
+function renderReleaseNotesMarkup(raw) {
+  if (!raw) return '<div class="updater-notes-empty">No release notes provided.</div>';
+  return isProbablyHtml(raw) ? renderHtmlReleaseNotes(raw) : renderMinimalMarkdown(raw);
+}
+
 function setIcon(target, html, modifier) {
   target.className = modifier ? `updater-modal-icon ${modifier}` : 'updater-modal-icon';
   target.innerHTML = html;
@@ -389,7 +498,7 @@ function showStatusSection(show, modifier) {
 
 function renderReleaseNotes(info) {
   const text = normalizeReleaseNotes(info && info.releaseNotes);
-  notesEl.innerHTML = renderMinimalMarkdown(text);
+  notesEl.innerHTML = renderReleaseNotesMarkup(text);
 }
 
 function render() {
@@ -523,9 +632,23 @@ function getStatus() {
   return currentState.status;
 }
 
-module.exports = {
+const api = {
   init,
   openModal,
   closeModal,
   getStatus
 };
+
+if (process.env.NODE_ENV === 'test') {
+  api.__test = {
+    htmlToPlainTextFallback,
+    isProbablyHtml,
+    normalizeReleaseNotes,
+    normalizeReleaseNotesHref,
+    renderHtmlReleaseNotes,
+    renderMinimalMarkdown,
+    renderReleaseNotesMarkup
+  };
+}
+
+module.exports = api;

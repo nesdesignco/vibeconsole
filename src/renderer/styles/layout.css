@@ -96,6 +96,10 @@ body.sidebar-resizing * {
 #file-tree {
   flex: 1;
   overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  padding-right: var(--space-xs);
+  padding-bottom: var(--space-sm);
   font-size: 13px;
   color: var(--text-secondary);
 }
@@ -184,6 +188,9 @@ body.sidebar-resizing * {
 #projects-list {
   max-height: 220px;
   overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+  padding-right: var(--space-xs);
 }
 
 

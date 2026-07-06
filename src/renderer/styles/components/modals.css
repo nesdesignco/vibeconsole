@@ -371,8 +371,21 @@ svg.updater-spinning {
   font-size: 13px;
   color: var(--text-primary);
   line-height: 1.55;
-  white-space: pre-wrap;
+  white-space: normal;
   word-break: break-word;
+}
+
+.updater-release-notes > div + div,
+.updater-release-notes > div + ul,
+.updater-release-notes > div + ol,
+.updater-release-notes > ul + div,
+.updater-release-notes > ol + div {
+  margin-top: var(--space-xs);
+}
+
+.updater-release-notes .updater-notes-heading-inline {
+  margin-top: var(--space-xs);
+  color: var(--text-primary);
 }
 
 .updater-release-notes ul,
@@ -402,6 +415,15 @@ svg.updater-spinning {
   padding: 1px 4px;
   border-radius: 3px;
   color: var(--text-primary);
+}
+
+.updater-release-notes a {
+  color: var(--accent-primary);
+  text-decoration: none;
+}
+
+.updater-release-notes a:hover {
+  text-decoration: underline;
 }
 
 .updater-release-notes .updater-notes-empty {
@@ -541,4 +563,3 @@ svg.updater-spinning {
   color: var(--accent-primary);
   text-decoration: underline;
 }
-

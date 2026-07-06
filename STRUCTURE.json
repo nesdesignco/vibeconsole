@@ -761,49 +761,49 @@
           "purpose": "Render file tree recursively"
         },
         "clearFileTree": {
-          "line": 155,
+          "line": 157,
           "purpose": "Clear file tree"
         },
         "refreshFileTree": {
-          "line": 164,
+          "line": 166,
           "params": [
             "projectPath"
           ],
           "purpose": "Refresh file tree"
         },
         "requestFileTree": {
-          "line": 171,
+          "line": 173,
           "params": [
             "projectPath"
           ]
         },
         "loadFileTree": {
-          "line": 178,
+          "line": 180,
           "params": [
             "projectPath"
           ],
           "purpose": "Load file tree for path"
         },
         "stopFileTreeWatch": {
-          "line": 186,
+          "line": 188,
           "purpose": "Stop watching file tree changes for the current renderer"
         },
         "validateFileName": {
-          "line": 194,
+          "line": 196,
           "params": [
             "name"
           ],
           "purpose": "Validate a file/folder name"
         },
         "getTargetDir": {
-          "line": 203,
+          "line": 205,
           "params": [
             "file"
           ],
           "purpose": "Get the directory path for creating new items relative to a file"
         },
         "createInlineInput": {
-          "line": 210,
+          "line": 212,
           "params": [
             "fileItem",
             "initialValue",
@@ -813,7 +813,7 @@
           "purpose": "Create an inline input for rename or new file/folder"
         },
         "showNewItemInput": {
-          "line": 287,
+          "line": 289,
           "params": [
             "file",
             "isFolder"
@@ -821,14 +821,14 @@
           "purpose": "Show inline input for creating a new file or folder inside a directory"
         },
         "startRename": {
-          "line": 376,
+          "line": 378,
           "params": [
             "file"
           ],
           "purpose": "Start inline rename for a file item"
         },
         "showContextMenu": {
-          "line": 392,
+          "line": 394,
           "params": [
             "x",
             "y",
@@ -837,37 +837,37 @@
           "purpose": "Show context menu for a file item"
         },
         "getExpandedPaths": {
-          "line": 455,
+          "line": 457,
           "purpose": "Get paths of all currently expanded folders"
         },
         "restoreExpandedPaths": {
-          "line": 473,
+          "line": 475,
           "params": [
             "expandedPaths"
           ],
           "purpose": "Restore expanded state after re-render"
         },
         "setupIPC": {
-          "line": 491,
+          "line": 493,
           "purpose": "Setup IPC listeners"
         },
         "focus": {
-          "line": 509,
+          "line": 511,
           "purpose": "Focus file tree for keyboard navigation"
         },
         "getVisibleItems": {
-          "line": 534,
+          "line": 536,
           "purpose": "Get all visible file items (for navigation)"
         },
         "handleKeydown": {
-          "line": 553,
+          "line": 555,
           "params": [
             "e"
           ],
           "purpose": "Handle keyboard navigation in file tree"
         },
         "blur": {
-          "line": 615,
+          "line": 617,
           "purpose": "Blur/unfocus file tree"
         }
       },
@@ -4649,12 +4649,7 @@
     "renderer/updaterModal": {
       "file": "src/renderer/updaterModal.js",
       "description": "U",
-      "exports": [
-        "init",
-        "openModal",
-        "closeModal",
-        "getStatus"
-      ],
+      "exports": [],
       "depends": [
         "electronBridge",
         "shared/ipcChannels",
@@ -4668,64 +4663,107 @@
           "line": 93
         },
         "setupIpcSubscriptions": {
-          "line": 121
+          "line": 131
         },
         "refreshStateFromMain": {
-          "line": 179
+          "line": 189
         },
         "maybeAutoOpen": {
-          "line": 196,
+          "line": 206,
           "params": [
             "info"
           ]
         },
         "openModal": {
-          "line": 209
+          "line": 219
         },
         "closeModal": {
-          "line": 217
-        },
-        "canDismiss": {
-          "line": 223
-        },
-        "handlePrimary": {
           "line": 227
         },
+        "canDismiss": {
+          "line": 233
+        },
+        "handlePrimary": {
+          "line": 237
+        },
         "handleSecondary": {
-          "line": 252
+          "line": 262
         },
         "formatBytes": {
-          "line": 276,
+          "line": 286,
           "params": [
             "bytes"
           ]
         },
         "formatDuration": {
-          "line": 284,
+          "line": 294,
           "params": [
             "seconds"
           ]
         },
         "formatReleaseDate": {
-          "line": 292,
+          "line": 302,
           "params": [
             "iso"
           ]
         },
         "normalizeReleaseNotes": {
-          "line": 303,
+          "line": 313,
           "params": [
             "notes"
           ]
         },
+        "isProbablyHtml": {
+          "line": 326,
+          "params": [
+            "raw"
+          ]
+        },
+        "normalizeReleaseNotesHref": {
+          "line": 330,
+          "params": [
+            "href"
+          ]
+        },
+        "renderSafeLink": {
+          "line": 341,
+          "params": [
+            "href",
+            "labelHtml"
+          ]
+        },
         "renderMinimalMarkdown": {
-          "line": 316,
+          "line": 348,
+          "params": [
+            "raw"
+          ]
+        },
+        "renderHtmlNode": {
+          "line": 394,
+          "params": [
+            "node"
+          ]
+        },
+        "htmlToPlainTextFallback": {
+          "line": 441,
+          "params": [
+            "raw"
+          ]
+        },
+        "renderHtmlReleaseNotes": {
+          "line": 457,
+          "params": [
+            "raw"
+          ]
+        },
+        "renderReleaseNotesMarkup": {
+          "line": 466,
           "params": [
             "raw"
           ]
         },
         "setIcon": {
-          "line": 362,
+          "line": 471,
           "params": [
             "target",
             "html",
@@ -4733,47 +4771,47 @@
           ]
         },
         "setStatusIcon": {
-          "line": 367,
+          "line": 476,
           "params": [
             "html"
           ]
         },
         "showVersionRow": {
-          "line": 371,
+          "line": 480,
           "params": [
             "show"
           ]
         },
         "showNotesSection": {
-          "line": 374,
+          "line": 483,
           "params": [
             "show"
           ]
         },
         "showProgressSection": {
-          "line": 377,
+          "line": 486,
           "params": [
             "show"
           ]
         },
         "showStatusSection": {
-          "line": 380,
+          "line": 489,
           "params": [
             "show",
             "modifier"
           ]
         },
         "renderReleaseNotes": {
-          "line": 390,
+          "line": 499,
           "params": [
             "info"
           ]
         },
         "render": {
-          "line": 395
+          "line": 504
         },
         "getStatus": {
-          "line": 522
+          "line": 631
         }
       },
       "ipc": {
@@ -4788,6 +4826,7 @@
           "OPEN_UPDATER_MODAL"
         ],
         "emits": [
+          "OPEN_EXTERNAL_URL",
           "OPEN_EXTERNAL_URL",
           "DOWNLOAD_UPDATE",
           "INSTALL_UPDATE",
