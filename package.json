@@ -84,6 +84,7 @@
       "gatekeeperAssess": false
     },
     "dmg": {
+      "artifactName": "${productName}-mac.${ext}",
       "sign": true,
       "title": "${productName} ${version}",
       "contents": [

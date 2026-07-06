@@ -2,6 +2,11 @@
 
 ## Session Notes
 
+### [2026-07-06] Stable macOS DMG Download Link
+- Added a fixed DMG artifact name for release builds so the public direct-download URL can remain stable across versions: `VibeConsole-mac.dmg`.
+- Made the release workflow explicitly overwrite same-named assets on reruns and fail when expected release files are missing.
+- Coordinated the website CTA target with the stable direct-download asset in the separate `vibeconsoleweb` project.
+
 ### [2026-02-13] Public Readiness Pass
 - TODO: Capture notable decisions and fixes made while preparing the repository for a public push.
 
