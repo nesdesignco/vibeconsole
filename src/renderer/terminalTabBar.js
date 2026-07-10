@@ -575,10 +575,12 @@ class TerminalTabBar {
     const sessionItem = container.querySelector('.usage-item.session');
     const weeklyItem = container.querySelector('.usage-item.weekly');
 
+    const expired = Boolean(data.fiveHour?.expired || data.sevenDay?.expired);
+
     if (data.error) {
       if (data.fiveHour || data.sevenDay) {
         // Error but cached data available - show cached data with warning tooltip
-        container.title = this._getUsageRefreshTitle(`Warning: ${data.error}`, data.sourceLimitId);
+        container.title = this._getUsageRefreshTitle(`Warning: ${data.error}`, data.sourceLimitId, data.sourceTimestamp, expired);
         // Fall through to normal render path below
       } else {
         // No data at all - show N/A
@@ -603,7 +605,9 @@ class TerminalTabBar {
       : '';
     this._updateUsageItem(weeklyItem, weeklyUsage, `${Math.round(weeklyUsage)}%`, weeklyReset);
 
-    container.title = this._getUsageRefreshTitle('', data.sourceLimitId);
+    if (!data.error) {
+      container.title = this._getUsageRefreshTitle('', data.sourceLimitId, data.sourceTimestamp, expired);
+    }
   }
 
   _setUsageToolIndicator(toolId) {
@@ -625,13 +629,20 @@ class TerminalTabBar {
     nameEl.textContent = name;
   }
 
-  _getUsageRefreshTitle(prefix = '', sourceLimitId = null) {
+  _getUsageRefreshTitle(prefix = '', sourceLimitId = null, sourceTimestamp = null, expired = false) {
     const name = AI_TOOL_FULL_NAMES[this._currentUsageTool] || 'AI Tool';
-    const sourceLine = sourceLimitId ? `\nSource: ${sourceLimitId}` : '';
-    if (prefix) {
-      return `${prefix}\n${name} usage - Click to refresh${sourceLine}`;
+    let suffix = sourceLimitId ? `\nSource: ${sourceLimitId}` : '';
+    const age = sourceTimestamp ? this._formatAge(sourceTimestamp) : '';
+    if (age) {
+      suffix += `\nData age: ${age}`;
     }
-    return `${name} usage - Click to refresh${sourceLine}`;
+    if (expired) {
+      suffix += '\nWindow reset since last activity';
+    }
+    if (prefix) {
+      return `${prefix}\n${name} usage - Click to refresh${suffix}`;
+    }
+    return `${name} usage - Click to refresh${suffix}`;
   }
 
   /**
@@ -662,6 +673,32 @@ class TerminalTabBar {
       reset.textContent = `(${resetText})`;
     } else if (reset) {
       reset.textContent = '';
+    }
+  }
+
+  /**
+   * Format how long ago a timestamp was (e.g. "5m ago", "2h 15m ago")
+   */
+  _formatAge(isoString) {
+    try {
+      const diffMs = Date.now() - new Date(isoString).getTime();
+      if (!Number.isFinite(diffMs) || diffMs < 0) return '';
+
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) return 'just now';
+      if (diffMins < 60) {
+        return `${diffMins}m ago`;
+      }
+
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) {
+        return `${diffHours}h ${diffMins % 60}m ago`;
+      }
+
+      const diffDays = Math.floor(diffHours / 24);
+      return `${diffDays}d ${diffHours % 24}h ago`;
+    } catch {
+      return '';
     }
   }
 

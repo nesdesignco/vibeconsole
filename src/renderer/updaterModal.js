@@ -231,7 +231,7 @@ function closeModal() {
 }
 
 function canDismiss() {
-  return currentState.status !== 'downloading';
+  return currentState.status !== 'downloading' && currentState.status !== 'installing';
 }
 
 function handlePrimary() {
@@ -244,6 +244,10 @@ function handlePrimary() {
       break;
     case 'downloaded':
       ipcRenderer.send(IPC.INSTALL_UPDATE);
+      // Renderer-only state: the app quits when the install proceeds; on
+      // failure main sends UPDATE_ERROR which replaces this state.
+      currentState.status = 'installing';
+      render();
       break;
     case 'error':
       currentState.status = 'checking';
@@ -584,6 +588,16 @@ function render() {
         : 'The update is ready to install.';
       primaryBtn.textContent = 'Restart now';
       secondaryBtn.textContent = 'Later';
+      break;
+
+    case 'installing':
+      setIcon(iconEl, ICONS.spinner, 'checking');
+      titleEl.textContent = 'Installing update…';
+      subtitleEl.textContent = 'Vibe Console will restart automatically';
+      showVersionRow(true);
+      primaryBtn.style.display = 'none';
+      secondaryBtn.style.display = 'none';
+      closeBtn.disabled = true;
       break;
 
     case 'error':

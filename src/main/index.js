@@ -28,6 +28,7 @@ const codexUsageManager = require('./codexUsageManager');
 const gitBranchesManager = require('./gitBranchesManager');
 const gitChangesManager = require('./gitChangesManager');
 const aiToolManager = require('./aiToolManager');
+const aiToolProcessDetector = require('./aiToolProcessDetector');
 const savedPromptsManager = require('./savedPromptsManager');
 const autoUpdater = require('./autoUpdater');
 
@@ -91,6 +92,7 @@ function createWindow() {
 
   mainWindow.on('closed', () => {
     ptyManager.destroyAll();
+    aiToolProcessDetector.cleanup();
     claudeUsageManager.cleanup();
     codexUsageManager.cleanup();
     autoUpdater.cleanup();
@@ -99,6 +101,7 @@ function createWindow() {
 
   // Initialize modules with window reference
   ptyManager.init(mainWindow);
+  aiToolProcessDetector.init(mainWindow);
   aiToolManager.init(mainWindow, app);
   menu.init(mainWindow, app, aiToolManager);
   dialogs.init(mainWindow, () => {});

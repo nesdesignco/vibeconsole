@@ -7,6 +7,7 @@ const { app } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const { CancellationToken } = require('builder-util-runtime');
 const { IPC } = require('../shared/ipcChannels');
+const { MANUAL_INSTALL_SCRIPT } = require('./updaterInstallScript');
 const { spawn, execFile } = require('child_process');
 const { promisify } = require('util');
 const fs = require('fs');
@@ -76,6 +77,12 @@ function ensureEventListeners() {
   });
 
   autoUpdater.on('update-available', (info) => {
+    // Hourly re-checks re-emit update-available for the same version; don't
+    // regress an in-flight download or a downloaded-and-ready update.
+    if ((state.status === 'downloading' || state.status === 'downloaded') &&
+        state.updateInfo && info && state.updateInfo.version === info.version) {
+      return;
+    }
     state.status = 'available';
     state.updateInfo = normalizeUpdateInfo(info);
     state.progress = null;
@@ -263,16 +270,28 @@ function setupIPC(_ipcMain) {
       safeSend(IPC.UPDATE_ERROR, { message: 'No downloaded update is ready to install' });
       return;
     }
+    if (installRequested) return; // ignore repeated clicks while installing
+    installRequested = true;
 
-    // Squirrel.Mac refuses unsigned/ad-hoc-signed apps, which makes
-    // quitAndInstall a silent no-op on our unsigned builds. Replace the app
-    // bundle from the downloaded zip ourselves in that case.
-    if (process.platform === 'darwin' && !(await isProperlySignedApp())) {
-      installMacUpdateManually();
-      return;
+    if (process.platform === 'darwin') {
+      // Neither Squirrel.Mac nor the manual fallback can replace a bundle on
+      // a read-only volume (running from the DMG) or under App Translocation.
+      const blocker = getInstallLocationBlocker();
+      if (blocker) {
+        installRequested = false;
+        safeSend(IPC.UPDATE_ERROR, { message: blocker });
+        return;
+      }
+
+      // Squirrel.Mac refuses unsigned/ad-hoc-signed apps, which makes
+      // quitAndInstall a silent no-op on our unsigned builds. Replace the app
+      // bundle from the downloaded zip ourselves in that case.
+      if (!(await isProperlySignedApp())) {
+        installMacUpdateManually();
+        return;
+      }
     }
 
-    installRequested = true;
     autoUpdater.quitAndInstall(false, true);
   });
 }
@@ -281,6 +300,22 @@ function getAppBundlePath() {
   // .../VibeConsole.app/Contents/MacOS/VibeConsole -> .../VibeConsole.app
   const bundlePath = path.resolve(app.getPath('exe'), '..', '..', '..');
   return bundlePath.endsWith('.app') ? bundlePath : null;
+}
+
+/**
+ * Returns a user-facing error when the app runs from a location where the
+ * bundle cannot be replaced, null when installation can proceed.
+ */
+function getInstallLocationBlocker() {
+  const bundlePath = getAppBundlePath();
+  if (!bundlePath) return null;
+  if (bundlePath.startsWith('/Volumes/')) {
+    return 'VibeConsole is running from the disk image. Move it to the Applications folder, relaunch, and try again.';
+  }
+  if (bundlePath.includes('/AppTranslocation/')) {
+    return 'macOS is running VibeConsole from a temporary location. Move it to the Applications folder, relaunch, and try again.';
+  }
+  return null;
 }
 
 async function isProperlySignedApp() {
@@ -295,21 +330,6 @@ async function isProperlySignedApp() {
     return false;
   }
 }
-
-const MANUAL_INSTALL_SCRIPT = `#!/bin/sh
-PID="$1"; ZIP="$2"; APP="$3"
-while kill -0 "$PID" 2>/dev/null; do sleep 0.2; done
-EXTRACT=$(mktemp -d) || exit 1
-ditto -xk "$ZIP" "$EXTRACT" || exit 1
-NEW_APP=$(find "$EXTRACT" -maxdepth 1 -name '*.app' -print | head -n 1)
-[ -n "$NEW_APP" ] || exit 1
-rm -rf "$APP" || exit 1
-mv "$NEW_APP" "$APP" || exit 1
-xattr -dr com.apple.quarantine "$APP" 2>/dev/null
-rm -rf "$EXTRACT"
-rm -f "$0"
-open "$APP"
-`;
 
 function installMacUpdateManually() {
   try {
@@ -331,6 +351,7 @@ function installMacUpdateManually() {
     child.unref();
     app.quit();
   } catch (err) {
+    installRequested = false;
     safeSend(IPC.UPDATE_ERROR, { message: `Install failed: ${err.message}` });
   }
 }

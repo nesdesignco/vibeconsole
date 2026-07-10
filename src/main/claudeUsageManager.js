@@ -59,6 +59,19 @@ async function getOAuthToken() {
 }
 
 /**
+ * Build an error result, falling back to the last good values so the
+ * renderer can show stale data with a warning instead of N/A.
+ */
+function errorResult(message) {
+  return {
+    error: message,
+    fiveHour: cachedUsage?.fiveHour || null,
+    sevenDay: cachedUsage?.sevenDay || null,
+    lastUpdated: cachedUsage?.lastUpdated || new Date().toISOString()
+  };
+}
+
+/**
  * Fetch usage data from Claude OAuth API
  * @returns {Promise<Object>} Usage data or error
  */
@@ -66,12 +79,7 @@ async function fetchUsage() {
   const token = await getOAuthToken();
 
   if (!token) {
-    return {
-      error: 'No OAuth token found',
-      fiveHour: null,
-      sevenDay: null,
-      lastUpdated: new Date().toISOString()
-    };
+    return errorResult('No OAuth token found');
   }
 
   return new Promise((resolve) => {
@@ -114,48 +122,23 @@ async function fetchUsage() {
             lastFetchTime = Date.now();
             resolve(result);
           } else if (res.statusCode === 401) {
-            resolve({
-              error: 'Token expired or invalid',
-              fiveHour: null,
-              sevenDay: null,
-              lastUpdated: new Date().toISOString()
-            });
+            resolve(errorResult('Token expired or invalid'));
           } else {
-            resolve({
-              error: `API error: ${res.statusCode}`,
-              fiveHour: null,
-              sevenDay: null,
-              lastUpdated: new Date().toISOString()
-            });
+            resolve(errorResult(`API error: ${res.statusCode}`));
           }
         } catch {
-          resolve({
-            error: 'Failed to parse response',
-            fiveHour: null,
-            sevenDay: null,
-            lastUpdated: new Date().toISOString()
-          });
+          resolve(errorResult('Failed to parse response'));
         }
       });
     });
 
     req.on('error', (err) => {
-      resolve({
-        error: `Network error: ${err.message}`,
-        fiveHour: cachedUsage?.fiveHour || null,
-        sevenDay: cachedUsage?.sevenDay || null,
-        lastUpdated: cachedUsage?.lastUpdated || new Date().toISOString()
-      });
+      resolve(errorResult(`Network error: ${err.message}`));
     });
 
     req.on('timeout', () => {
       req.destroy();
-      resolve({
-        error: 'Request timeout',
-        fiveHour: cachedUsage?.fiveHour || null,
-        sevenDay: cachedUsage?.sevenDay || null,
-        lastUpdated: cachedUsage?.lastUpdated || new Date().toISOString()
-      });
+      resolve(errorResult('Request timeout'));
     });
 
     req.end();
@@ -169,12 +152,9 @@ async function sendUsageToRenderer() {
   if (!mainWindow || mainWindow.isDestroyed()) return;
 
   const usage = await fetchUsage();
-  if (!usage.error) {
-    // Good data - push it
+  if (!usage.error || usage.fiveHour || usage.sevenDay) {
+    // Good data, or an error with stale values the renderer can show with a warning
     mainWindow.webContents.send(IPC.AI_USAGE_DATA, { toolId: 'claude', ...usage });
-  } else if (cachedUsage && !cachedUsage.error) {
-    // Error but we have valid cached data - push cached instead
-    mainWindow.webContents.send(IPC.AI_USAGE_DATA, { toolId: 'claude', ...cachedUsage });
   }
   // If error and no valid cache, don't push anything - avoid wiping renderer state
 }

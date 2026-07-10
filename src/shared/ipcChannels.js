@@ -55,6 +55,7 @@ const IPC = {
   TERMINAL_INPUT_ID: 'terminal-input-id',
   TERMINAL_OUTPUT_ID: 'terminal-output-id',
   TERMINAL_RESIZE_ID: 'terminal-resize-id',
+  TERMINAL_AI_TOOL_DETECTED: 'terminal-ai-tool-detected',
   GET_AVAILABLE_SHELLS: 'get-available-shells',
   AVAILABLE_SHELLS_DATA: 'available-shells-data',
 

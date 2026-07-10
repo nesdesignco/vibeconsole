@@ -1,7 +1,7 @@
 {
   "version": "1.1",
   "description": "Claude Code IDE - Module structure and IPC communication map",
-  "lastUpdated": "2026-07-06",
+  "lastUpdated": "2026-07-10",
   "architecture": {
     "type": "electron",
     "mainProcess": "src/main/index.js",
@@ -35,38 +35,39 @@
         "gitBranchesManager",
         "gitChangesManager",
         "aiToolManager",
+        "aiToolProcessDetector",
         "savedPromptsManager",
         "autoUpdater"
       ],
       "functions": {
         "createWindow": {
-          "line": 40,
+          "line": 41,
           "purpose": "Create main application window"
         },
         "isTrustedAppUrl": {
-          "line": 116,
+          "line": 119,
           "params": [
             "rawUrl"
           ],
           "purpose": "Allow only local app URLs to load inside the app window."
         },
         "openExternalSafely": {
-          "line": 139,
+          "line": 142,
           "params": [
             "rawUrl"
           ],
           "purpose": "Avoid forwarding file/custom scheme URLs to the OS."
         },
         "setupAllIPC": {
-          "line": 153,
+          "line": 156,
           "purpose": "Setup all IPC handlers"
         },
         "init": {
-          "line": 210,
+          "line": 213,
           "purpose": "Initialize application"
         },
         "initModulesWithWindow": {
-          "line": 221,
+          "line": 224,
           "params": [
             "window"
           ],
@@ -1435,6 +1436,7 @@
         "@xterm/addon-fit",
         "@xterm/addon-web-links",
         "shared/ipcChannels",
+        "shared/aiToolDetection",
         "clipboardWrite",
         "shellEscape",
         "filePathLinker"
@@ -1443,7 +1445,8 @@
       "ipc": {
         "listens": [
           "TERMINAL_OUTPUT_ID",
-          "TERMINAL_DESTROYED"
+          "TERMINAL_DESTROYED",
+          "TERMINAL_AI_TOOL_DETECTED"
         ],
         "emits": [
           "OPEN_EXTERNAL_URL",
@@ -1561,6 +1564,8 @@
         "hasTerminal",
         "getTerminalsByProject",
         "getTerminalInfo",
+        "getTerminalPids",
+        "getTerminalForegroundNames",
         "getAvailableShells",
         "setupIPC"
       ],
@@ -1659,6 +1664,14 @@
             "ipcMain"
           ],
           "purpose": "Setup IPC handlers for multi-terminal"
+        },
+        "getTerminalPids": {
+          "line": 375,
+          "purpose": "Get shell PIDs for all live terminals (for AI tool process detection)"
+        },
+        "getTerminalForegroundNames": {
+          "line": 390,
+          "purpose": "Get node-pty's foreground process name per terminal (fallback detection path)"
         }
       },
       "ipc": {
@@ -2305,45 +2318,51 @@
           "line": 31,
           "purpose": "Get OAuth token from macOS Keychain"
         },
-        "fetchUsage": {
+        "errorResult": {
           "line": 65,
+          "params": [
+            "message"
+          ],
+          "purpose": "renderer can show stale data with a warning instead of N/A."
+        },
+        "fetchUsage": {
+          "line": 78,
           "purpose": "Fetch usage data from Claude OAuth API"
         },
         "sendUsageToRenderer": {
-          "line": 168,
+          "line": 151,
           "purpose": "Send usage data to renderer"
         },
         "startPolling": {
-          "line": 186,
+          "line": 166,
           "params": [
             "interval = 60000"
           ],
           "purpose": "Start periodic polling for usage updates"
         },
         "stopPolling": {
-          "line": 204,
+          "line": 184,
           "purpose": "Stop polling"
         },
         "setupIPC": {
-          "line": 219,
+          "line": 199,
           "params": [
             "_ipcMain"
           ],
           "purpose": "Setup IPC handlers"
         },
         "getCachedUsage": {
-          "line": 227,
+          "line": 207,
           "purpose": "Get cached usage if fresh (< 60s old)"
         },
         "cleanup": {
-          "line": 237,
+          "line": 217,
           "purpose": "Cleanup on app quit"
         }
       },
       "ipc": {
         "listens": [],
         "emits": [
-          "AI_USAGE_DATA",
           "AI_USAGE_DATA"
         ]
       }
@@ -3233,6 +3252,7 @@
         "electron-updater",
         "builder-util-runtime",
         "shared/ipcChannels",
+        "updaterInstallScript",
         "child_process",
         "util",
         "fs",
@@ -3241,61 +3261,65 @@
       ],
       "functions": {
         "isAutoUpdateSupported": {
-          "line": 36
+          "line": 37
         },
         "safeSend": {
-          "line": 40,
+          "line": 41,
           "params": [
             "channel",
             "data"
           ]
         },
         "normalizeUpdateInfo": {
-          "line": 46,
+          "line": 47,
           "params": [
             "info"
           ]
         },
         "resetDownload": {
-          "line": 56
+          "line": 57
         },
         "handleDownloadCancelled": {
-          "line": 61
+          "line": 62
         },
         "ensureEventListeners": {
-          "line": 68
+          "line": 69
         },
         "init": {
-          "line": 147,
+          "line": 154,
           "params": [
             "window"
           ]
         },
         "triggerManualCheck": {
-          "line": 178,
+          "line": 185,
           "purpose": "can react immediately without waiting for events to bubble back."
         },
         "setupIPC": {
-          "line": 204,
+          "line": 211,
           "params": [
             "_ipcMain"
           ]
         },
         "getAppBundlePath": {
-          "line": 280
+          "line": 299
+        },
+        "getInstallLocationBlocker": {
+          "line": 309,
+          "purpose": "bundle cannot be replaced, null when installation can proceed."
         },
         "isProperlySignedApp": {
-          "line": 286
+          "line": 321
         },
         "installMacUpdateManually": {
-          "line": 314
+          "line": 334
         },
         "requestOpenModal": {
-          "line": 342,
+          "line": 363,
           "purpose": "The renderer reads the current state via GET_UPDATE_STATE upon receiving this."
         },
         "cleanup": {
-          "line": 346
+          "line": 367
         }
       },
       "ipc": {
@@ -3323,6 +3347,7 @@
         "parseTokenCountCandidatesFromContent",
         "selectBestRateLimit",
         "normalizeUsage",
+        "applyWindowExpiry",
         "toIsoFromUnixSeconds"
       ],
       "depends": [
@@ -3394,45 +3419,53 @@
           ],
           "purpose": "Normalize Codex token_count data to the same format as Claude usage"
         },
+        "applyWindowExpiry": {
+          "line": 238,
+          "params": [
+            "usage",
+            "now = Date.now("
+          ],
+          "purpose": "so cachedUsage keeps the original values."
+        },
         "fetchUsage": {
-          "line": 235,
+          "line": 256,
           "purpose": "Fetch usage data from Codex session files"
         },
         "setupWatcher": {
-          "line": 280,
+          "line": 301,
           "params": [
             "filePath"
           ],
           "purpose": "Setup file watcher on the active session file"
         },
         "sendUsageToRenderer": {
-          "line": 310,
+          "line": 331,
           "purpose": "Send usage data to renderer"
         },
         "startPolling": {
-          "line": 320,
+          "line": 341,
           "params": [
             "interval = 30000"
           ],
           "purpose": "Start periodic polling for usage updates"
         },
         "stopPolling": {
-          "line": 337,
+          "line": 358,
           "purpose": "Stop polling"
         },
         "setupIPC": {
-          "line": 351,
+          "line": 372,
           "params": [
             "ipcMain"
           ],
           "purpose": "Setup IPC handlers"
         },
         "getCachedUsage": {
-          "line": 360,
+          "line": 381,
           "purpose": "Get cached usage if available"
         },
         "cleanup": {
-          "line": 367,
+          "line": 388,
           "purpose": "Cleanup on app quit"
         }
       },
@@ -4687,83 +4720,83 @@
           "line": 237
         },
         "handleSecondary": {
-          "line": 262
+          "line": 266
         },
         "formatBytes": {
-          "line": 286,
+          "line": 290,
           "params": [
             "bytes"
           ]
         },
         "formatDuration": {
-          "line": 294,
+          "line": 298,
           "params": [
             "seconds"
           ]
         },
         "formatReleaseDate": {
-          "line": 302,
+          "line": 306,
           "params": [
             "iso"
           ]
         },
         "normalizeReleaseNotes": {
-          "line": 313,
+          "line": 317,
           "params": [
             "notes"
           ]
         },
         "isProbablyHtml": {
-          "line": 326,
+          "line": 330,
           "params": [
             "raw"
           ]
         },
         "normalizeReleaseNotesHref": {
-          "line": 330,
+          "line": 334,
           "params": [
             "href"
           ]
         },
         "renderSafeLink": {
-          "line": 341,
+          "line": 345,
           "params": [
             "href",
             "labelHtml"
           ]
         },
         "renderMinimalMarkdown": {
-          "line": 348,
+          "line": 352,
           "params": [
             "raw"
           ]
         },
         "renderHtmlNode": {
-          "line": 394,
+          "line": 398,
           "params": [
             "node"
           ]
         },
         "htmlToPlainTextFallback": {
-          "line": 441,
+          "line": 445,
           "params": [
             "raw"
           ]
         },
         "renderHtmlReleaseNotes": {
-          "line": 457,
+          "line": 461,
           "params": [
             "raw"
           ]
         },
         "renderReleaseNotesMarkup": {
-          "line": 466,
+          "line": 470,
           "params": [
             "raw"
           ]
         },
         "setIcon": {
-          "line": 471,
+          "line": 475,
           "params": [
             "target",
             "html",
@@ -4771,47 +4804,47 @@
           ]
         },
         "setStatusIcon": {
-          "line": 476,
+          "line": 480,
           "params": [
             "html"
           ]
         },
         "showVersionRow": {
-          "line": 480,
+          "line": 484,
           "params": [
             "show"
           ]
         },
         "showNotesSection": {
-          "line": 483,
+          "line": 487,
           "params": [
             "show"
           ]
         },
         "showProgressSection": {
-          "line": 486,
+          "line": 490,
           "params": [
             "show"
           ]
         },
         "showStatusSection": {
-          "line": 489,
+          "line": 493,
           "params": [
             "show",
             "modifier"
           ]
         },
         "renderReleaseNotes": {
-          "line": 499,
+          "line": 503,
           "params": [
             "info"
           ]
         },
         "render": {
-          "line": 504
+          "line": 508
         },
         "getStatus": {
-          "line": 631
+          "line": 645
         }
       },
       "ipc": {
@@ -5097,6 +5130,122 @@
           ]
         }
       }
+    },
+    "main/aiToolProcessDetector": {
+      "file": "src/main/aiToolProcessDetector.js",
+      "description": "A",
+      "exports": [
+        "init",
+        "cleanup",
+        "startPolling",
+        "stopPolling",
+        "pollOnce",
+        "parsePsOutput",
+        "commToTool",
+        "detectToolForPid",
+        "nextDetectionState"
+      ],
+      "depends": [
+        "child_process",
+        "util",
+        "shared/ipcChannels",
+        "ptyManager"
+      ],
+      "functions": {
+        "parsePsOutput": {
+          "line": 33,
+          "params": [
+            "text"
+          ],
+          "purpose": "that may contain spaces, so the whole line must not be split on whitespace."
+        },
+        "commToTool": {
+          "line": 62,
+          "params": [
+            "comm"
+          ],
+          "purpose": "don't count (their parent `codex` is already in the tree)."
+        },
+        "detectToolForPid": {
+          "line": 77,
+          "params": [
+            "shellPid",
+            "{ commByPid",
+            "childrenByPpid }"
+          ],
+          "purpose": "from the shell is reported)."
+        },
+        "nextDetectionState": {
+          "line": 103,
+          "params": [
+            "prevState",
+            "rawDetected"
+          ],
+          "purpose": "disappearance only after NULL_DEBOUNCE_TICKS consecutive misses."
+        },
+        "pruneState": {
+          "line": 117,
+          "params": [
+            "pids"
+          ]
+        },
+        "pollOnce": {
+          "line": 126
+        },
+        "init": {
+          "line": 177,
+          "params": [
+            "window"
+          ],
+          "purpose": "Initialize the module with window reference"
+        },
+        "startPolling": {
+          "line": 182,
+          "params": [
+            "interval = POLL_INTERVAL_MS"
+          ]
+        },
+        "stopPolling": {
+          "line": 192
+        },
+        "cleanup": {
+          "line": 202,
+          "purpose": "Cleanup on app quit"
+        }
+      },
+      "ipc": {
+        "listens": [],
+        "emits": [
+          "TERMINAL_AI_TOOL_DETECTED"
+        ]
+      }
+    },
+    "shared/aiToolDetection": {
+      "file": "src/shared/aiToolDetection.js",
+      "description": "A",
+      "exports": [
+        "AI_TOOL_COMMAND_MAP",
+        "matchAiToolCommand"
+      ],
+      "depends": [],
+      "functions": {
+        "matchAiToolCommand": {
+          "line": 20,
+          "params": [
+            "line"
+          ],
+          "purpose": "`/usr/local/bin/claude -p` and `CLAUDE` both match."
+        }
+      }
+    },
+    "main/updaterInstallScript": {
+      "file": "src/main/updaterInstallScript.js",
+      "description": "M",
+      "exports": [
+        "MANUAL_INSTALL_SCRIPT"
+      ],
+      "depends": [],
+      "functions": {}
     }
   },
   "ipcChannels": {

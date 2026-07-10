@@ -230,6 +230,27 @@ function normalizeUsage(selectedCandidate) {
 }
 
 /**
+ * Zero out windows whose reset time has passed. The JSONL data only updates
+ * while Codex runs, so after resets_at the recorded used_percent no longer
+ * reflects the (rolled-over) window. Pure view - never mutates the input,
+ * so cachedUsage keeps the original values.
+ */
+function applyWindowExpiry(usage, now = Date.now()) {
+  if (!usage) return usage;
+
+  const expire = (window) => {
+    if (!window || !window.resetsAt) return window;
+    const reset = Date.parse(window.resetsAt);
+    if (Number.isFinite(reset) && reset <= now) {
+      return { ...window, utilization: 0, resetsAt: null, expired: true };
+    }
+    return window;
+  };
+
+  return { ...usage, fiveHour: expire(usage.fiveHour), sevenDay: expire(usage.sevenDay) };
+}
+
+/**
  * Fetch usage data from Codex session files
  */
 async function fetchUsage() {
@@ -256,7 +277,7 @@ async function fetchUsage() {
   // New session files often start with metadata only. Reuse cache first, and
   // only scan older files when no cache is available yet.
   if (!selected && cachedUsage && !cachedUsage.error) {
-    return cachedUsage;
+    return applyWindowExpiry(cachedUsage);
   }
 
   if (!selected) {
@@ -268,10 +289,10 @@ async function fetchUsage() {
 
   const usage = normalizeUsage(selected);
   if (usage.error && cachedUsage && !cachedUsage.error) {
-    return cachedUsage;
+    return applyWindowExpiry(cachedUsage);
   }
   cachedUsage = usage;
-  return usage;
+  return applyWindowExpiry(usage);
 }
 
 /**
@@ -358,7 +379,7 @@ function setupIPC(ipcMain) {
  * @returns {Object|null} Cached usage data or null
  */
 function getCachedUsage() {
-  return cachedUsage || null;
+  return cachedUsage ? applyWindowExpiry(cachedUsage) : null;
 }
 
 /**
@@ -382,5 +403,6 @@ module.exports = {
   parseTokenCountCandidatesFromContent,
   selectBestRateLimit,
   normalizeUsage,
+  applyWindowExpiry,
   toIsoFromUnixSeconds
 };

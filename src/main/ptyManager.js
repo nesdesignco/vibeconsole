@@ -368,6 +368,37 @@ function setupIPC(ipcMain) {
   });
 }
 
+/**
+ * Get shell PIDs for all live terminals (for AI tool process detection)
+ * @returns {Array<{terminalId: string, pid: number}>}
+ */
+function getTerminalPids() {
+  const result = [];
+  for (const [terminalId, instance] of ptyInstances) {
+    const pid = instance.pty && instance.pty.pid;
+    if (Number.isFinite(pid)) {
+      result.push({ terminalId, pid });
+    }
+  }
+  return result;
+}
+
+/**
+ * Get node-pty's foreground process name per terminal (fallback detection path)
+ * @returns {Array<{terminalId: string, name: string}>}
+ */
+function getTerminalForegroundNames() {
+  const result = [];
+  for (const [terminalId, instance] of ptyInstances) {
+    try {
+      result.push({ terminalId, name: instance.pty.process || '' });
+    } catch {
+      result.push({ terminalId, name: '' });
+    }
+  }
+  return result;
+}
+
 module.exports = {
   init,
   createTerminal,
@@ -380,6 +411,8 @@ module.exports = {
   hasTerminal,
   getTerminalsByProject,
   getTerminalInfo,
+  getTerminalPids,
+  getTerminalForegroundNames,
   getAvailableShells,
   setupIPC
 };

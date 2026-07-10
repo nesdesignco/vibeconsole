@@ -82,3 +82,61 @@ test('normalizeUsage returns no-data shape for missing candidate', () => {
   assert.equal(normalized.sourceLimitId, null);
   assert.equal(normalized.sourceTimestamp, null);
 });
+
+test('applyWindowExpiry zeroes windows whose reset time has passed', () => {
+  const now = Date.parse('2026-07-10T12:00:00Z');
+  const usage = {
+    fiveHour: { utilization: 13, resetsAt: '2026-07-10T10:55:00Z' },
+    sevenDay: { utilization: 2, resetsAt: '2026-07-16T22:00:00Z' },
+    error: null
+  };
+
+  const result = codexUsageManager.applyWindowExpiry(usage, now);
+
+  assert.deepEqual(result.fiveHour, { utilization: 0, resetsAt: null, expired: true });
+  assert.deepEqual(result.sevenDay, usage.sevenDay); // future window untouched
+});
+
+test('applyWindowExpiry leaves null windows and future windows untouched', () => {
+  const now = Date.parse('2026-07-10T12:00:00Z');
+  const usage = {
+    fiveHour: null,
+    sevenDay: { utilization: 5, resetsAt: '2026-07-12T00:00:00Z' },
+    error: null
+  };
+
+  const result = codexUsageManager.applyWindowExpiry(usage, now);
+
+  assert.equal(result.fiveHour, null);
+  assert.deepEqual(result.sevenDay, usage.sevenDay);
+  assert.equal(codexUsageManager.applyWindowExpiry(null, now), null);
+});
+
+test('applyWindowExpiry does not mutate its input', () => {
+  const now = Date.parse('2026-07-10T12:00:00Z');
+  const usage = {
+    fiveHour: { utilization: 13, resetsAt: '2026-07-10T10:55:00Z' },
+    sevenDay: { utilization: 2, resetsAt: '2026-07-10T10:55:00Z' },
+    error: null
+  };
+
+  codexUsageManager.applyWindowExpiry(usage, now);
+
+  assert.equal(usage.fiveHour.utilization, 13);
+  assert.equal(usage.fiveHour.resetsAt, '2026-07-10T10:55:00Z');
+  assert.equal(usage.fiveHour.expired, undefined);
+});
+
+test('applyWindowExpiry composes with normalizeUsage on an expired event', () => {
+  const pastUnixSeconds = 1770946556; // 2026-02-13
+  const content = buildTokenCountEvent({ limitId: 'codex', primary: 45, secondary: 67 });
+  const candidates = codexUsageManager.parseTokenCountCandidatesFromContent(content);
+  const normalized = codexUsageManager.normalizeUsage(codexUsageManager.selectBestRateLimit(candidates));
+  const now = (pastUnixSeconds + 60) * 1000;
+
+  const result = codexUsageManager.applyWindowExpiry(normalized, now);
+
+  assert.equal(result.fiveHour.utilization, 0);
+  assert.equal(result.fiveHour.expired, true);
+  assert.equal(result.sevenDay.utilization, 67); // its reset is still in the future
+});

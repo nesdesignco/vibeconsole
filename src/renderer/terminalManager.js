@@ -8,6 +8,7 @@ const { Terminal } = require('@xterm/xterm');
 const { FitAddon } = require('@xterm/addon-fit');
 const { WebLinksAddon } = require('@xterm/addon-web-links');
 const { IPC } = require('../shared/ipcChannels');
+const { matchAiToolCommand } = require('../shared/aiToolDetection');
 const { writeClipboardText } = require('./clipboardWrite');
 const { shellQuote } = require('./shellEscape');
 const { registerFilePathLinks } = require('./filePathLinker');
@@ -40,15 +41,15 @@ const terminalTheme = {
 // Session storage key
 const SESSION_STORAGE_KEY = 'vibeconsole-terminal-sessions';
 const GLOBAL_PROJECT_KEY = '__global__';
-const AI_TOOL_COMMAND_MAP = {
-  claude: 'claude',
-  codex: 'codex'
-};
+// Process detection may lag a freshly typed/queued start command by one poll
+// cycle; a null detection within this window must not clear the tag.
+const AI_TOOL_DETECTION_GRACE_MS = 5000;
 
 class TerminalManager {
   constructor() {
     this.terminals = new Map(); // Map<id, {terminal, fitAddon, element, state}>
     this._inputLineBuffers = new Map(); // Map<terminalId, currentInputLine>
+    this._aiToolHeuristicSetAt = new Map(); // Map<terminalId, timestamp of last heuristic tag>
     this.activeTerminalId = null;
     this.viewMode = 'tabs'; // 'tabs' or 'grid'
     this.gridLayout = '2x2';
@@ -607,6 +608,11 @@ class TerminalManager {
       lastSentRows: null
     });
 
+    if (state.aiTool) {
+      // Creation-time tag (Start button): protect it until the start command runs
+      this._aiToolHeuristicSetAt.set(terminalId, Date.now());
+    }
+
     // Allow app-level shortcuts to pass through when terminal has focus
     terminal.attachCustomKeyEventHandler((event) => {
       const modKey = event.ctrlKey || event.metaKey;
@@ -823,6 +829,7 @@ class TerminalManager {
     const instance = this.terminals.get(terminalId);
     if (instance) {
       this._inputLineBuffers.delete(terminalId);
+      this._aiToolHeuristicSetAt.delete(terminalId);
       instance.terminal.dispose();
       instance.element.remove();
       this.terminals.delete(terminalId);
@@ -1059,16 +1066,32 @@ class TerminalManager {
   }
 
   _detectAiToolFromCommand(terminalId, line) {
-    if (!line || typeof line !== 'string') return;
-
-    const trimmed = line.trim();
-    if (!trimmed) return;
-
-    const [firstToken] = trimmed.split(/\s+/);
-    const aiTool = AI_TOOL_COMMAND_MAP[firstToken];
+    const aiTool = matchAiToolCommand(line);
     if (aiTool) {
+      this._aiToolHeuristicSetAt.set(terminalId, Date.now());
       this.setTerminalAiTool(terminalId, aiTool);
     }
+  }
+
+  /**
+   * Apply an authoritative process-based detection from the main process.
+   * @param {string} terminalId - Terminal ID
+   * @param {'claude'|'codex'|null} aiTool - Detected tool (null = none running)
+   */
+  _applyDetectedAiTool(terminalId, aiTool) {
+    const instance = this.terminals.get(terminalId);
+    if (!instance) return;
+
+    if (aiTool === null) {
+      // The CLI may not have appeared in the last process snapshot yet -
+      // don't clear a tag the heuristic (or Start button) just set.
+      const setAt = this._aiToolHeuristicSetAt.get(terminalId);
+      if (setAt && (Date.now() - setAt) < AI_TOOL_DETECTION_GRACE_MS) return;
+    } else {
+      this._aiToolHeuristicSetAt.delete(terminalId);
+    }
+
+    this.setTerminalAiTool(terminalId, aiTool);
   }
 
   _isTrackableInputChar(char) {
@@ -1186,6 +1209,14 @@ class TerminalManager {
     ipcRenderer.on(IPC.TERMINAL_DESTROYED, (event, { terminalId }) => {
       if (this.terminals.has(terminalId)) {
         this.closeTerminal(terminalId);
+      }
+    });
+
+    // Authoritative per-terminal AI tool detections (full snapshot each tick)
+    ipcRenderer.on(IPC.TERMINAL_AI_TOOL_DETECTED, (event, { detections }) => {
+      if (!detections) return;
+      for (const [terminalId, aiTool] of Object.entries(detections)) {
+        this._applyDetectedAiTool(terminalId, aiTool);
       }
     });
   }

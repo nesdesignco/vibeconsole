@@ -2,6 +2,13 @@
 
 ## Session Notes
 
+### [2026-07-10] Process-Based AI Tool Detection for the Usage Bar
+- Root-caused the usage bar showing the wrong provider (Codex quota during a Claude session) and spurious N/A: the per-terminal `aiTool` tag was set only by a keystroke heuristic, never verified against the running process, and never cleared on CLI exit; shell-history recall and tab completion bypassed detection entirely.
+- Added `src/main/aiToolProcessDetector.js`: one `ps -ax` walk per 3s tick resolves each PTY shell's descendant tree to `claude`/`codex`/null (exact basename match, null debounced over 2 ticks) and pushes a full snapshot over the new `TERMINAL_AI_TOOL_DETECTED` channel; the renderer applies it as the authoritative signal with a 5s grace window protecting freshly typed start commands. Keystroke heuristic stays for instant feedback (now case-insensitive, basename-aware, shared in `src/shared/aiToolDetection.js`).
+- Claude usage errors (401/non-200/parse) now fall back to last-good cached values so the UI shows stale data with a "Warning:" tooltip instead of N/A.
+- Codex usage windows whose `resets_at` has passed are rendered as 0% (`applyWindowExpiry`, a non-mutating view over the cache) with data age and a reset note in the tooltip — previously the last recorded percentage was shown forever with "(soon)".
+- Updater hardening for 1.3.8: install is blocked with a clear message when running from the DMG or under App Translocation (Squirrel can't replace read-only bundles); INSTALL_UPDATE is re-entry guarded; the modal shows an "Installing update…" state; the manual unsigned-install script (extracted to `src/main/updaterInstallScript.js`, unit-tested) now swaps the bundle with rollback instead of delete-then-move; hourly re-checks no longer regress a downloaded update back to "available".
+
 ### [2026-07-06] Updater Notes and Sidebar Layout Hardening
 - Added a safe release-notes renderer for GitHub HTML so update modals do not expose raw `<h2>`, `<ul>`, or anchor markup.
 - Kept updater release-note links on the existing external-url IPC path and added regression coverage for GitHub HTML, fallback HTML stripping, and Markdown rendering.
