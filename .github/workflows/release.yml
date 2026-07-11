@@ -24,6 +24,18 @@ jobs:
           node-version: "22"
           cache: "npm"
 
+      - name: Verify tag matches package version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          package_version="$(node -p "require('./package.json').version")"
+          tag_version="${GITHUB_REF_NAME#v}"
+          if [ "$tag_version" != "$package_version" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package version $package_version"
+            exit 1
+          fi
+          echo "Release version verified: $package_version"
+
       - name: Install dependencies
         run: npm ci
 

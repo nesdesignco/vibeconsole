@@ -7,6 +7,7 @@
 - Existing context files, `AGENTS.md`, and `CLAUDE.md` are treated as human-owned input and are never overwritten automatically. The terminal workflow requires evidence collection, complete content for missing files or focused diffs for existing files, and explicit approval before any write; it does not create a new instruction file when both are absent.
 - Added authoritative CLI-process readiness state to terminal sessions so automated prompt preparation waits for the actual selected AI process instead of relying on a fixed startup delay.
 - Validation completed: lint, typecheck, 93 unit tests, renderer build, and the real Electron smoke test passed.
+- Prepared the `1.3.9` release and added a fail-fast release guard so pushed `v*` tags must match the version in `package.json` before signing and notarization begin.
 
 ### [2026-07-10] Process-Based AI Tool Detection for the Usage Bar
 - Root-caused the usage bar showing the wrong provider (Codex quota during a Claude session) and spurious N/A: the per-terminal `aiTool` tag was set only by a keystroke heuristic, never verified against the running process, and never cleared on CLI exit; shell-history recall and tab completion bypassed detection entirely.
