@@ -93,6 +93,23 @@ body.sidebar-resizing * {
   letter-spacing: 0.8px;
 }
 
+.file-explorer-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  min-width: 0;
+}
+
+#btn-project-context {
+  height: 20px;
+  max-width: 118px;
+  padding: 0 5px;
+  font-size: 9px;
+  letter-spacing: 0.1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 #file-tree {
   flex: 1;
   overflow-y: auto;

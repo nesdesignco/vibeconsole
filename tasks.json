@@ -1,5 +1,20 @@
 [
   {
+    "id": "feature-project-context-setup-2026-07-11",
+    "title": "Add VibeConsole project-context initialization and audit",
+    "description": "Add an English-only, provider-neutral workflow that uses the active Claude Code or Codex CLI session to analyze the selected project and initialize or audit the canonical VibeConsole context package: STRUCTURE.json, PROJECT_NOTES.md, and tasks.json. Existing AGENTS.md and CLAUDE.md files remain human-owned and receive only optional minimal integration diffs.",
+    "userRequest": "User requested a VibeConsole button that analyzes projects missing VibeConsole's project context files and prepares those files through an English enterprise-safe prompt.",
+    "acceptanceCriteria": "The project header exposes Initialize Context or Audit Context based on the three canonical context files, status is queried through restricted IPC, the selected CLI starts when necessary, the English prompt is pasted without submission only after the CLI is ready, all existing context/instruction files are preserved pending preview and approval, and lint/typecheck/tests/renderer build pass.",
+    "notes": "Implementation follows read-only analysis -> complete-content/diff preview -> explicit approval. The canonical package is STRUCTURE.json, PROJECT_NOTES.md, and tasks.json; this feature is not an AGENTS.md generator.",
+    "status": "completed",
+    "priority": "high",
+    "category": "feature",
+    "context": "2026-07-11 session; user clarified that the feature must initialize VibeConsole's own project-context files rather than merely create AGENTS.md. All UI and generated content must be English.",
+    "createdAt": "2026-07-11T00:00:00Z",
+    "updatedAt": "2026-07-11T12:09:53Z",
+    "completedAt": "2026-07-11T12:09:53Z"
+  },
+  {
     "id": "refactor-github-panel-modularize-2026-02-17",
     "title": "Modularize GitHub panel internals",
     "description": "Refactor `src/renderer/githubPanel.js` by extracting repeated state initialization and render helpers into dedicated modules under `src/renderer/githubPanel/`. Keep the public module API unchanged and preserve existing runtime behavior. Update project structure documentation after the new modules are added.",

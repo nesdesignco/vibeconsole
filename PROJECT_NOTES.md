@@ -2,6 +2,12 @@
 
 ## Session Notes
 
+### [2026-07-11] English-Only VibeConsole Project Context Setup
+- Added an English-only Initialize Context / Audit Context action to the project file header. It checks the canonical context package (`STRUCTURE.json`, `PROJECT_NOTES.md`, and `tasks.json`) plus root instruction-file presence through a restricted status-only IPC handler, then prepares a provider-neutral workflow prompt in a ready Claude Code or Codex terminal without submitting it.
+- Existing context files, `AGENTS.md`, and `CLAUDE.md` are treated as human-owned input and are never overwritten automatically. The terminal workflow requires evidence collection, complete content for missing files or focused diffs for existing files, and explicit approval before any write; it does not create a new instruction file when both are absent.
+- Added authoritative CLI-process readiness state to terminal sessions so automated prompt preparation waits for the actual selected AI process instead of relying on a fixed startup delay.
+- Validation completed: lint, typecheck, 93 unit tests, renderer build, and the real Electron smoke test passed.
+
 ### [2026-07-10] Process-Based AI Tool Detection for the Usage Bar
 - Root-caused the usage bar showing the wrong provider (Codex quota during a Claude session) and spurious N/A: the per-terminal `aiTool` tag was set only by a keystroke heuristic, never verified against the running process, and never cleared on CLI exit; shell-history recall and tab completion bypassed detection entirely.
 - Added `src/main/aiToolProcessDetector.js`: one `ps -ax` walk per 3s tick resolves each PTY shell's descendant tree to `claude`/`codex`/null (exact basename match, null debounced over 2 ticks) and pushes a full snapshot over the new `TERMINAL_AI_TOOL_DETECTED` channel; the renderer applies it as the authoritative signal with a 5s grace window protecting freshly typed start commands. Keystroke heuristic stays for instant feedback (now case-insensitive, basename-aware, shared in `src/shared/aiToolDetection.js`).

@@ -85,6 +85,14 @@ function sendCommand(command, terminalId = null) {
 }
 
 /**
+ * Paste text without submitting it.
+ */
+function pasteText(text, terminalId = null) {
+  if (!multiTerminalUI) return false;
+  return multiTerminalUI.getManager().pasteText(text, terminalId);
+}
+
+/**
  * Set active terminal
  */
 function setActiveTerminal(terminalId) {
@@ -142,6 +150,7 @@ module.exports = {
   startTerminal,
   restartTerminal,
   sendCommand,
+  pasteText,
   setActiveTerminal,
   getActiveTerminalState,
   getMultiTerminalUI

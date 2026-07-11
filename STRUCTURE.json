@@ -1,7 +1,7 @@
 {
   "version": "1.1",
   "description": "Claude Code IDE - Module structure and IPC communication map",
-  "lastUpdated": "2026-07-10",
+  "lastUpdated": "2026-07-11",
   "architecture": {
     "type": "electron",
     "mainProcess": "src/main/index.js",
@@ -37,37 +37,38 @@
         "aiToolManager",
         "aiToolProcessDetector",
         "savedPromptsManager",
-        "autoUpdater"
+        "autoUpdater",
+        "projectContext"
       ],
       "functions": {
         "createWindow": {
-          "line": 41,
+          "line": 42,
           "purpose": "Create main application window"
         },
         "isTrustedAppUrl": {
-          "line": 119,
+          "line": 120,
           "params": [
             "rawUrl"
           ],
           "purpose": "Allow only local app URLs to load inside the app window."
         },
         "openExternalSafely": {
-          "line": 142,
+          "line": 143,
           "params": [
             "rawUrl"
           ],
           "purpose": "Avoid forwarding file/custom scheme URLs to the OS."
         },
         "setupAllIPC": {
-          "line": 156,
+          "line": 157,
           "purpose": "Setup all IPC handlers"
         },
         "init": {
-          "line": 213,
+          "line": 215,
           "purpose": "Initialize application"
         },
         "initModulesWithWindow": {
-          "line": 224,
+          "line": 226,
           "params": [
             "window"
           ],
@@ -585,24 +586,25 @@
         "aiToolSelector",
         "savedPromptsPanel",
         "updaterModal",
+        "projectContextSetup",
         "toast",
         "electronBridge",
         "shared/ipcChannels"
       ],
       "functions": {
         "toggleSidebarSafe": {
-          "line": 26
+          "line": 27
         },
         "init": {
-          "line": 42,
+          "line": 43,
           "purpose": "Initialize all modules"
         },
         "setupButtonHandlers": {
-          "line": 256,
+          "line": 260,
           "purpose": "Setup button click handlers"
         },
         "setupKeyboardShortcuts": {
-          "line": 324,
+          "line": 328,
           "purpose": "Setup keyboard shortcuts"
         }
       },
@@ -625,6 +627,7 @@
         "startTerminal",
         "restartTerminal",
         "sendCommand",
+        "pasteText",
         "setActiveTerminal",
         "getActiveTerminalState",
         "getMultiTerminalUI"
@@ -684,19 +687,27 @@
           ],
           "purpose": "Send command to active terminal or specific terminal"
         },
-        "setActiveTerminal": {
+        "pasteText": {
           "line": 90,
+          "params": [
+            "text",
+            "terminalId = null"
+          ],
+          "purpose": "Paste text without submitting it."
+        },
+        "setActiveTerminal": {
+          "line": 98,
           "params": [
             "terminalId"
           ],
           "purpose": "Set active terminal"
         },
         "getActiveTerminalState": {
-          "line": 99,
+          "line": 107,
           "purpose": "Get currently active terminal state."
         },
         "getMultiTerminalUI": {
-          "line": 132,
+          "line": 140,
           "purpose": "Get MultiTerminalUI instance"
         }
       },
@@ -5246,6 +5257,149 @@
       ],
       "depends": [],
       "functions": {}
+    },
+    "main/projectContext": {
+      "file": "src/main/projectContext.js",
+      "description": "R",
+      "exports": [
+        "resolveProjectRoot",
+        "getProjectContextStatus",
+        "setupIPC"
+      ],
+      "depends": [
+        "fs",
+        "path",
+        "shared/ipcChannels"
+      ],
+      "functions": {
+        "resolveProjectRoot": {
+          "line": 10,
+          "params": [
+            "projectPath"
+          ]
+        },
+        "isRootFile": {
+          "line": 22,
+          "params": [
+            "projectRoot",
+            "fileName"
+          ]
+        },
+        "getProjectContextStatus": {
+          "line": 32,
+          "params": [
+            "projectPath"
+          ]
+        },
+        "setupIPC": {
+          "line": 70,
+          "params": [
+            "ipcMain"
+          ]
+        }
+      },
+      "ipc": {
+        "listens": [
+          "GET_PROJECT_CONTEXT_STATUS"
+        ],
+        "emits": []
+      }
+    },
+    "renderer/projectContextSetup": {
+      "file": "src/renderer/projectContextSetup.js",
+      "description": "V",
+      "exports": [
+        "init",
+        "getActionLabel",
+        "refreshStatus"
+      ],
+      "depends": [
+        "electronBridge",
+        "shared/ipcChannels",
+        "shared/projectContextPrompt",
+        "state",
+        "terminal",
+        "aiToolSelector",
+        "toast"
+      ],
+      "functions": {
+        "getActionLabel": {
+          "line": 23,
+          "params": [
+            "status"
+          ]
+        },
+        "updateButton": {
+          "line": 27,
+          "params": [
+            "status"
+          ]
+        },
+        "refreshStatus": {
+          "line": 41
+        },
+        "scheduleStatusRefresh": {
+          "line": 64
+        },
+        "findReadyTerminal": {
+          "line": 72,
+          "params": [
+            "projectPath",
+            "aiToolId"
+          ]
+        },
+        "waitForReadyTerminal": {
+          "line": 88,
+          "params": [
+            "terminalId",
+            "projectPath",
+            "aiToolId"
+          ]
+        },
+        "startAiTerminal": {
+          "line": 118,
+          "params": [
+            "projectPath",
+            "aiTool"
+          ]
+        },
+        "prepareContextPrompt": {
+          "line": 128
+        },
+        "init": {
+          "line": 169
+        }
+      },
+      "ipc": {
+        "listens": [
+          "FILE_TREE_DATA"
+        ],
+        "emits": []
+      }
+    },
+    "shared/projectContextPrompt": {
+      "file": "src/shared/projectContextPrompt.js",
+      "description": "P",
+      "exports": [
+        "CORE_CONTEXT_FILES",
+        "formatFileStatus",
+        "buildProjectContextPrompt"
+      ],
+      "depends": [],
+      "functions": {
+        "formatFileStatus": {
+          "line": 8,
+          "params": [
+            "status = {}"
+          ]
+        },
+        "buildProjectContextPrompt": {
+          "line": 20,
+          "params": [
+            "status = {}"
+          ]
+        }
+      }
     }
   },
   "ipcChannels": {

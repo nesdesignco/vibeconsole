@@ -139,7 +139,7 @@ class TerminalManager {
     if (!text) return false;
 
     // Small payloads can go directly without noticeable jank.
-    const DIRECT_PASTE_LIMIT = 2048;
+    const DIRECT_PASTE_LIMIT = 8192;
     if (text.length <= DIRECT_PASTE_LIMIT) {
       terminal.paste(text);
       return true;
@@ -593,7 +593,8 @@ class TerminalManager {
       createdAt: Date.now(),
       order: this._getNextOrderForProject(options.projectPath !== undefined ? options.projectPath : this.currentProjectPath),
       projectPath: options.projectPath !== undefined ? options.projectPath : this.currentProjectPath,
-      aiTool: options.aiTool || null
+      aiTool: options.aiTool || null,
+      aiToolProcessDetected: false
     };
 
     this.terminals.set(terminalId, {
@@ -816,9 +817,10 @@ class TerminalManager {
     const instance = this.terminals.get(terminalId);
     if (!instance) return;
 
-    if (instance.state.aiTool === aiTool) return;
+    if (instance.state.aiTool === aiTool && instance.state.aiToolProcessDetected === false) return;
 
     instance.state.aiTool = aiTool;
+    instance.state.aiToolProcessDetected = false;
     this._notifyStateChange();
   }
 
@@ -1007,6 +1009,21 @@ class TerminalManager {
     }
   }
 
+  /**
+   * Paste text into a terminal without submitting it.
+   * @param {string} text - Text to paste
+   * @param {string} [terminalId] - Optional target terminal ID
+   * @returns {boolean} Whether the text was accepted for paste
+   */
+  pasteText(text, terminalId = null) {
+    const targetId = terminalId || this.activeTerminalId;
+    if (!targetId) return false;
+
+    const instance = this.terminals.get(targetId);
+    if (!instance) return false;
+    return this._pasteInChunks(instance.terminal, text);
+  }
+
   // Private methods
   _isInDOM(instance) {
     return instance.element && instance.element.isConnected;
@@ -1091,7 +1108,12 @@ class TerminalManager {
       this._aiToolHeuristicSetAt.delete(terminalId);
     }
 
-    this.setTerminalAiTool(terminalId, aiTool);
+    const processDetected = aiTool !== null;
+    if (instance.state.aiTool === aiTool && instance.state.aiToolProcessDetected === processDetected) return;
+
+    instance.state.aiTool = aiTool;
+    instance.state.aiToolProcessDetected = processDetected;
+    this._notifyStateChange();
   }
 
   _isTrackableInputChar(char) {

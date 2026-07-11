@@ -31,6 +31,7 @@ const aiToolManager = require('./aiToolManager');
 const aiToolProcessDetector = require('./aiToolProcessDetector');
 const savedPromptsManager = require('./savedPromptsManager');
 const autoUpdater = require('./autoUpdater');
+const projectContext = require('./projectContext');
 
 
 let mainWindow = null;
@@ -204,6 +205,7 @@ function setupAllIPC() {
   gitBranchesManager.setupIPC(ipcMain);
   gitChangesManager.setupIPC(ipcMain);
   savedPromptsManager.setupIPC(ipcMain);
+  projectContext.setupIPC(ipcMain);
   autoUpdater.setupIPC(ipcMain);
 }
 

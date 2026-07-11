@@ -8,6 +8,7 @@ const IPC = {
   SELECT_PROJECT_FOLDER: 'select-project-folder',
   CREATE_NEW_PROJECT: 'create-new-project',
   PROJECT_SELECTED: 'project-selected',
+  GET_PROJECT_CONTEXT_STATUS: 'get-project-context-status',
 
   // File Tree
   LOAD_FILE_TREE: 'load-file-tree',
