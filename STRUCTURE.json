@@ -1,7 +1,7 @@
 {
   "version": "1.1",
   "description": "Claude Code IDE - Module structure and IPC communication map",
-  "lastUpdated": "2026-07-11",
+  "lastUpdated": "2026-07-14",
   "architecture": {
     "type": "electron",
     "mainProcess": "src/main/index.js",
@@ -1439,7 +1439,8 @@
       "file": "src/renderer/terminalManager.js",
       "description": "T",
       "exports": [
-        "TerminalManager"
+        "TerminalManager",
+        "createTerminalLinkHandler"
       ],
       "depends": [
         "electronBridge",
@@ -1452,7 +1453,14 @@
         "shellEscape",
         "filePathLinker"
       ],
-      "functions": {},
+      "functions": {
+        "createTerminalLinkHandler": {
+          "line": 48,
+          "params": [
+            "ipc = ipcRenderer"
+          ]
+        }
+      },
       "ipc": {
         "listens": [
           "TERMINAL_OUTPUT_ID",
@@ -1460,11 +1468,11 @@
           "TERMINAL_AI_TOOL_DETECTED"
         ],
         "emits": [
-          "OPEN_EXTERNAL_URL",
           "TERMINAL_INPUT_ID",
           "TERMINAL_DESTROY",
           "TERMINAL_INPUT_ID",
-          "TERMINAL_RESIZE_ID"
+          "TERMINAL_RESIZE_ID",
+          "OPEN_EXTERNAL_URL"
         ]
       }
     },
@@ -3369,69 +3377,76 @@
       ],
       "functions": {
         "toNumberOrNull": {
-          "line": 22,
+          "line": 24,
           "params": [
             "value"
           ]
         },
         "toIsoFromUnixSeconds": {
-          "line": 31,
+          "line": 33,
           "params": [
             "seconds"
           ]
         },
+        "slotForWindow": {
+          "line": 45,
+          "params": [
+            "rawWindow",
+            "positionalSlot"
+          ]
+        },
         "parseTokenCountCandidatesFromContent": {
-          "line": 39,
+          "line": 52,
           "params": [
             "content"
           ]
         },
         "isModelSpecificCodexLimit": {
-          "line": 71,
+          "line": 84,
           "params": [
             "limitId"
           ]
         },
         "selectBestRateLimit": {
-          "line": 75,
+          "line": 88,
           "params": [
             "candidates"
           ]
         },
         "init": {
-          "line": 93,
+          "line": 106,
           "params": [
             "window"
           ],
           "purpose": "Initialize the module with window reference"
         },
         "getSessionsDir": {
-          "line": 101,
+          "line": 114,
           "purpose": "Get the Codex sessions base directory"
         },
         "findRecentSessionFiles": {
-          "line": 109,
+          "line": 122,
           "params": [
             "limit = 50"
           ],
           "purpose": "Searches ~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl"
         },
         "parseBestTokenCount": {
-          "line": 166,
+          "line": 179,
           "params": [
             "filePath"
           ],
           "purpose": "Returns best matching token_count candidate"
         },
         "normalizeUsage": {
-          "line": 200,
+          "line": 213,
           "params": [
             "selectedCandidate"
           ],
           "purpose": "Normalize Codex token_count data to the same format as Claude usage"
         },
         "applyWindowExpiry": {
-          "line": 238,
+          "line": 261,
           "params": [
             "usage",
             "now = Date.now("
@@ -3439,44 +3454,44 @@
           "purpose": "so cachedUsage keeps the original values."
         },
         "fetchUsage": {
-          "line": 256,
+          "line": 279,
           "purpose": "Fetch usage data from Codex session files"
         },
         "setupWatcher": {
-          "line": 301,
+          "line": 324,
           "params": [
             "filePath"
           ],
           "purpose": "Setup file watcher on the active session file"
         },
         "sendUsageToRenderer": {
-          "line": 331,
+          "line": 354,
           "purpose": "Send usage data to renderer"
         },
         "startPolling": {
-          "line": 341,
+          "line": 364,
           "params": [
             "interval = 30000"
           ],
           "purpose": "Start periodic polling for usage updates"
         },
         "stopPolling": {
-          "line": 358,
+          "line": 381,
           "purpose": "Stop polling"
         },
         "setupIPC": {
-          "line": 372,
+          "line": 395,
           "params": [
             "ipcMain"
           ],
           "purpose": "Setup IPC handlers"
         },
         "getCachedUsage": {
-          "line": 381,
+          "line": 404,
           "purpose": "Get cached usage if available"
         },
         "cleanup": {
-          "line": 388,
+          "line": 411,
           "purpose": "Cleanup on app quit"
         }
       },

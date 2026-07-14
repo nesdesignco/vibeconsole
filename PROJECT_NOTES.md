@@ -2,6 +2,11 @@
 
 ## Session Notes
 
+### [2026-07-14] Codex Usage Windows and Terminal Link Handling
+- Corrected Codex quota placement by classifying primary and secondary rate-limit windows from `window_minutes`, while preserving positional fallback behavior for older CLI session data that omits the field.
+- Routed OSC 8 terminal hyperlinks through the same protocol-restricted external URL IPC path as detected web links, removing xterm's generic danger confirmation for trusted user clicks without weakening the main-process protocol allowlist.
+- Added regression coverage for weekly-only, reordered, conflicting, and legacy Codex rate-limit windows plus OSC 8 external link forwarding; prepared the `1.3.10` patch release.
+
 ### [2026-07-11] English-Only VibeConsole Project Context Setup
 - Added an English-only Initialize Context / Audit Context action to the project file header. It checks the canonical context package (`STRUCTURE.json`, `PROJECT_NOTES.md`, and `tasks.json`) plus root instruction-file presence through a restricted status-only IPC handler, then prepares a provider-neutral workflow prompt in a ready Claude Code or Codex terminal without submitting it.
 - Existing context files, `AGENTS.md`, and `CLAUDE.md` are treated as human-owned input and are never overwritten automatically. The terminal workflow requires evidence collection, complete content for missing files or focused diffs for existing files, and explicit approval before any write; it does not create a new instruction file when both are absent.

@@ -45,6 +45,14 @@ const GLOBAL_PROJECT_KEY = '__global__';
 // cycle; a null detection within this window must not clear the tag.
 const AI_TOOL_DETECTION_GRACE_MS = 5000;
 
+function createTerminalLinkHandler(ipc = ipcRenderer) {
+  return {
+    activate: (_event, uri) => {
+      ipc.send(IPC.OPEN_EXTERNAL_URL, uri);
+    }
+  };
+}
+
 class TerminalManager {
   constructor() {
     this.terminals = new Map(); // Map<id, {terminal, fitAddon, element, state}>
@@ -478,21 +486,22 @@ class TerminalManager {
    * Initialize xterm.js instance for a terminal
    */
   _initializeTerminal(terminalId, options) {
+    const linkHandler = createTerminalLinkHandler();
     const terminal = new Terminal({
       cursorBlink: true,
       fontSize: 14,
       fontFamily: '"Geist Mono", "SF Mono", Consolas, monospace',
       theme: terminalTheme,
       allowTransparency: false,
-      scrollback: 10000
+      scrollback: 10000,
+      // OSC 8 hyperlinks otherwise use xterm's built-in warning dialog.
+      linkHandler
     });
 
     const fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
 
-    const webLinksAddon = new WebLinksAddon((_event, uri) => {
-      ipcRenderer.send(IPC.OPEN_EXTERNAL_URL, uri);
-    });
+    const webLinksAddon = new WebLinksAddon(linkHandler.activate);
     terminal.loadAddon(webLinksAddon);
 
     // File path link provider (e.g. src/renderer/editor.js:42 → open in editor)
@@ -1270,4 +1279,4 @@ class TerminalManager {
   }
 }
 
-module.exports = { TerminalManager };
+module.exports = { TerminalManager, createTerminalLinkHandler };

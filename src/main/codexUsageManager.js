@@ -2,7 +2,9 @@
  * Codex Usage Manager Module
  * Reads Codex CLI session JSONL files for usage data and provides periodic updates
  * Session files are at: ~/.codex/sessions/YYYY/MM/DD/rollout-*.jsonl
- * Token count events contain rate_limits.primary (5-hour) and rate_limits.secondary (weekly)
+ * Token count events contain rate_limits.primary/secondary windows, classified
+ * into session (5h) vs weekly slots by window_minutes; older Codex versions
+ * omit window_minutes, where primary=5h / secondary=weekly positionally
  */
 
 const fs = require('fs');
@@ -34,6 +36,17 @@ function toIsoFromUnixSeconds(seconds) {
   const millis = value * 1000;
   const date = new Date(millis);
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
+}
+
+// Windows at or under 12h render in the SESSION slot; longer windows
+// (1d, 7d) render in the WEEKLY slot. Known real values: 300 (5h), 10080 (7d).
+const SESSION_WINDOW_MAX_MINUTES = 720;
+
+function slotForWindow(rawWindow, positionalSlot) {
+  if (!rawWindow || typeof rawWindow !== 'object') return null;
+  const minutes = toNumberOrNull(rawWindow.window_minutes);
+  if (minutes === null || minutes <= 0) return positionalSlot;
+  return minutes <= SESSION_WINDOW_MAX_MINUTES ? 'fiveHour' : 'sevenDay';
 }
 
 function parseTokenCountCandidatesFromContent(content) {
@@ -210,18 +223,28 @@ function normalizeUsage(selectedCandidate) {
     };
   }
 
-  const primary = tokenCount.rate_limits.primary;
-  const secondary = tokenCount.rate_limits.secondary;
+  // Classify by window_minutes when present; fall back to the historical
+  // positional meaning (primary=5h, secondary=weekly) for older Codex data.
+  // On a slot conflict primary wins - mislabeling is worse than omitting.
+  const slots = { fiveHour: null, sevenDay: null };
+  const windows = [
+    [tokenCount.rate_limits.primary, 'fiveHour'],
+    [tokenCount.rate_limits.secondary, 'sevenDay']
+  ];
+
+  for (const [rawWindow, positionalSlot] of windows) {
+    const slot = slotForWindow(rawWindow, positionalSlot);
+    if (slot && slots[slot] === null) {
+      slots[slot] = {
+        utilization: rawWindow.used_percent || 0,
+        resetsAt: toIsoFromUnixSeconds(rawWindow.resets_at)
+      };
+    }
+  }
 
   return {
-    fiveHour: primary ? {
-      utilization: primary.used_percent || 0,
-      resetsAt: toIsoFromUnixSeconds(primary.resets_at)
-    } : null,
-    sevenDay: secondary ? {
-      utilization: secondary.used_percent || 0,
-      resetsAt: toIsoFromUnixSeconds(secondary.resets_at)
-    } : null,
+    fiveHour: slots.fiveHour,
+    sevenDay: slots.sevenDay,
     sourceLimitId: selectedCandidate?.limitId || null,
     sourceTimestamp: selectedCandidate?.timestamp || null,
     lastUpdated: new Date().toISOString(),
