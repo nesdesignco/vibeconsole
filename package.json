@@ -53,7 +53,7 @@
     "electron": "^42.4.0",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.1",
-    "eslint": "^10.6.0",
+    "eslint": "^10.7.0",
     "globals": "^17.7.0",
     "typescript": "^6.0.3"
   },
@@ -63,7 +63,7 @@
     "@xterm/xterm": "^5.5.0",
     "builder-util-runtime": "^9.7.0",
     "electron-updater": "^6.8.9",
-    "lucide": "^1.23.0",
+    "lucide": "^1.25.0",
     "monaco-editor": "^0.55.1",
     "node-pty": "^1.1.0"
   },
