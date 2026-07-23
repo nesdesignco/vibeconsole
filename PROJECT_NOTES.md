@@ -2,6 +2,13 @@
 
 ## Session Notes
 
+### [2026-07-23] Terminal Link Clicks Made Reliable (Root Cause Found)
+- Root cause of the long-standing "links never open" complaint: xterm's native Linkifier activation is identity-fragile — any viewport re-render between mousedown and mouseup (TUIs like Codex/Claude Code redraw on mouse reports and stream output constantly) recreates the link object and the `_mouseDownLink === _currentLink` check silently fails. Links only ever worked in an idle plain shell.
+- Second gap: WebLinksAddon only linkifies `http(s)://` text (its internal `isUrl()` also rejects protocol-less matches even with a custom `urlRegex`), so bare domains printed by AI CLIs (`form-drive.vercel.app`, `github.com/user/repo`) were never clickable in any version.
+- Fixes: new `src/shared/urlUtils.js` (curated-TLD bare URL regex, trailing-punctuation stripping, protocol normalization, column hit-testing) + `src/renderer/urlLinker.js` with a bare-URL `ILinkProvider` and a capture-phase click fallback that re-runs its own hit-test (incl. OSC 8 via guarded internal API) when native activation did not handle the click; 500 ms same-URL dedupe prevents double-opens. `openExternalSafely` now normalizes as defense-in-depth and logs drops/failures instead of swallowing them.
+- Added `VIBE_USER_DATA_DIR` env override so test/dev instances never share userData with a running installed app.
+- Verified end-to-end with a Playwright `_electron` driver clicking real links in the running app (full URL, parenthesized, bare domain, www, localhost, OSC 8, and under DECSET 1000/1002/1006 mouse capture): 8/8 scenarios green across consecutive runs; prepared the `1.3.11` patch release.
+
 ### [2026-07-14] Codex Usage Windows and Terminal Link Handling
 - Corrected Codex quota placement by classifying primary and secondary rate-limit windows from `window_minutes`, while preserving positional fallback behavior for older CLI session data that omits the field.
 - Routed OSC 8 terminal hyperlinks through the same protocol-restricted external URL IPC path as detected web links, removing xterm's generic danger confirmation for trusted user clicks without weakening the main-process protocol allowlist.

@@ -1,7 +1,7 @@
 {
   "version": "1.1",
   "description": "Claude Code IDE - Module structure and IPC communication map",
-  "lastUpdated": "2026-07-14",
+  "lastUpdated": "2026-07-23",
   "architecture": {
     "type": "electron",
     "mainProcess": "src/main/index.js",
@@ -21,6 +21,7 @@
         "fs",
         "url",
         "shared/ipcChannels",
+        "shared/urlUtils",
         "ptyManager",
         "menu",
         "dialogs",
@@ -42,33 +43,33 @@
       ],
       "functions": {
         "createWindow": {
-          "line": 42,
+          "line": 49,
           "purpose": "Create main application window"
         },
         "isTrustedAppUrl": {
-          "line": 120,
+          "line": 127,
           "params": [
             "rawUrl"
           ],
           "purpose": "Allow only local app URLs to load inside the app window."
         },
         "openExternalSafely": {
-          "line": 143,
+          "line": 150,
           "params": [
             "rawUrl"
           ],
           "purpose": "Avoid forwarding file/custom scheme URLs to the OS."
         },
         "setupAllIPC": {
-          "line": 157,
+          "line": 177,
           "purpose": "Setup all IPC handlers"
         },
         "init": {
-          "line": 215,
+          "line": 235,
           "purpose": "Initialize application"
         },
         "initModulesWithWindow": {
-          "line": 226,
+          "line": 246,
           "params": [
             "window"
           ],
@@ -1451,11 +1452,13 @@
         "shared/aiToolDetection",
         "clipboardWrite",
         "shellEscape",
-        "filePathLinker"
+        "filePathLinker",
+        "urlLinker",
+        "shared/urlUtils"
       ],
       "functions": {
         "createTerminalLinkHandler": {
-          "line": 48,
+          "line": 50,
           "params": [
             "ipc = ipcRenderer"
           ]
@@ -5413,6 +5416,88 @@
           "params": [
             "status = {}"
           ]
+        }
+      }
+    },
+    "renderer/urlLinker": {
+      "file": "src/renderer/urlLinker.js",
+      "description": "B",
+      "exports": [
+        "attachClickLinkFallback",
+        "registerBareUrlLinks"
+      ],
+      "depends": [
+        "shared/urlUtils"
+      ],
+      "functions": {
+        "registerBareUrlLinks": {
+          "line": 19,
+          "params": [
+            "terminal",
+            "onActivate"
+          ],
+          "purpose": "Create and register a bare URL link provider on a terminal instance."
+        },
+        "resolveOscUriAtCell": {
+          "line": 62,
+          "params": [
+            "terminal",
+            "bufferRow",
+            "col"
+          ],
+          "purpose": "to \"no OSC link found\" instead of breaking clicks."
+        },
+        "attachClickLinkFallback": {
+          "line": 88,
+          "params": [
+            "terminal",
+            "element",
+            "linkHandler"
+          ],
+          "purpose": "forwarding them to the application."
+        }
+      }
+    },
+    "shared/urlUtils": {
+      "file": "src/shared/urlUtils.js",
+      "description": "U",
+      "exports": [
+        "BARE_URL_REGEX",
+        "STRICT_URL_REGEX",
+        "findUrlAtColumn",
+        "normalizeTerminalUrl",
+        "stripTrailingJunk"
+      ],
+      "depends": [],
+      "functions": {
+        "countChar": {
+          "line": 34,
+          "params": [
+            "text",
+            "char"
+          ]
+        },
+        "stripTrailingJunk": {
+          "line": 47,
+          "params": [
+            "text"
+          ],
+          "purpose": "\"(https://x.com/y).\" -> the match \"https://x.com/y).\" -> \"https://x.com/y\"."
+        },
+        "normalizeTerminalUrl": {
+          "line": 67,
+          "params": [
+            "raw"
+          ],
+          "purpose": "Returns null when nothing usable remains."
+        },
+        "findUrlAtColumn": {
+          "line": 81,
+          "params": [
+            "text",
+            "column"
+          ],
+          "purpose": "Returns the cleaned URL text or null."
         }
       }
     }

@@ -12,6 +12,8 @@ const { matchAiToolCommand } = require('../shared/aiToolDetection');
 const { writeClipboardText } = require('./clipboardWrite');
 const { shellQuote } = require('./shellEscape');
 const { registerFilePathLinks } = require('./filePathLinker');
+const { attachClickLinkFallback, registerBareUrlLinks } = require('./urlLinker');
+const { normalizeTerminalUrl } = require('../shared/urlUtils');
 
 // Terminal theme (VS Code dark)
 const terminalTheme = {
@@ -46,9 +48,24 @@ const GLOBAL_PROJECT_KEY = '__global__';
 const AI_TOOL_DETECTION_GRACE_MS = 5000;
 
 function createTerminalLinkHandler(ipc = ipcRenderer) {
+  let lastSent = { url: null, at: 0 };
   return {
     activate: (_event, uri) => {
-      ipc.send(IPC.OPEN_EXTERNAL_URL, uri);
+      // Normalize before sending: strips prose punctuation and adds the
+      // missing protocol for bare-domain links (form-drive.vercel.app).
+      const url = normalizeTerminalUrl(uri);
+      if (!url) return;
+      // The click fallback and xterm's native activation can both fire for
+      // one click; open once.
+      const now = Date.now();
+      if (url === lastSent.url && now - lastSent.at < 500) return;
+      lastSent = { url, at: now };
+      ipc.send(IPC.OPEN_EXTERNAL_URL, url);
+    },
+    // Lets the click fallback detect whether native activation already
+    // handled the current click.
+    get lastSentAt() {
+      return lastSent.at;
     }
   };
 }
@@ -511,6 +528,10 @@ class TerminalManager {
       }
     });
 
+    // Protocol-less web URLs (form-drive.vercel.app, www.*, localhost:3000);
+    // WebLinksAddon only covers http(s):// text.
+    registerBareUrlLinks(terminal, linkHandler.activate);
+
     // Create container element
     const element = document.createElement('div');
     element.id = `terminal-${terminalId}`;
@@ -557,6 +578,10 @@ class TerminalManager {
     element.addEventListener('click', () => {
       terminal.focus();
     });
+
+    // Keep link clicks reliable while TUIs capture the mouse or output is
+    // streaming: xterm's native activation silently drops those clicks.
+    attachClickLinkFallback(terminal, element, linkHandler);
 
     // Drag & drop: paste file paths into terminal
     element.addEventListener('dragover', (e) => {

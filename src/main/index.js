@@ -8,10 +8,17 @@ process.stdout?.on('error', (err) => { if (err.code !== 'EPIPE') throw err; });
 process.stderr?.on('error', (err) => { if (err.code !== 'EPIPE') throw err; });
 
 const { app, BrowserWindow, ipcMain, shell } = require('electron');
+
+// Isolated profile for test/dev instances: a dev launch must never share
+// userData (session storage) with a running installed app.
+if (process.env.VIBE_USER_DATA_DIR) {
+  app.setPath('userData', process.env.VIBE_USER_DATA_DIR);
+}
 const path = require('path');
 const fs = require('fs');
 const { URL, fileURLToPath } = require('url');
 const { IPC } = require('../shared/ipcChannels');
+const { normalizeTerminalUrl } = require('../shared/urlUtils');
 
 // Import modules
 const ptyManager = require('./ptyManager');
@@ -141,13 +148,26 @@ function isTrustedAppUrl(rawUrl) {
  * Avoid forwarding file/custom scheme URLs to the OS.
  */
 function openExternalSafely(rawUrl) {
+  // Defense in depth: normalize here too so protocol-less URLs from any
+  // caller (older renderers, window handlers) still open, and log every
+  // drop/failure — silent failures made this chain undiagnosable for months.
+  const normalized = normalizeTerminalUrl(rawUrl);
+  if (!normalized) {
+    console.warn('[external-url] dropped (empty):', rawUrl);
+    return;
+  }
   try {
-    const parsed = new URL(rawUrl);
+    const parsed = new URL(normalized);
     const allowedProtocols = new Set(['https:', 'http:', 'mailto:']);
-    if (!allowedProtocols.has(parsed.protocol)) return;
-    shell.openExternal(rawUrl).catch(() => {});
-  } catch {
-    // Ignore malformed URLs
+    if (!allowedProtocols.has(parsed.protocol)) {
+      console.warn('[external-url] dropped (protocol not allowed):', rawUrl);
+      return;
+    }
+    shell.openExternal(normalized).catch((err) => {
+      console.error('[external-url] openExternal failed:', normalized, err);
+    });
+  } catch (err) {
+    console.warn('[external-url] dropped (malformed):', rawUrl, err?.message);
   }
 }
 
