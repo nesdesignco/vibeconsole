@@ -6,6 +6,7 @@ const path = require('node:path');
 const { execFile } = require('node:child_process');
 
 const gitChangesManager = require('../src/main/gitChangesManager');
+const projectAccess = require('../src/main/projectAccess');
 
 /**
  * Stand in for electron's shell.trashItem, which is unavailable outside the
@@ -97,6 +98,10 @@ function createTempDir(t, name) {
   t.after(() => {
     fs.rmSync(dir, { recursive: true, force: true });
   });
+  // Path containment is only honoured for roots the main process knows about,
+  // which in the app come from the folder picker or the workspace file. A temp
+  // repo has to be registered the same way to be operated on.
+  projectAccess.registerProjectRoot(dir);
   return dir;
 }
 

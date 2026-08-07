@@ -11,6 +11,8 @@ const {
   isRelativePathWithinProjectContent,
   isPathWithinDirectory
 } = require('../src/shared/pathValidation');
+const pathValidation = require('../src/shared/pathValidation');
+const projectAccess = require('../src/main/projectAccess');
 const gitBranchesManager = require('../src/main/gitBranchesManager');
 const gitChangesManager = require('../src/main/gitChangesManager');
 const { execFileGit, isValidBranchName } = require('../src/main/gitExecUtils');
@@ -190,4 +192,49 @@ test('execFileGit refuses git command-execution flags as a backstop', async (t) 
     () => execFileGit(['push', '--receive-pack=/tmp/evil.sh'], repo),
     (err) => /Refused unsafe git argument/.test(err.error)
   );
+});
+
+test('path containment refuses a project root the main process never issued', (t) => {
+  const projectDir = createTempDir(t, 'unregistered');
+  fs.mkdirSync(path.join(projectDir, 'src'), { recursive: true });
+  const inside = path.join(projectDir, 'src', 'index.js');
+
+  // The pure validator is happy: the file really is inside the given base.
+  assert.equal(pathValidation.isPathWithinProjectContent(inside, projectDir), true);
+
+  // The guarded one is not, because nothing ever registered this root. Without
+  // that check a caller could supply its own base and satisfy containment
+  // against any directory on disk.
+  assert.equal(projectAccess.isPathWithinProjectContent(inside, projectDir), false);
+  assert.equal(projectAccess.isKnownProjectRoot(projectDir), false);
+
+  projectAccess.registerProjectRoot(projectDir);
+  assert.equal(projectAccess.isKnownProjectRoot(projectDir), true);
+  assert.equal(projectAccess.isPathWithinProjectContent(inside, projectDir), true);
+});
+
+test('an attacker-chosen base cannot reach outside a registered project', (t) => {
+  const projectDir = createTempDir(t, 'registered');
+  const outsideDir = createTempDir(t, 'victim');
+  const secret = path.join(outsideDir, 'id_rsa');
+  fs.writeFileSync(secret, 'private', 'utf8');
+  projectAccess.registerProjectRoot(projectDir);
+
+  // The exact shape the handlers accept: base and target from the same message.
+  assert.equal(projectAccess.isPathWithinProjectContent(secret, '/'), false);
+  assert.equal(projectAccess.isPathWithinProjectContent(secret, outsideDir), false);
+  assert.equal(projectAccess.isPathWithinProjectContent(secret, projectDir), false);
+  assert.equal(projectAccess.isRelativePathWithinProjectContent('/', 'Users/x/.ssh/id_rsa'), false);
+});
+
+test('registering a root normalizes it, and rejects unusable input', (t) => {
+  const projectDir = createTempDir(t, 'normalize');
+  const messy = path.join(projectDir, 'src', '..');
+
+  projectAccess.registerProjectRoot(messy);
+  assert.equal(projectAccess.isKnownProjectRoot(projectDir), true);
+
+  assert.equal(projectAccess.registerProjectRoot(''), null);
+  assert.equal(projectAccess.registerProjectRoot(null), null);
+  assert.equal(projectAccess.isKnownProjectRoot(null), false);
 });

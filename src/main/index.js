@@ -24,6 +24,7 @@ const { normalizeTerminalUrl } = require('../shared/urlUtils');
 const ptyManager = require('./ptyManager');
 const menu = require('./menu');
 const dialogs = require('./dialogs');
+const projectAccess = require('./projectAccess');
 const fileTree = require('./fileTree');
 const promptLogger = require('./promptLogger');
 const workspace = require('./workspace');
@@ -112,7 +113,9 @@ function createWindow() {
   aiToolProcessDetector.init(mainWindow);
   aiToolManager.init(mainWindow, app);
   menu.init(mainWindow, app, aiToolManager);
-  dialogs.init(mainWindow, () => {});
+  // The picked folder is the authoritative moment a project root comes into
+  // existence; record it before the renderer can act on it.
+  dialogs.init(mainWindow, (projectPath) => projectAccess.registerProjectRoot(projectPath));
   initModulesWithWindow(mainWindow);
 
   // Create application menu

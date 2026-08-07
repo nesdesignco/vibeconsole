@@ -84,6 +84,10 @@ function normalizeWorkspace(data) {
 
 function loadWorkspace() {
   if (_cachedWorkspace) return _cachedWorkspace;
+  // Before init() there is no path to read. Return an empty workspace without
+  // caching it: caching here would pin "no projects" for the process lifetime,
+  // and callers that gate on the project list would reject every real project.
+  if (!workspacePath) return createDefaultWorkspace();
   try {
     const data = fs.readFileSync(workspacePath, 'utf8');
     _cachedWorkspace = normalizeWorkspace(JSON.parse(data));

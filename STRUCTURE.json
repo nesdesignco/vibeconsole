@@ -25,6 +25,7 @@
         "ptyManager",
         "menu",
         "dialogs",
+        "projectAccess",
         "fileTree",
         "promptLogger",
         "workspace",
@@ -43,33 +44,33 @@
       ],
       "functions": {
         "createWindow": {
-          "line": 49,
+          "line": 50,
           "purpose": "Create main application window"
         },
         "isTrustedAppUrl": {
-          "line": 127,
+          "line": 130,
           "params": [
             "rawUrl"
           ],
           "purpose": "Allow only local app URLs to load inside the app window."
         },
         "openExternalSafely": {
-          "line": 150,
+          "line": 153,
           "params": [
             "rawUrl"
           ],
           "purpose": "Avoid forwarding file/custom scheme URLs to the OS."
         },
         "setupAllIPC": {
-          "line": 177,
+          "line": 180,
           "purpose": "Setup all IPC handlers"
         },
         "init": {
-          "line": 235,
+          "line": 238,
           "purpose": "Initialize application"
         },
         "initModulesWithWindow": {
-          "line": 246,
+          "line": 249,
           "params": [
             "window"
           ],
@@ -310,7 +311,7 @@
         "path",
         "electron",
         "shared/ipcChannels",
-        "shared/pathValidation"
+        "projectAccess"
       ],
       "functions": {
         "isIgnoredWatchPath": {
@@ -532,18 +533,18 @@
           "line": 85
         },
         "saveWorkspace": {
-          "line": 101,
+          "line": 105,
           "params": [
             "data"
           ],
           "purpose": "Save workspace to file"
         },
         "getProjects": {
-          "line": 115,
+          "line": 119,
           "purpose": "Get projects from active workspace"
         },
         "addProject": {
-          "line": 124,
+          "line": 128,
           "params": [
             "projectPath",
             "name"
@@ -551,21 +552,21 @@
           "purpose": "Add project to workspace"
         },
         "removeProject": {
-          "line": 148,
+          "line": 152,
           "params": [
             "projectPath"
           ],
           "purpose": "Remove project from workspace"
         },
         "updateProjectLastOpened": {
-          "line": 161,
+          "line": 165,
           "params": [
             "projectPath"
           ],
           "purpose": "Update project's last opened timestamp"
         },
         "setupIPC": {
-          "line": 177,
+          "line": 181,
           "params": [
             "ipcMain"
           ],
@@ -1516,7 +1517,7 @@
         "fs",
         "path",
         "shared/ipcChannels",
-        "shared/pathValidation"
+        "projectAccess"
       ],
       "functions": {
         "getMimeTypeForExtension": {
@@ -2691,7 +2692,7 @@
         "fs",
         "path",
         "shared/ipcChannels",
-        "shared/pathValidation",
+        "projectAccess",
         "gitExecUtils",
         "electron",
         "gitStashOps",
@@ -3978,7 +3979,7 @@
       ],
       "depends": [
         "gitExecUtils",
-        "shared/pathValidation"
+        "projectAccess"
       ],
       "functions": {
         "stashChanges": {
@@ -5528,6 +5529,57 @@
             "column"
           ],
           "purpose": "Returns the cleaned URL text or null."
+        }
+      }
+    },
+    "main/projectAccess": {
+      "file": "src/main/projectAccess.js",
+      "description": "P",
+      "exports": [
+        "registerProjectRoot",
+        "isKnownProjectRoot",
+        "isPathWithinProjectContent",
+        "isRelativePathWithinProjectContent"
+      ],
+      "depends": [
+        "path",
+        "workspace",
+        "shared/pathValidation"
+      ],
+      "functions": {
+        "normalizeRoot": {
+          "line": 28,
+          "params": [
+            "projectPath"
+          ]
+        },
+        "registerProjectRoot": {
+          "line": 42,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "Record a project root the main process produced itself."
+        },
+        "isKnownProjectRoot": {
+          "line": 56,
+          "params": [
+            "projectPath"
+          ],
+          "purpose": "source of truth."
+        },
+        "isPathWithinProjectContent": {
+          "line": 68,
+          "params": [
+            "filePath",
+            "projectPath"
+          ]
+        },
+        "isRelativePathWithinProjectContent": {
+          "line": 73,
+          "params": [
+            "projectPath",
+            "relativePath"
+          ]
         }
       }
     }

@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const { shell } = require('electron');
 const { IPC } = require('../shared/ipcChannels');
-const { isPathWithinProjectContent } = require('../shared/pathValidation');
+const { isPathWithinProjectContent, isKnownProjectRoot } = require('./projectAccess');
 const watcherBySenderId = new Map(); // Map<number, { watcher: fs.FSWatcher, projectPath: string, timer: NodeJS.Timeout | null }>
 const PROJECT_PATH_ERROR = 'Path is outside project directory or targets protected metadata';
 
@@ -167,11 +167,17 @@ function startWatcherForSender(sender, projectPath) {
 
 function setupIPC(ipcMain) {
   ipcMain.on(IPC.LOAD_FILE_TREE, (event, projectPath) => {
+    // Without this the renderer could enumerate any directory on disk.
+    if (!isKnownProjectRoot(projectPath)) {
+      safeSend(event.sender, IPC.FILE_TREE_DATA, []);
+      return;
+    }
     const files = getFileTree(projectPath);
     safeSend(event.sender, IPC.FILE_TREE_DATA, files);
   });
 
   ipcMain.on(IPC.START_FILE_TREE_WATCH, (event, projectPath) => {
+    if (!isKnownProjectRoot(projectPath)) return;
     startWatcherForSender(event.sender, projectPath);
   });
 

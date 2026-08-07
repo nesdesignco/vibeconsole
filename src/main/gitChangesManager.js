@@ -6,7 +6,7 @@
 const fs = require('fs');
 const path = require('path');
 const { IPC } = require('../shared/ipcChannels');
-const { isRelativePathWithinProjectContent } = require('../shared/pathValidation');
+const { isRelativePathWithinProjectContent } = require('./projectAccess');
 const PROJECT_PATH_ERROR = 'Path is outside project directory or targets protected metadata';
 
 // Shared utilities

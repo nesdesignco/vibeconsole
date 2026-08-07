@@ -4,7 +4,7 @@
  */
 
 const { execFileGit, isValidStashRef } = require('./gitExecUtils');
-const { isRelativePathWithinProjectContent } = require('../shared/pathValidation');
+const { isRelativePathWithinProjectContent } = require('./projectAccess');
 
 /**
  * Stash changes (optionally a single file, with optional message)

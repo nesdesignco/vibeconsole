@@ -7,7 +7,7 @@ const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
 const { IPC } = require('../shared/ipcChannels');
-const { isPathWithinProjectContent } = require('../shared/pathValidation');
+const { isPathWithinProjectContent } = require('./projectAccess');
 const MAX_EDITOR_FILE_BYTES = 10 * 1024 * 1024; // 10MB
 const PROJECT_PATH_ERROR = 'Path is outside project directory or targets protected metadata';
 
