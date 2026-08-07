@@ -111,10 +111,6 @@ function setupIPCListeners() {
       );
     }
   });
-
-  ipcRenderer.on(IPC.TOGGLE_PLUGINS_PANEL, () => {
-    toggle();
-  });
 }
 
 /**

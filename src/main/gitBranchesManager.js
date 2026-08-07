@@ -9,13 +9,11 @@ const { IPC } = require('../shared/ipcChannels');
 const { execFileGit, isValidBranchName } = require('./gitExecUtils');
 const { isPathWithinDirectory } = require('../shared/pathValidation');
 
-let mainWindow = null;
-
 /**
  * Initialize manager
  */
-function init(window) {
-  mainWindow = window;
+function init(_window) {
+  // Window reference reserved for future use
 }
 
 function getResolvedHomeDir() {
@@ -323,13 +321,6 @@ function setupIPC(ipcMain) {
   // Remove worktree
   ipcMain.handle(IPC.REMOVE_GIT_WORKTREE, async (event, { projectPath, worktreePath, force }) => {
     return await removeWorktree(projectPath, worktreePath, force);
-  });
-
-  // Toggle panel from menu
-  ipcMain.on(IPC.TOGGLE_GIT_BRANCHES_PANEL, () => {
-    if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send(IPC.TOGGLE_GIT_BRANCHES_PANEL);
-    }
   });
 }
 

@@ -139,10 +139,6 @@ function setupIPCListeners() {
       showToast('Prompt deleted', 'info');
     }
   });
-
-  ipcRenderer.on(IPC.TOGGLE_SAVED_PROMPTS_PANEL, () => {
-    toggle();
-  });
 }
 
 /**

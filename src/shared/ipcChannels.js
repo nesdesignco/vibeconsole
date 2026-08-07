@@ -50,7 +50,6 @@ const IPC = {
 
   // Multi-Terminal
   TERMINAL_CREATE: 'terminal-create',
-  TERMINAL_CREATED: 'terminal-created',
   TERMINAL_DESTROY: 'terminal-destroy',
   TERMINAL_DESTROYED: 'terminal-destroyed',
   TERMINAL_INPUT_ID: 'terminal-input-id',
@@ -58,17 +57,12 @@ const IPC = {
   TERMINAL_RESIZE_ID: 'terminal-resize-id',
   TERMINAL_AI_TOOL_DETECTED: 'terminal-ai-tool-detected',
   GET_AVAILABLE_SHELLS: 'get-available-shells',
-  AVAILABLE_SHELLS_DATA: 'available-shells-data',
 
   // Plugins Panel
   LOAD_PLUGINS: 'load-plugins',
   TOGGLE_PLUGIN: 'toggle-plugin',
   PLUGIN_TOGGLED: 'plugin-toggled',
-  TOGGLE_PLUGINS_PANEL: 'toggle-plugins-panel',
   REFRESH_PLUGINS: 'refresh-plugins',
-
-  // GitHub Panel
-  TOGGLE_GITHUB_PANEL: 'toggle-github-panel',
 
   // AI Tool Usage (generic - per-terminal)
   LOAD_AI_USAGE: 'load-ai-usage',
@@ -83,7 +77,6 @@ const IPC = {
   LOAD_GIT_WORKTREES: 'load-git-worktrees',
   ADD_GIT_WORKTREE: 'add-git-worktree',
   REMOVE_GIT_WORKTREE: 'remove-git-worktree',
-  TOGGLE_GIT_BRANCHES_PANEL: 'toggle-git-branches-panel',
 
   // Git Changes
   LOAD_GIT_CHANGES: 'load-git-changes',
@@ -121,7 +114,6 @@ const IPC = {
   UPDATE_SAVED_PROMPT: 'update-saved-prompt',
   DELETE_SAVED_PROMPT: 'delete-saved-prompt',
   SAVED_PROMPT_UPDATED: 'saved-prompt-updated',
-  TOGGLE_SAVED_PROMPTS_PANEL: 'toggle-saved-prompts-panel',
 
   // AI Tool Settings
   GET_AI_TOOL_CONFIG: 'get-ai-tool-config',

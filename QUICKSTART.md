@@ -1,7 +1,7 @@
 # Quickstart
 
 ## Requirements
-- Node.js 18+
+- Node.js 22.12+
 - macOS (current release target)
 - Git
 

@@ -102,7 +102,6 @@ function init() {
 
   setupEventListeners();
   setupContentDelegation();
-  setupIPCListeners();
   loadAutoStagePreference();
   setupCommitArea();
   setupGitWatcher();
@@ -244,15 +243,6 @@ function setupContentDelegation() {
         await gitOps.stashDrop(stashRef);
       }
     }
-  });
-}
-
-/**
- * Setup IPC listeners
- */
-function setupIPCListeners() {
-  ipcRenderer.on(IPC.TOGGLE_GITHUB_PANEL, () => {
-    toggle();
   });
 }
 

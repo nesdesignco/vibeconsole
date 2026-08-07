@@ -21,8 +21,8 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/platform-macOS-black?style=flat-square&logo=apple&logoColor=white" alt="macOS">
-  <img src="https://img.shields.io/badge/electron-28-47848f?style=flat-square&logo=electron&logoColor=white" alt="Electron">
-  <img src="https://img.shields.io/badge/node-%3E%3D18-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node">
+  <img src="https://img.shields.io/badge/electron-42-47848f?style=flat-square&logo=electron&logoColor=white" alt="Electron">
+  <img src="https://img.shields.io/badge/node-%3E%3D22.12-339933?style=flat-square&logo=node.js&logoColor=white" alt="Node">
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square" alt="PRs Welcome">
 </p>
 
@@ -142,7 +142,7 @@ Unsigned local builds are available for development with `npm run dist:mac:unsig
 
 | Shortcut | Action |
 |----------|--------|
-| <kbd>Ctrl</kbd>+<kbd>K</kbd> | Launch Claude Code in active terminal |
+| <kbd>Ctrl</kbd>+<kbd>K</kbd> | Start the selected AI tool in active terminal |
 | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>T</kbd> | New terminal |
 | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>W</kbd> | Close terminal |
 | <kbd>Ctrl</kbd>+<kbd>Tab</kbd> / <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Tab</kbd> | Next / Previous terminal |
@@ -174,7 +174,7 @@ src/
 <tr>
 <td align="center" width="150">
   <img src="https://cdn.simpleicons.org/electron/47848F" width="36" height="36" alt="Electron"><br>
-  <sub><b>Electron 28</b></sub><br>
+  <sub><b>Electron 42</b></sub><br>
   <sub>Desktop framework</sub>
 </td>
 <td align="center" width="150">
@@ -184,7 +184,7 @@ src/
 </td>
 <td align="center" width="150">
   <img src="https://cdn.simpleicons.org/nodedotjs/339933" width="36" height="36" alt="Node.js"><br>
-  <sub><b>Node.js 18+</b></sub><br>
+  <sub><b>Node.js 22.12+</b></sub><br>
   <sub>Runtime</sub>
 </td>
 <td align="center" width="150">
@@ -196,12 +196,12 @@ src/
 <tr>
 <td align="center" width="150">
   <br>
-  <sub><b>xterm.js 5.3</b></sub><br>
+  <sub><b>xterm.js 5.5</b></sub><br>
   <sub>Terminal emulator</sub>
 </td>
 <td align="center" width="150">
   <br>
-  <sub><b>node-pty 1.0</b></sub><br>
+  <sub><b>node-pty 1.1</b></sub><br>
   <sub>PTY management</sub>
 </td>
 <td align="center" width="150">
