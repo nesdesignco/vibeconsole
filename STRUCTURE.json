@@ -1601,22 +1601,22 @@
       ],
       "functions": {
         "init": {
-          "line": 22,
+          "line": 27,
           "params": [
             "window"
           ],
           "purpose": "Initialize PTY manager with window reference"
         },
         "getDefaultShell": {
-          "line": 40,
+          "line": 45,
           "purpose": "Get default shell based on platform"
         },
         "getAvailableShells": {
-          "line": 57,
+          "line": 62,
           "purpose": "Get available shells on the system"
         },
         "createTerminal": {
-          "line": 146,
+          "line": 151,
           "params": [
             "workingDir = null",
             "projectPath = null",
@@ -1624,21 +1624,21 @@
           ]
         },
         "getTerminalsByProject": {
-          "line": 221,
+          "line": 252,
           "params": [
             "projectPath"
           ],
           "purpose": "Get terminals for a specific project"
         },
         "getTerminalInfo": {
-          "line": 236,
+          "line": 267,
           "params": [
             "terminalId"
           ],
           "purpose": "Get terminal info"
         },
         "writeToTerminal": {
-          "line": 247,
+          "line": 278,
           "params": [
             "terminalId",
             "data"
@@ -1646,7 +1646,7 @@
           "purpose": "Write data to specific terminal"
         },
         "resizeTerminal": {
-          "line": 257,
+          "line": 288,
           "params": [
             "terminalId",
             "cols",
@@ -1655,44 +1655,44 @@
           "purpose": "Resize specific terminal"
         },
         "destroyTerminal": {
-          "line": 267,
+          "line": 298,
           "params": [
             "terminalId"
           ],
           "purpose": "Destroy specific terminal"
         },
         "destroyAll": {
-          "line": 279,
+          "line": 311,
           "purpose": "Destroy all terminals"
         },
         "getTerminalCount": {
-          "line": 290,
+          "line": 323,
           "purpose": "Get terminal count"
         },
         "getTerminalIds": {
-          "line": 297,
+          "line": 330,
           "purpose": "Get all terminal IDs"
         },
         "hasTerminal": {
-          "line": 304,
+          "line": 337,
           "params": [
             "terminalId"
           ],
           "purpose": "Check if terminal exists"
         },
         "setupIPC": {
-          "line": 311,
+          "line": 344,
           "params": [
             "ipcMain"
           ],
           "purpose": "Setup IPC handlers for multi-terminal"
         },
         "getTerminalPids": {
-          "line": 375,
+          "line": 408,
           "purpose": "Get shell PIDs for all live terminals (for AI tool process detection)"
         },
         "getTerminalForegroundNames": {
-          "line": 390,
+          "line": 423,
           "purpose": "Get node-pty's foreground process name per terminal (fallback detection path)"
         }
       },
@@ -4674,13 +4674,13 @@
           "purpose": "Build a process.env clone with augmented PATH."
         },
         "isExecutableFile": {
-          "line": 56,
+          "line": 60,
           "params": [
             "filePath"
           ]
         },
         "resolveCommandPath": {
-          "line": 72,
+          "line": 76,
           "params": [
             "cmd",
             "envPath"

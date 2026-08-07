@@ -1,6 +1,8 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
+const { IPC } = require('../src/shared/ipcChannels');
+
 // node-pty is a native module built for Electron's ABI; stub it so the
 // manager's lifecycle logic can run under plain Node.
 const spawnCalls = [];
@@ -12,7 +14,12 @@ function createFakePty() {
     cols: 80,
     rows: 24,
     _exitHandlers: [],
-    onData: () => ({ dispose: () => { fake.dataDisposed = true; } }),
+    _dataHandlers: [],
+    onData: (handler) => {
+      fake._dataHandlers.push(handler);
+      return { dispose: () => { fake.dataDisposed = true; } };
+    },
+    emitData: (chunk) => fake._dataHandlers.forEach(h => h(chunk)),
     onExit: (handler) => { fake._exitHandlers.push(handler); },
     write: (data) => fake.writes.push(data),
     resize: (cols, rows) => { fake.cols = cols; fake.rows = rows; },
@@ -131,4 +138,72 @@ test('getAvailableShells returns existing shells with default first', () => {
   if (process.platform !== 'win32') {
     assert.ok(shells.some(s => s.path === '/bin/sh'));
   }
+});
+
+function outputMessagesFor(terminalId) {
+  return sentMessages.filter(m => m.channel === IPC.TERMINAL_OUTPUT_ID && m.payload.terminalId === terminalId);
+}
+
+const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+test('rapid pty output is coalesced into a single IPC message', async () => {
+  sentMessages.length = 0;
+  const id = ptyManager.createTerminal('/tmp', '/tmp/coalesce');
+  const { fake } = spawnCalls.at(-1);
+
+  for (let i = 0; i < 50; i++) fake.emitData(`chunk${i} `);
+
+  // Nothing is sent synchronously; the burst is still buffered.
+  assert.equal(outputMessagesFor(id).length, 0);
+
+  await sleep(40);
+
+  const messages = outputMessagesFor(id);
+  assert.equal(messages.length, 1, 'expected one coalesced message');
+  assert.equal(messages[0].payload.data, Array.from({ length: 50 }, (_, i) => `chunk${i} `).join(''));
+
+  ptyManager.destroyTerminal(id);
+});
+
+test('pending output is flushed before the exit notification', async () => {
+  sentMessages.length = 0;
+  const id = ptyManager.createTerminal('/tmp', '/tmp/exitflush');
+  const { fake } = spawnCalls.at(-1);
+
+  fake.emitData('goodbye\r\n');
+  fake.emitExit(0);
+
+  const channels = sentMessages.filter(m => m.payload.terminalId === id).map(m => m.channel);
+  const outputIdx = channels.indexOf(IPC.TERMINAL_OUTPUT_ID);
+  const destroyedIdx = channels.indexOf(IPC.TERMINAL_DESTROYED);
+
+  assert.ok(outputIdx !== -1, 'trailing output must not be dropped on exit');
+  assert.ok(outputIdx < destroyedIdx, 'output must be sent before the exit notification');
+  assert.equal(outputMessagesFor(id)[0].payload.data, 'goodbye\r\n');
+});
+
+test('output exceeding the buffer cap flushes immediately', async () => {
+  sentMessages.length = 0;
+  const id = ptyManager.createTerminal('/tmp', '/tmp/bigburst');
+  const { fake } = spawnCalls.at(-1);
+
+  fake.emitData('x'.repeat(300 * 1024));
+
+  // No timer wait: the cap forces a synchronous flush.
+  assert.equal(outputMessagesFor(id).length, 1);
+  assert.equal(outputMessagesFor(id)[0].payload.data.length, 300 * 1024);
+
+  ptyManager.destroyTerminal(id);
+});
+
+test('destroyTerminal flushes buffered output instead of discarding it', async () => {
+  sentMessages.length = 0;
+  const id = ptyManager.createTerminal('/tmp', '/tmp/destroyflush');
+  const { fake } = spawnCalls.at(-1);
+
+  fake.emitData('partial line');
+  ptyManager.destroyTerminal(id);
+
+  assert.equal(outputMessagesFor(id).length, 1);
+  assert.equal(outputMessagesFor(id)[0].payload.data, 'partial line');
 });

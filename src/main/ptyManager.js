@@ -14,6 +14,11 @@ let mainWindow = null;
 let terminalCounter = 0;
 // Global PTY ceiling across all projects/workspaces.
 const MAX_TERMINALS = 50;
+
+// PTY output coalescing. ~8ms is roughly one frame: short enough that typing
+// still feels immediate, long enough to collapse a burst into one IPC message.
+const PTY_OUTPUT_FLUSH_MS = 8;
+const PTY_OUTPUT_MAX_BUFFER = 256 * 1024;
 let cachedShells = null;
 
 /**
@@ -192,15 +197,41 @@ function createTerminal(workingDir = null, projectPath = null, shellPath = null)
     throw new Error(`Failed to spawn shell "${shell}": ${err.message}`, { cause: err });
   }
 
-  // Handle PTY output - send with terminal ID
-  const dataDisposable = ptyProcess.onData((data) => {
+  // Handle PTY output. node-pty emits many small chunks per second under fast
+  // output (`cat` of a large file, a build, a streaming AI CLI); forwarding each
+  // one as its own IPC message floods the channel and stalls the renderer. Chunks
+  // are coalesced into one message per frame instead.
+  const output = { buffer: '', timer: null };
+
+  const flushOutput = () => {
+    if (output.timer) {
+      clearTimeout(output.timer);
+      output.timer = null;
+    }
+    if (!output.buffer) return;
+    const data = output.buffer;
+    output.buffer = '';
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send(IPC.TERMINAL_OUTPUT_ID, { terminalId, data });
+    }
+  };
+
+  const dataDisposable = ptyProcess.onData((data) => {
+    output.buffer += data;
+    // Bound the buffer so a single flush never carries an unbounded payload.
+    if (output.buffer.length >= PTY_OUTPUT_MAX_BUFFER) {
+      flushOutput();
+      return;
+    }
+    if (!output.timer) {
+      output.timer = setTimeout(flushOutput, PTY_OUTPUT_FLUSH_MS);
     }
   });
 
   // Handle PTY exit
   ptyProcess.onExit(({ exitCode, signal }) => {
+    // Emit whatever the shell printed on its way out before announcing the exit.
+    flushOutput();
     dataDisposable.dispose();
     ptyInstances.delete(terminalId);
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -208,7 +239,7 @@ function createTerminal(workingDir = null, projectPath = null, shellPath = null)
     }
   });
 
-  ptyInstances.set(terminalId, { pty: ptyProcess, cwd, projectPath, dataDisposable });
+  ptyInstances.set(terminalId, { pty: ptyProcess, cwd, projectPath, dataDisposable, flushOutput });
 
   return terminalId;
 }
@@ -267,6 +298,7 @@ function resizeTerminal(terminalId, cols, rows) {
 function destroyTerminal(terminalId) {
   const instance = ptyInstances.get(terminalId);
   if (instance) {
+    if (instance.flushOutput) instance.flushOutput();
     if (instance.dataDisposable) instance.dataDisposable.dispose();
     instance.pty.kill();
     ptyInstances.delete(terminalId);
@@ -278,6 +310,7 @@ function destroyTerminal(terminalId) {
  */
 function destroyAll() {
   for (const [_terminalId, instance] of ptyInstances) {
+    if (instance.flushOutput) instance.flushOutput();
     if (instance.dataDisposable) instance.dataDisposable.dispose();
     instance.pty.kill();
   }

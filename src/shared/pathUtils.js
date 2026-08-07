@@ -49,7 +49,11 @@ function buildAugmentedPath() {
 function buildExecEnv() {
   return {
     ...process.env,
-    PATH: buildAugmentedPath()
+    PATH: buildAugmentedPath(),
+    // Pin git's message locale: several call sites classify results by matching
+    // English stderr ('nothing to commit', 'unknown revision', 'CONFLICT'), which
+    // silently stops working on a translated git.
+    LC_ALL: 'C'
   };
 }
 
