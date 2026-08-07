@@ -117,8 +117,10 @@
       "src/shared/**/*",
       "src/renderer/styles/**/*",
       "dist/**/*",
+      "!dist/**/*.map",
       "vendor/**/*",
       "!node_modules/**/*.md",
+      "!node_modules/**/*.map",
       "!node_modules/**/test/**",
       "!node_modules/**/tests/**"
     ],
