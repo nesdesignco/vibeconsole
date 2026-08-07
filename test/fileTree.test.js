@@ -4,7 +4,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const { getFileTree } = require('../src/main/fileTree');
+const { getFileTree, isIgnoredWatchPath } = require('../src/main/fileTree');
 
 function makeFixture() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vibe-filetree-test-'));
@@ -87,4 +87,19 @@ test('getFileTree handles symlink cycles without hanging', () => {
 
 test('getFileTree returns empty array for missing directory', () => {
   assert.deepEqual(getFileTree('/nonexistent-vibe-test-path'), []);
+});
+
+test('watch events inside excluded directories are ignored', () => {
+  // These directories are never part of the tree, so churn inside them
+  // (npm install, git checkout) must not trigger a rebuild.
+  assert.equal(isIgnoredWatchPath('node_modules/pkg/index.js'), true);
+  assert.equal(isIgnoredWatchPath('.git/objects/ab/cdef'), true);
+  assert.equal(isIgnoredWatchPath('src/node_modules/dep/a.js'), true);
+  assert.equal(isIgnoredWatchPath('node_modules'), true);
+
+  assert.equal(isIgnoredWatchPath('src/index.js'), false);
+  assert.equal(isIgnoredWatchPath('README.md'), false);
+  // Near-misses must still refresh.
+  assert.equal(isIgnoredWatchPath('node_modules_backup/a.js'), false);
+  assert.equal(isIgnoredWatchPath('src/.gitignore'), false);
 });

@@ -18,6 +18,20 @@ const PROJECT_PATH_ERROR = 'Path is outside project directory or targets protect
  * @param {number} currentDepth - Current depth level
  * @returns {Array} File tree structure
  */
+// Directories excluded from the tree, and therefore from watch events too.
+const IGNORED_WATCH_SEGMENTS = new Set(['node_modules', '.git']);
+
+/**
+ * True when a watcher-reported path lies inside a directory the tree excludes.
+ * @param {string} filename path relative to the watched root, as fs.watch reports it
+ */
+function isIgnoredWatchPath(filename) {
+  const segments = String(filename).split(/[/\\]/);
+  // The last segment is the entry itself; a change to a directory *named*
+  // node_modules still matters only for its contents, which are excluded too.
+  return segments.some(segment => IGNORED_WATCH_SEGMENTS.has(segment));
+}
+
 function getFileTree(dirPath, maxDepth = 5, currentDepth = 0, visitedPaths = null) {
   if (currentDepth >= maxDepth) return [];
 
@@ -102,7 +116,12 @@ function startWatcherForSender(sender, projectPath) {
   if (!stat.isDirectory()) return;
 
   let timer = null;
-  const scheduleRefresh = () => {
+  const scheduleRefresh = (_eventType, filename) => {
+    // getFileTree never returns node_modules or .git, so churn inside them
+    // (npm install, git checkout) would rebuild and re-send a tree that cannot
+    // have changed — and the renderer rebuilds its DOM for every message.
+    // A null filename means the platform did not tell us what changed; refresh.
+    if (filename && isIgnoredWatchPath(filename)) return;
     if (timer) clearTimeout(timer);
     const prevEntry = watcherBySenderId.get(senderId);
     if (prevEntry) prevEntry.timer = null;
@@ -250,5 +269,6 @@ function setupIPC(ipcMain) {
 
 module.exports = {
   getFileTree,
+  isIgnoredWatchPath,
   setupIPC
 };

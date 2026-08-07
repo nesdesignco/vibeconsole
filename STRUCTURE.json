@@ -302,6 +302,7 @@
       "description": "F",
       "exports": [
         "getFileTree",
+        "isIgnoredWatchPath",
         "setupIPC"
       ],
       "depends": [
@@ -312,8 +313,15 @@
         "shared/pathValidation"
       ],
       "functions": {
+        "isIgnoredWatchPath": {
+          "line": 28,
+          "params": [
+            "filename"
+          ],
+          "purpose": "True when a watcher-reported path lies inside a directory the tree excludes."
+        },
         "getFileTree": {
-          "line": 21,
+          "line": 35,
           "params": [
             "dirPath",
             "maxDepth = 5",
@@ -322,7 +330,7 @@
           ]
         },
         "safeSend": {
-          "line": 72,
+          "line": 86,
           "params": [
             "sender",
             "channel",
@@ -331,20 +339,20 @@
           "purpose": "Setup IPC handlers"
         },
         "stopWatcherForSender": {
-          "line": 78,
+          "line": 92,
           "params": [
             "senderId"
           ]
         },
         "startWatcherForSender": {
-          "line": 90,
+          "line": 104,
           "params": [
             "sender",
             "projectPath"
           ]
         },
         "setupIPC": {
-          "line": 149,
+          "line": 168,
           "params": [
             "ipcMain"
           ]
@@ -382,31 +390,31 @@
       ],
       "functions": {
         "init": {
-          "line": 19,
+          "line": 23,
           "params": [
             "app"
           ],
           "purpose": "Initialize prompt logger"
         },
         "getLogFilePath": {
-          "line": 26,
+          "line": 30,
           "purpose": "Get log file path"
         },
         "enqueueLogWrite": {
-          "line": 30,
+          "line": 34,
           "params": [
             "logEntry"
           ]
         },
         "sanitizeHistoryLine": {
-          "line": 40,
+          "line": 44,
           "params": [
             "line",
             "terminalId = 'global'"
           ]
         },
         "logInput": {
-          "line": 94,
+          "line": 98,
           "params": [
             "data",
             "terminalId = 'global'"
@@ -414,11 +422,11 @@
           "purpose": "Process and log input data"
         },
         "getHistory": {
-          "line": 124,
+          "line": 128,
           "purpose": "Get prompt history"
         },
         "setupIPC": {
-          "line": 141,
+          "line": 173,
           "params": [
             "ipcMain"
           ],
@@ -513,23 +521,29 @@
           "line": 44,
           "purpose": "Create default workspace structure"
         },
+        "normalizeWorkspace": {
+          "line": 68,
+          "params": [
+            "data"
+          ],
+          "purpose": "TypeError and surface as Electron's crash dialog."
+        },
         "loadWorkspace": {
-          "line": 61,
-          "purpose": "Load workspace from file"
+          "line": 85
         },
         "saveWorkspace": {
-          "line": 77,
+          "line": 101,
           "params": [
             "data"
           ],
           "purpose": "Save workspace to file"
         },
         "getProjects": {
-          "line": 91,
+          "line": 115,
           "purpose": "Get projects from active workspace"
         },
         "addProject": {
-          "line": 100,
+          "line": 124,
           "params": [
             "projectPath",
             "name"
@@ -537,21 +551,21 @@
           "purpose": "Add project to workspace"
         },
         "removeProject": {
-          "line": 124,
+          "line": 148,
           "params": [
             "projectPath"
           ],
           "purpose": "Remove project from workspace"
         },
         "updateProjectLastOpened": {
-          "line": 137,
+          "line": 161,
           "params": [
             "projectPath"
           ],
           "purpose": "Update project's last opened timestamp"
         },
         "setupIPC": {
-          "line": 153,
+          "line": 177,
           "params": [
             "ipcMain"
           ],
@@ -865,22 +879,22 @@
           "purpose": "Setup IPC listeners"
         },
         "focus": {
-          "line": 511,
+          "line": 516,
           "purpose": "Focus file tree for keyboard navigation"
         },
         "getVisibleItems": {
-          "line": 536,
+          "line": 541,
           "purpose": "Get all visible file items (for navigation)"
         },
         "handleKeydown": {
-          "line": 555,
+          "line": 560,
           "params": [
             "e"
           ],
           "purpose": "Handle keyboard navigation in file tree"
         },
         "blur": {
-          "line": 617,
+          "line": 622,
           "purpose": "Blur/unfocus file tree"
         }
       },

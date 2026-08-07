@@ -13,6 +13,10 @@ const inputBuffers = new Map(); // Map<terminalId, inputBuffer>
 const keyBlockMode = new Map(); // Map<terminalId, boolean>
 let writeQueue = Promise.resolve();
 
+// Bounds for what the history panel loads. The log itself is never truncated.
+const MAX_HISTORY_READ_BYTES = 1024 * 1024;
+const MAX_HISTORY_LINES = 5000;
+
 /**
  * Initialize prompt logger
  */
@@ -122,17 +126,45 @@ function logInput(data, terminalId = 'global') {
  * @returns {Promise<string>} History file contents
  */
 async function getHistory() {
+  if (!logFilePath) return '';
+
+  let handle = null;
   try {
-    if (logFilePath) {
-      await fsp.access(logFilePath);
-      return await fsp.readFile(logFilePath, 'utf8');
+    handle = await fsp.open(logFilePath, 'r');
+    const { size } = await handle.stat();
+
+    // Read only the tail. The history file is append-only and never rotated, so
+    // it grows without bound; reading it whole put the entire file in main
+    // memory, over IPC, and into one DOM node per line. The panel shows newest
+    // first anyway, and the full file stays on disk for "Open History File".
+    const start = Math.max(0, size - MAX_HISTORY_READ_BYTES);
+    const length = size - start;
+    if (length <= 0) return '';
+
+    const buffer = Buffer.alloc(length);
+    const { bytesRead } = await handle.read(buffer, 0, length, start);
+    let text = buffer.subarray(0, bytesRead).toString('utf8');
+
+    // A tail read can begin mid-line, and therefore mid-UTF-8-sequence;
+    // dropping the partial first line discards both.
+    if (start > 0) {
+      const newlineIndex = text.indexOf('\n');
+      text = newlineIndex === -1 ? '' : text.slice(newlineIndex + 1);
     }
+
+    const lines = text.split('\n');
+    if (lines.length > MAX_HISTORY_LINES) {
+      text = lines.slice(-MAX_HISTORY_LINES).join('\n');
+    }
+    return text;
   } catch (err) {
     if (err && err.code !== 'ENOENT') {
       console.error('Error reading prompt history:', err);
     }
+    return '';
+  } finally {
+    if (handle) await handle.close().catch(() => {});
   }
-  return '';
 }
 
 /**

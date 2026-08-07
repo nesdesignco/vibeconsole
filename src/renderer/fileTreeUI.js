@@ -493,9 +493,14 @@ function restoreExpandedPaths(expandedPaths) {
 function setupIPC() {
   ipcRenderer.on(IPC.FILE_TREE_DATA, (event, files) => {
     const expanded = getExpandedPaths();
+    // The tree is rebuilt from scratch on every watcher event, which resets
+    // scrollTop; without this the view jumps to the top whenever a build or
+    // an editor save touches a watched file.
+    const scrollTop = fileTreeElement ? fileTreeElement.scrollTop : 0;
     clearFileTree();
     renderFileTree(files, fileTreeElement);
     restoreExpandedPaths(expanded);
+    if (fileTreeElement) fileTreeElement.scrollTop = scrollTop;
   });
 
   ipcRenderer.on(IPC.FILE_DELETED, (event, result) => {

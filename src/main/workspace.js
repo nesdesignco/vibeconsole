@@ -58,11 +58,35 @@ function createDefaultWorkspace() {
 /**
  * Load workspace from file
  */
+/**
+ * Repair a workspace object so the active workspace always exists and has a
+ * projects array. addProject/removeProject run inside plain ipcMain.on handlers
+ * and index into workspaces[activeWorkspace].projects directly, so a file that
+ * is valid JSON but structurally off would otherwise throw an uncaught
+ * TypeError and surface as Electron's crash dialog.
+ */
+function normalizeWorkspace(data) {
+  if (!data || typeof data !== 'object' || !data.workspaces || typeof data.workspaces !== 'object') {
+    return createDefaultWorkspace();
+  }
+
+  if (!data.activeWorkspace || !data.workspaces[data.activeWorkspace]) {
+    const firstName = Object.keys(data.workspaces)[0];
+    if (!firstName) return createDefaultWorkspace();
+    data.activeWorkspace = firstName;
+  }
+
+  const active = data.workspaces[data.activeWorkspace];
+  if (!Array.isArray(active.projects)) active.projects = [];
+
+  return data;
+}
+
 function loadWorkspace() {
   if (_cachedWorkspace) return _cachedWorkspace;
   try {
     const data = fs.readFileSync(workspacePath, 'utf8');
-    _cachedWorkspace = JSON.parse(data);
+    _cachedWorkspace = normalizeWorkspace(JSON.parse(data));
     return _cachedWorkspace;
   } catch (err) {
     console.error('Error loading workspace:', err);
