@@ -6,25 +6,10 @@
 const os = require('os');
 const path = require('path');
 const { IPC } = require('../shared/ipcChannels');
-const { execFileGit } = require('./gitExecUtils');
+const { execFileGit, isValidBranchName } = require('./gitExecUtils');
 const { isPathWithinDirectory } = require('../shared/pathValidation');
 
 let mainWindow = null;
-
-/**
- * Validate branch name to prevent git argument injection
- * Allows alphanumeric, dots, underscores, hyphens, and slashes
- * Rejects names starting with '-' (flag injection)
- */
-function isValidBranchName(name) {
-  if (!name || typeof name !== 'string') return false;
-  if (name.length > 255) return false;
-  if (name.startsWith('-')) return false;
-  if (name.includes('..') || name.includes('//')) return false;
-  if (name.includes('.lock') || name.endsWith('.') || name.endsWith('/')) return false;
-  if (name.includes('.git/') || name.includes('.git\\') || name === '.git') return false;
-  return /^[a-zA-Z0-9._/-]+$/.test(name);
-}
 
 /**
  * Initialize manager

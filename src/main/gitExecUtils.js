@@ -14,10 +14,53 @@ function isValidStashRef(ref) {
 }
 
 /**
+ * Validate branch name to prevent git argument injection
+ * Allows alphanumeric, dots, underscores, hyphens, and slashes
+ * Rejects names starting with '-' (flag injection)
+ *
+ * Branch names are not always user-typed: `git branch --show-current` echoes
+ * whatever `.git/HEAD` contains, and a crafted HEAD can yield `--upload-pack=...`,
+ * which git executes locally. Every branch name reaching git must pass through here.
+ */
+function isValidBranchName(name) {
+  if (!name || typeof name !== 'string') return false;
+  if (name.length > 255) return false;
+  if (name.startsWith('-')) return false;
+  if (name.includes('..') || name.includes('//')) return false;
+  if (name.includes('.lock') || name.endsWith('.') || name.endsWith('/')) return false;
+  if (name.includes('.git/') || name.includes('.git\\') || name === '.git') return false;
+  return /^[a-zA-Z0-9._/-]+$/.test(name);
+}
+
+/**
+ * Git flags that make git run an arbitrary command. VibeConsole never uses any of
+ * them, so any occurrence means a caller-supplied value was interpreted as a flag
+ * (e.g. a branch name read from a crafted `.git/HEAD`). Backstop only — call sites
+ * are still responsible for validating refs before they reach git.
+ */
+const COMMAND_EXECUTION_FLAGS = ['--upload-pack', '--receive-pack', '--exec'];
+
+function findCommandExecutionFlag(args) {
+  if (!Array.isArray(args)) return null;
+  return args.find(arg =>
+    typeof arg === 'string' &&
+    COMMAND_EXECUTION_FLAGS.some(flag => arg === flag || arg.startsWith(`${flag}=`))
+  ) || null;
+}
+
+function rejectIfCommandExecutionFlag(args, reject) {
+  const flag = findCommandExecutionFlag(args);
+  if (!flag) return false;
+  reject({ error: `Refused unsafe git argument: ${flag}`, stderr: '' });
+  return true;
+}
+
+/**
  * Execute git command safely using execFile (prevents argument injection)
  */
 function execFileGit(args, projectPath, maxBuffer = 1024 * 1024, timeout = 10000) {
   return new Promise((resolve, reject) => {
+    if (rejectIfCommandExecutionFlag(args, reject)) return;
     const env = buildExecEnv();
     const gitCmd = resolveCommandPath('git', env.PATH) || 'git';
     execFile(gitCmd, args, { cwd: projectPath, timeout, maxBuffer, env }, (error, stdout, stderr) => {
@@ -57,6 +100,7 @@ function formatGitError(err, fallback) {
  */
 function execGitWithStdin(args, input, projectPath, timeout = 10000) {
   return new Promise((resolve, reject) => {
+    if (rejectIfCommandExecutionFlag(args, reject)) return;
     const env = buildExecEnv();
     const gitCmd = resolveCommandPath('git', env.PATH) || 'git';
     const child = spawn(gitCmd, args, { cwd: projectPath, stdio: ['pipe', 'pipe', 'pipe'], env });
@@ -96,6 +140,7 @@ function execGitWithStdin(args, input, projectPath, timeout = 10000) {
  */
 function execFileGitBuffer(args, projectPath, maxBufferBytes = 20 * 1024 * 1024, timeout = 10000) {
   return new Promise((resolve, reject) => {
+    if (rejectIfCommandExecutionFlag(args, reject)) return;
     const env = buildExecEnv();
     const gitCmd = resolveCommandPath('git', env.PATH) || 'git';
     const child = spawn(gitCmd, args, { cwd: projectPath, stdio: ['ignore', 'pipe', 'pipe'], env });
@@ -279,6 +324,7 @@ function formatLocalDate(date) {
 
 module.exports = {
   isValidStashRef,
+  isValidBranchName,
   execFileGit,
   execFileGitBuffer,
   formatGitError,

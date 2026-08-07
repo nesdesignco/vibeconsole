@@ -17,6 +17,7 @@ const {
   formatGitError,
   execGitWithStdin,
   execFileCmd,
+  isValidBranchName,
   parseStatusLine,
   isUnmergedStatus,
   parseCommitList,
@@ -324,6 +325,7 @@ async function gitPush(projectPath, branch, setUpstream) {
   try {
     const args = ['push'];
     if (setUpstream && branch) {
+      if (!isValidBranchName(branch)) return { error: 'Invalid branch name' };
       args.push('-u', 'origin', branch);
     }
     await execFileGit(args, projectPath, 2 * 1024 * 1024, 120000);
@@ -339,6 +341,7 @@ async function gitPull(projectPath, branch, noUpstream) {
   try {
     const args = ['pull'];
     if (noUpstream && branch) {
+      if (!isValidBranchName(branch)) return { error: 'Invalid branch name' };
       args.push('origin', branch);
     }
     await execFileGit(args, projectPath, 10 * 1024 * 1024, 120000);
@@ -1166,5 +1169,7 @@ module.exports = {
   stashDrop: gitStashOps.stashDrop,
   stashShow: gitStashOps.stashShow,
   gitAheadBehind,
+  gitPull,
+  gitPush,
   setupIPC
 };
