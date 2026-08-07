@@ -233,8 +233,12 @@ class TerminalGrid {
         const cells = Array.from(this.container.querySelectorAll('.grid-cell'));
         const cellIndex = cells.indexOf(cell);
         const prop = isHorizontal ? 'gridTemplateColumns' : 'gridTemplateRows';
+        // `count` is how many tracks the edited template has; the cell's position
+        // within the grid is always derived from the column count.
         const count = isHorizontal ? this._currentCols : this._currentRows;
-        const colOrRow = isHorizontal ? cellIndex % count : Math.floor(cellIndex / count);
+        const colOrRow = isHorizontal
+          ? cellIndex % this._currentCols
+          : Math.floor(cellIndex / this._currentCols);
 
         // Build new template sizes array
         const sizes = Array(count).fill(null).map(() => `1fr`);

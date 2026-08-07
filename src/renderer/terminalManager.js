@@ -805,9 +805,12 @@ class TerminalManager {
    */
   setActiveTerminal(terminalId) {
     if (this.activeTerminalId === terminalId) {
-      // Already active, just ensure focus
+      // Already active, just ensure focus. isActive is re-asserted rather than
+      // assumed: the id can already point at this terminal before its state was
+      // marked active (e.g. when succeeding a closed terminal).
       const current = this.terminals.get(terminalId);
       if (current) {
+        current.state.isActive = true;
         current.terminal.focus();
       }
       return;
@@ -875,8 +878,9 @@ class TerminalManager {
         // Select from same project's terminals, not all terminals
         const projectTerminals = this.getTerminalsByProject(instance.state.projectPath);
         if (projectTerminals.length > 0) {
-          this.activeTerminalId = projectTerminals[projectTerminals.length - 1].id;
-          this.setActiveTerminal(this.activeTerminalId);
+          // Leave activeTerminalId pointing at the closed id so setActiveTerminal
+          // takes its full path and marks the successor active.
+          this.setActiveTerminal(projectTerminals[projectTerminals.length - 1].id);
         } else {
           this.activeTerminalId = null;
         }

@@ -37,8 +37,11 @@ function isAllowedWorktreePath(worktreePath) {
  */
 async function isWorkingTreeClean(projectPath) {
   try {
-    const { stdout } = await execFileGit(['status', '--porcelain'], projectPath);
-    return { clean: stdout === '', changes: stdout.split('\n').filter(Boolean) };
+    const { stdout } = await execFileGit(
+      ['-c', 'core.quotepath=false', 'status', '--porcelain', '-z'],
+      projectPath
+    );
+    return { clean: stdout === '', changes: stdout.split('\0').filter(Boolean) };
   } catch (err) {
     return { clean: false, error: err.error };
   }

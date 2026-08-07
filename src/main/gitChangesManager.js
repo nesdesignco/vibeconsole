@@ -5,7 +5,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const { shell } = require('electron');
 const { IPC } = require('../shared/ipcChannels');
 const { isRelativePathWithinProjectContent } = require('../shared/pathValidation');
 const PROJECT_PATH_ERROR = 'Path is outside project directory or targets protected metadata';
@@ -18,7 +17,7 @@ const {
   execGitWithStdin,
   execFileCmd,
   isValidBranchName,
-  parseStatusLine,
+  parseStatusRecords,
   isUnmergedStatus,
   parseCommitList,
   extractHunkPatches,
@@ -36,6 +35,15 @@ const IMAGE_EXT_TO_MIME = {
   svg: 'image/svg+xml'
 };
 const MAX_IMAGE_DIFF_BYTES = 10 * 1024 * 1024; // 10MB per side
+
+/**
+ * Move a path to the OS trash. The electron module is resolved lazily so tests,
+ * which run outside the Electron runtime, can substitute it.
+ */
+async function moveToTrash(fullPath) {
+  const { shell } = require('electron');
+  await shell.trashItem(fullPath);
+}
 
 function getImageMimeForPath(filePath) {
   const ext = path.extname(filePath || '').slice(1).toLowerCase();
@@ -229,12 +237,12 @@ async function expandUntrackedEntries(projectPath, relativePath) {
 
   try {
     const { stdout } = await execFileGit(
-      ['ls-files', '--others', '--exclude-standard', '--', `${trimmedPath}/`],
+      ['-c', 'core.quotepath=false', 'ls-files', '--others', '--exclude-standard', '-z', '--', `${trimmedPath}/`],
       projectPath,
       4 * 1024 * 1024,
       15000
     );
-    const children = String(stdout || '').split('\n').filter(Boolean);
+    const children = String(stdout || '').split('\0').filter(Boolean);
     if (children.length > 0) {
       return children.map((childPath) => ({ path: childPath, oldPath: null, status: '?' }));
     }
@@ -527,44 +535,41 @@ async function loadChanges(projectPath) {
   try {
     await execFileGit(['rev-parse', '--is-inside-work-tree'], projectPath);
 
-    const { stdout } = await execFileGit(['status', '--porcelain'], projectPath);
+    const { stdout } = await execFileGit(
+      ['-c', 'core.quotepath=false', 'status', '--porcelain', '-z'],
+      projectPath
+    );
 
     const conflicts = [];
     const staged = [];
     const unstaged = [];
     const untracked = [];
 
-    if (stdout) {
-      const statusLines = stdout.split('\n').filter(Boolean);
-      for (const line of statusLines) {
-        const parsed = parseStatusLine(line);
-        if (!parsed) continue;
+    for (const parsed of parseStatusRecords(stdout)) {
+      const { x, y } = parsed;
+      const fileInfo = { path: parsed.path, oldPath: parsed.oldPath };
 
-        const { x, y } = parsed;
-        const fileInfo = { path: parsed.path, oldPath: parsed.oldPath };
+      // Unmerged conflicts are their own section in professional UIs.
+      if (isUnmergedStatus(x, y)) {
+        conflicts.push({ ...fileInfo, status: `${x}${y}`, x, y });
+        continue;
+      }
 
-        // Unmerged conflicts are their own section in professional UIs.
-        if (isUnmergedStatus(x, y)) {
-          conflicts.push({ ...fileInfo, status: `${x}${y}`, x, y });
-          continue;
-        }
+      // Untracked files/directories
+      if (x === '?' && y === '?') {
+        const entries = await expandUntrackedEntries(projectPath, parsed.path);
+        untracked.push(...entries);
+        continue;
+      }
 
-        // Untracked files/directories
-        if (x === '?' && y === '?') {
-          const entries = await expandUntrackedEntries(projectPath, parsed.path);
-          untracked.push(...entries);
-          continue;
-        }
+      // Staged changes (X column, ignore '?' and ' ')
+      if (x !== ' ' && x !== '?') {
+        staged.push({ ...fileInfo, status: x });
+      }
 
-        // Staged changes (X column, ignore '?' and ' ')
-        if (x !== ' ' && x !== '?') {
-          staged.push({ ...fileInfo, status: x });
-        }
-
-        // Unstaged changes (Y column, ignore '?' and ' ')
-        if (y !== ' ' && y !== '?') {
-          unstaged.push({ ...fileInfo, status: y });
-        }
+      // Unstaged changes (Y column, ignore '?' and ' ')
+      if (y !== ' ' && y !== '?') {
+        unstaged.push({ ...fileInfo, status: y });
       }
     }
 
@@ -863,7 +868,7 @@ async function discardFile(projectPath, filePath, diffType) {
     if (diffType === 'untracked') {
       // Move untracked file or directory to trash (recoverable)
       const fullPath = path.join(projectPath, filePath);
-      await shell.trashItem(fullPath);
+      await moveToTrash(fullPath);
     } else if (diffType === 'staged') {
       // Restore staged file to HEAD version
       await execFileGit(['checkout', 'HEAD', '--', filePath], projectPath);
@@ -886,10 +891,38 @@ async function discardAllUnstaged(projectPath) {
   }
 
   try {
-    // Restore tracked files and remove untracked files/dirs.
+    // Restore tracked files, then remove untracked files/dirs.
     // Keep ignored files intact (no -x) to match "unstaged changes" scope.
     await execFileGit(['checkout', '--', '.'], projectPath);
-    await execFileGit(['clean', '-fd'], projectPath);
+
+    // Untracked entries go to the trash rather than `git clean -fd`, so bulk
+    // discard stays as recoverable as discarding a single untracked file.
+    // --directory collapses a wholly-untracked dir into one entry, matching
+    // `clean -fd` scope.
+    const { stdout } = await execFileGit(
+      ['-c', 'core.quotepath=false', 'ls-files', '--others', '--exclude-standard', '--directory', '-z'],
+      projectPath,
+      4 * 1024 * 1024,
+      15000
+    );
+
+    const entries = stdout.split('\0').filter(Boolean);
+    const failed = [];
+    for (const entry of entries) {
+      const relative = entry.replace(/\/+$/, '');
+      if (!relative || !isRelativePathWithinProjectContent(projectPath, relative)) continue;
+      try {
+        await moveToTrash(path.join(projectPath, relative));
+      } catch {
+        failed.push(relative);
+      }
+    }
+
+    if (failed.length > 0) {
+      const preview = failed.slice(0, 3).join(', ');
+      const suffix = failed.length > 3 ? ` and ${failed.length - 3} more` : '';
+      return { error: `Could not move to trash: ${preview}${suffix}` };
+    }
     return { error: null };
   } catch (err) {
     return { error: err.error || 'Failed to discard changes' };

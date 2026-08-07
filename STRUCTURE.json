@@ -2272,34 +2272,34 @@
           "purpose": "Handle creating a commit (native execFile)"
         },
         "handleCommitAndPush": {
-          "line": 1191,
+          "line": 1195,
           "purpose": "Handle commit and push"
         },
         "handleAmendCommit": {
-          "line": 1199,
+          "line": 1203,
           "purpose": "Handle amending the last commit"
         },
         "handleFetch": {
-          "line": 1231,
+          "line": 1235,
           "params": [
             "options = {}"
           ],
           "purpose": "Fetch remote refs and refresh sync indicators."
         },
         "handlePull": {
-          "line": 1264,
+          "line": 1268,
           "purpose": "Handle pull (IPC background)"
         },
         "handlePush": {
-          "line": 1305,
+          "line": 1309,
           "purpose": "Handle push (IPC background)"
         },
         "updateSyncStatus": {
-          "line": 1344,
+          "line": 1348,
           "purpose": "Update sync status (ahead/behind counts)"
         },
         "renderBranchBar": {
-          "line": 1366,
+          "line": 1370,
           "purpose": "Branch/upstream info now lives in the activity header."
         }
       },
@@ -2437,14 +2437,14 @@
           "purpose": "Check if working tree is clean"
         },
         "loadBranches": {
-          "line": 50,
+          "line": 53,
           "params": [
             "projectPath"
           ],
           "purpose": "Load all branches"
         },
         "switchBranch": {
-          "line": 95,
+          "line": 98,
           "params": [
             "projectPath",
             "branchName"
@@ -2452,7 +2452,7 @@
           "purpose": "Switch to a branch"
         },
         "createBranch": {
-          "line": 142,
+          "line": 145,
           "params": [
             "projectPath",
             "branchName",
@@ -2462,7 +2462,7 @@
           "purpose": "Create a new branch"
         },
         "deleteBranch": {
-          "line": 176,
+          "line": 179,
           "params": [
             "projectPath",
             "branchName",
@@ -2471,14 +2471,14 @@
           "purpose": "Delete a branch"
         },
         "loadWorktrees": {
-          "line": 196,
+          "line": 199,
           "params": [
             "projectPath"
           ],
           "purpose": "Load worktrees"
         },
         "addWorktree": {
-          "line": 238,
+          "line": 241,
           "params": [
             "projectPath",
             "worktreePath",
@@ -2488,7 +2488,7 @@
           "purpose": "Add a worktree"
         },
         "removeWorktree": {
-          "line": 264,
+          "line": 267,
           "params": [
             "projectPath",
             "worktreePath",
@@ -2497,7 +2497,7 @@
           "purpose": "Remove a worktree"
         },
         "setupIPC": {
-          "line": 289,
+          "line": 292,
           "params": [
             "ipcMain"
           ],
@@ -2690,67 +2690,74 @@
       "depends": [
         "fs",
         "path",
-        "electron",
         "shared/ipcChannels",
         "shared/pathValidation",
         "gitExecUtils",
+        "electron",
         "gitStashOps",
         "gitCommitOps"
       ],
       "functions": {
+        "moveToTrash": {
+          "line": 43,
+          "params": [
+            "fullPath"
+          ],
+          "purpose": "which run outside the Electron runtime, can substitute it."
+        },
         "getImageMimeForPath": {
-          "line": 40,
+          "line": 48,
           "params": [
             "filePath"
           ]
         },
         "init": {
-          "line": 62,
+          "line": 70,
           "params": [
             "_window"
           ],
           "purpose": "Initialize manager"
         },
         "getActivityCacheKey": {
-          "line": 67,
+          "line": 75,
           "params": [
             "projectPath",
             "days"
           ]
         },
         "getRepoCacheKey": {
-          "line": 71,
+          "line": 79,
           "params": [
             "projectPath"
           ]
         },
         "invalidateActivityCache": {
-          "line": 80,
-          "params": [
-            "projectPath"
-          ]
-        },
-        "invalidateRepoStatusCache": {
           "line": 88,
           "params": [
             "projectPath"
           ]
         },
+        "invalidateRepoStatusCache": {
+          "line": 96,
+          "params": [
+            "projectPath"
+          ]
+        },
         "invalidateAheadBehindCache": {
-          "line": 95,
+          "line": 103,
           "params": [
             "projectPath"
           ]
         },
         "invalidateRepoCaches": {
-          "line": 102,
+          "line": 110,
           "params": [
             "projectPath",
             "options = {}"
           ]
         },
         "loadLocalCommits": {
-          "line": 112,
+          "line": 120,
           "params": [
             "projectPath",
             "maxCount = 20"
@@ -2758,14 +2765,14 @@
           "purpose": "Load recent commits from HEAD (used when no upstream/tracking branch is configured)."
         },
         "loadSyncCommits": {
-          "line": 130,
+          "line": 138,
           "params": [
             "projectPath"
           ],
           "purpose": "Load outgoing (ahead) and incoming (behind) commits relative to upstream."
         },
         "loadCommitGraph": {
-          "line": 179,
+          "line": 187,
           "params": [
             "projectPath",
             "maxCount = 200"
@@ -2773,14 +2780,14 @@
           "purpose": "Load ASCII lane graph for recent commits."
         },
         "expandUntrackedEntries": {
-          "line": 206,
+          "line": 214,
           "params": [
             "projectPath",
             "relativePath"
           ]
         },
         "loadGitActivity": {
-          "line": 251,
+          "line": 259,
           "params": [
             "projectPath",
             "days = ACTIVITY_LOOKBACK_DAYS"
@@ -2788,7 +2795,7 @@
           "purpose": "Load GitHub-style daily commit activity for the last N days."
         },
         "gitFetch": {
-          "line": 307,
+          "line": 315,
           "params": [
             "projectPath",
             "prune = true"
@@ -2796,7 +2803,7 @@
           "purpose": "Fetch remote refs for accurate incoming/outgoing calculations."
         },
         "gitPush": {
-          "line": 322,
+          "line": 330,
           "params": [
             "projectPath",
             "branch",
@@ -2804,7 +2811,7 @@
           ]
         },
         "gitPull": {
-          "line": 338,
+          "line": 346,
           "params": [
             "projectPath",
             "branch",
@@ -2812,7 +2819,7 @@
           ]
         },
         "applyGitHunk": {
-          "line": 357,
+          "line": 365,
           "params": [
             "projectPath",
             "filePath",
@@ -2823,7 +2830,7 @@
           "purpose": "Apply a single hunk patch to index and/or working tree."
         },
         "loadGitConflict": {
-          "line": 396,
+          "line": 404,
           "params": [
             "projectPath",
             "filePath"
@@ -2831,7 +2838,7 @@
           "purpose": "Load base/ours/theirs versions for a conflicted file."
         },
         "resolveGitConflict": {
-          "line": 431,
+          "line": 439,
           "params": [
             "projectPath",
             "filePath",
@@ -2840,7 +2847,7 @@
           "purpose": "Save resolved conflict content and stage file."
         },
         "loadCommitDiff": {
-          "line": 449,
+          "line": 457,
           "params": [
             "projectPath",
             "commitHash"
@@ -2848,21 +2855,21 @@
           "purpose": "Load diff for a specific commit"
         },
         "loadChanges": {
-          "line": 506,
+          "line": 514,
           "params": [
             "projectPath"
           ],
           "purpose": "Load git changes (status)"
         },
         "loadChangesCached": {
-          "line": 629,
+          "line": 634,
           "params": [
             "projectPath",
             "options = {}"
           ]
         },
         "loadDiff": {
-          "line": 662,
+          "line": 667,
           "params": [
             "projectPath",
             "filePath",
@@ -2871,7 +2878,7 @@
           "purpose": "diffType: 'staged', 'unstaged', 'untracked', 'conflict'"
         },
         "readGitRevisionBytes": {
-          "line": 731,
+          "line": 736,
           "params": [
             "projectPath",
             "revSpec"
@@ -2879,21 +2886,21 @@
           "purpose": "Returns null if missing or oversized."
         },
         "readWorkingTreeBytes": {
-          "line": 743,
+          "line": 748,
           "params": [
             "fullPath"
           ],
           "purpose": "Read a file from disk as Buffer, capped at MAX_IMAGE_DIFF_BYTES. Returns null on error/oversize."
         },
         "bufferToDataUrl": {
-          "line": 753,
+          "line": 758,
           "params": [
             "buffer",
             "mime"
           ]
         },
         "loadImageDiff": {
-          "line": 763,
+          "line": 768,
           "params": [
             "projectPath",
             "filePath",
@@ -2902,7 +2909,7 @@
           "purpose": "Returns { error, oldDataUrl, newDataUrl, oldSize, newSize, mime, filePath }"
         },
         "stageFile": {
-          "line": 812,
+          "line": 817,
           "params": [
             "projectPath",
             "filePath"
@@ -2910,7 +2917,7 @@
           "purpose": "Stage a file"
         },
         "unstageFile": {
-          "line": 832,
+          "line": 837,
           "params": [
             "projectPath",
             "filePath"
@@ -2918,7 +2925,7 @@
           "purpose": "Unstage a file"
         },
         "discardFile": {
-          "line": 853,
+          "line": 858,
           "params": [
             "projectPath",
             "filePath",
@@ -2927,42 +2934,42 @@
           "purpose": "diffType: 'staged', 'unstaged', 'untracked'"
         },
         "discardAllUnstaged": {
-          "line": 883,
+          "line": 888,
           "params": [
             "projectPath"
           ],
           "purpose": "Discard all unstaged changes"
         },
         "stageAll": {
-          "line": 902,
+          "line": 935,
           "params": [
             "projectPath"
           ],
           "purpose": "Stage all files"
         },
         "unstageAll": {
-          "line": 918,
+          "line": 951,
           "params": [
             "projectPath"
           ],
           "purpose": "Unstage all files"
         },
         "gitAheadBehind": {
-          "line": 944,
+          "line": 977,
           "params": [
             "projectPath"
           ],
           "purpose": "Get ahead/behind count relative to upstream tracking branch"
         },
         "gitAheadBehindCached": {
-          "line": 970,
+          "line": 1003,
           "params": [
             "projectPath",
             "options = {}"
           ]
         },
         "setupIPC": {
-          "line": 1002,
+          "line": 1035,
           "params": [
             "ipcMain"
           ],
@@ -3828,7 +3835,7 @@
         "formatGitError",
         "execGitWithStdin",
         "execFileCmd",
-        "parseStatusLine",
+        "parseStatusRecords",
         "isUnmergedStatus",
         "parseCommitList",
         "parseHunkHeaderLine",
@@ -3915,15 +3922,15 @@
           ],
           "purpose": "Execute a non-git command safely using execFile"
         },
-        "parseStatusLine": {
-          "line": 218,
+        "parseStatusRecords": {
+          "line": 229,
           "params": [
-            "line"
+            "stdout"
           ],
-          "purpose": "X = staged status, Y = unstaged status"
+          "purpose": "X = staged status, Y = unstaged status."
         },
         "isUnmergedStatus": {
-          "line": 241,
+          "line": 263,
           "params": [
             "x",
             "y"
@@ -3931,28 +3938,28 @@
           "purpose": "See git status short format: DD, AU, UD, UA, DU, AA, UU."
         },
         "parseCommitList": {
-          "line": 249,
+          "line": 271,
           "params": [
             "stdout"
           ],
           "purpose": "Parse commit list from a null-delimited git log format."
         },
         "parseHunkHeaderLine": {
-          "line": 270,
+          "line": 292,
           "params": [
             "line"
           ],
           "purpose": "Parse hunk header line for labels."
         },
         "extractHunkPatches": {
-          "line": 284,
+          "line": 306,
           "params": [
             "diffText"
           ],
           "purpose": "Extract standalone hunk patches from a unified diff."
         },
         "formatLocalDate": {
-          "line": 318,
+          "line": 340,
           "params": [
             "date"
           ]
@@ -4062,12 +4069,20 @@
       "file": "src/renderer/filePathLinker.js",
       "description": "F",
       "exports": [
-        "registerFilePathLinks"
+        "registerFilePathLinks",
+        "findFilePathMatches"
       ],
       "depends": [],
       "functions": {
+        "findFilePathMatches": {
+          "line": 41,
+          "params": [
+            "text"
+          ],
+          "purpose": "Pure helper so the pattern can be tested without an xterm instance."
+        },
         "registerFilePathLinks": {
-          "line": 29,
+          "line": 66,
           "params": [
             "terminal",
             "onActivate"
@@ -4497,7 +4512,7 @@
           "purpose": "Handle worktree removal"
         },
         "renderWorktreesError": {
-          "line": 218,
+          "line": 221,
           "params": [
             "message"
           ],

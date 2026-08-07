@@ -7,6 +7,38 @@ const { execFile } = require('node:child_process');
 
 const gitChangesManager = require('../src/main/gitChangesManager');
 
+/**
+ * Stand in for electron's shell.trashItem, which is unavailable outside the
+ * Electron runtime. Records what was trashed and deletes it so the repo reaches
+ * the same end state a real trash move would produce.
+ */
+function stubTrash(t) {
+  const electronPath = require.resolve('electron');
+  const original = require.cache[electronPath];
+  const trashed = [];
+
+  require.cache[electronPath] = {
+    id: electronPath,
+    filename: electronPath,
+    loaded: true,
+    exports: {
+      shell: {
+        async trashItem(target) {
+          trashed.push(target);
+          fs.rmSync(target, { recursive: true, force: true });
+        }
+      }
+    }
+  };
+
+  t.after(() => {
+    if (original) require.cache[electronPath] = original;
+    else delete require.cache[electronPath];
+  });
+
+  return trashed;
+}
+
 function runCommand(cmd, args, cwd) {
   return new Promise((resolve, reject) => {
     execFile(cmd, args, { cwd }, (error, stdout, stderr) => {
@@ -335,7 +367,8 @@ test('stageAll and unstageAll roundtrip changes', async (t) => {
   assert.ok(afterUnstage.untracked.some(f => f.path === 'new.txt'));
 });
 
-test('discardAllUnstaged restores tracked files and removes untracked files', async (t) => {
+test('discardAllUnstaged restores tracked files and trashes untracked files', async (t) => {
+  const trashed = stubTrash(t);
   const repoDir = createTempDir(t, 'discardall');
   await initRepo(repoDir);
 
@@ -349,11 +382,82 @@ test('discardAllUnstaged restores tracked files and removes untracked files', as
   const res = await gitChangesManager.discardAllUnstaged(repoDir);
   assert.equal(res.error, null);
 
+  // Untracked content must go to the trash, not be unlinked outright.
+  assert.deepEqual(trashed, [path.join(repoDir, 'u.txt')]);
+
   const after = await gitChangesManager.loadChanges(repoDir);
   assert.equal(after.unstaged.length, 0);
   assert.equal(after.untracked.length, 0);
   assert.equal(fs.readFileSync(path.join(repoDir, 't.txt'), 'utf8'), 'v1\n');
   assert.ok(!fs.existsSync(path.join(repoDir, 'u.txt')));
+});
+
+test('discardAllUnstaged trashes untracked directories and honours gitignore', async (t) => {
+  const trashed = stubTrash(t);
+  const repoDir = createTempDir(t, 'discardall-dirs');
+  await initRepo(repoDir);
+
+  fs.writeFileSync(path.join(repoDir, '.gitignore'), 'ignored/\n', 'utf8');
+  await git(repoDir, 'add', '.gitignore');
+  await git(repoDir, 'commit', '-m', 'base');
+
+  fs.mkdirSync(path.join(repoDir, 'newdir', 'nested'), { recursive: true });
+  fs.writeFileSync(path.join(repoDir, 'newdir', 'nested', 'a.txt'), 'a\n', 'utf8');
+  fs.mkdirSync(path.join(repoDir, 'ignored'), { recursive: true });
+  fs.writeFileSync(path.join(repoDir, 'ignored', 'keep.txt'), 'keep\n', 'utf8');
+
+  const res = await gitChangesManager.discardAllUnstaged(repoDir);
+  assert.equal(res.error, null);
+
+  // The whole untracked directory is trashed as one entry, not file by file.
+  assert.deepEqual(trashed, [path.join(repoDir, 'newdir')]);
+  assert.ok(!fs.existsSync(path.join(repoDir, 'newdir')));
+  // Ignored files are out of scope for "discard unstaged changes".
+  assert.ok(fs.existsSync(path.join(repoDir, 'ignored', 'keep.txt')));
+});
+
+test('loadChanges reports non-ASCII paths verbatim and they stay operable', async (t) => {
+  const repoDir = createTempDir(t, 'unicode');
+  await initRepo(repoDir);
+
+  fs.writeFileSync(path.join(repoDir, 'base.txt'), 'base\n', 'utf8');
+  await git(repoDir, 'add', 'base.txt');
+  await git(repoDir, 'commit', '-m', 'base');
+
+  // Without core.quotepath=false git prints these as "caf\303\251.txt" and every
+  // follow-up pathspec built from that string fails.
+  fs.writeFileSync(path.join(repoDir, 'café.txt'), 'c\n', 'utf8');
+  fs.writeFileSync(path.join(repoDir, 'naïve dosya.js'), 'n\n', 'utf8');
+
+  const changes = await gitChangesManager.loadChanges(repoDir);
+  const untrackedPaths = changes.untracked.map(f => f.path);
+  assert.ok(untrackedPaths.includes('café.txt'), `got ${JSON.stringify(untrackedPaths)}`);
+  assert.ok(untrackedPaths.includes('naïve dosya.js'), `got ${JSON.stringify(untrackedPaths)}`);
+
+  // The reported path must round-trip back into git.
+  const stageRes = await gitChangesManager.stageFile(repoDir, 'café.txt');
+  assert.equal(stageRes.error, null);
+
+  const afterStage = await gitChangesManager.loadChanges(repoDir);
+  assert.ok(afterStage.staged.some(f => f.path === 'café.txt'));
+});
+
+test('loadChanges parses renames of non-ASCII paths without the arrow ambiguity', async (t) => {
+  const repoDir = createTempDir(t, 'unicode-rename');
+  await initRepo(repoDir);
+
+  fs.writeFileSync(path.join(repoDir, 'köprü.txt'), 'x\n', 'utf8');
+  await git(repoDir, 'add', 'köprü.txt');
+  await git(repoDir, 'commit', '-m', 'base');
+
+  fs.renameSync(path.join(repoDir, 'köprü.txt'), path.join(repoDir, 'yeni köprü.txt'));
+  await git(repoDir, 'add', '-A');
+
+  const changes = await gitChangesManager.loadChanges(repoDir);
+  const renamed = changes.staged.find(f => f.status === 'R');
+  assert.ok(renamed, `expected a rename, got ${JSON.stringify(changes.staged)}`);
+  assert.equal(renamed.path, 'yeni köprü.txt');
+  assert.equal(renamed.oldPath, 'köprü.txt');
 });
 
 test('stashChanges/stashList/stashShow/stashApply/stashDrop work end-to-end', async (t) => {

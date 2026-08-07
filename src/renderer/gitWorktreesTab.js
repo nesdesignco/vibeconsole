@@ -198,9 +198,12 @@ async function handleRemoveWorktree(wtPath) {
 
     if (result.error) {
       const forceRemove = confirm(`Worktree has local changes.\n\nForce remove?`);
-      if (forceRemove) {
-        await ipcRenderer.invoke(IPC.REMOVE_GIT_WORKTREE, { projectPath, worktreePath: wtPath, force: true });
-      } else {
+      if (!forceRemove) return;
+
+      const forceResult = await ipcRenderer.invoke(IPC.REMOVE_GIT_WORKTREE, { projectPath, worktreePath: wtPath, force: true });
+      if (forceResult.error) {
+        _showToast(forceResult.error, 'error');
+        await loadWorktrees();
         return;
       }
     }

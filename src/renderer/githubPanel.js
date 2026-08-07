@@ -1129,9 +1129,15 @@ async function handleCommit() {
   const state = require('./state');
   const projectPath = state.getProjectPath();
   if (!projectPath) { showToast('No project selected', 'error'); return false; }
-  setActivityPending(true);
-  let operationStarted = false;
+
+  // Claim the operation before the first await. The pre-flight status refresh
+  // below yields, and a second click during that window would otherwise pass
+  // the guard above and run a parallel commit pipeline.
+  operationInProgress = true;
+  const operationStarted = true;
   let commitBtn = null;
+  updateCommitBtnState();
+  setActivityPending(true);
 
   try {
     // Avoid stale UI counts by forcing a fresh git status right before commit.
@@ -1155,8 +1161,6 @@ async function handleCommit() {
       return false;
     }
 
-    operationInProgress = true;
-    operationStarted = true;
     commitBtn = document.getElementById('git-commit-btn');
     if (commitBtn) { commitBtn.disabled = true; commitBtn.classList.add('spinning'); }
 

@@ -82,7 +82,7 @@ function createGitOperations({ ipcRenderer, IPC, showToast, loadChanges, getProj
     }),
 
     discardAllUnstaged: () => run({
-      confirmMessage: 'Discard ALL unstaged changes?\n\nThis cannot be undone.',
+      confirmMessage: 'Discard ALL unstaged changes?\n\nTracked files are restored to their last committed state (not undoable). Untracked files are moved to the Trash.',
       channel: IPC.DISCARD_ALL_UNSTAGED,
       buildPayload: (projectPath) => projectPath,
       successToast: 'All unstaged changes discarded',

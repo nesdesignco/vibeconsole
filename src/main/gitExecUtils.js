@@ -211,27 +211,49 @@ function execFileCmd(cmd, args, projectPath, maxBuffer = 1024 * 1024, timeout = 
 }
 
 /**
- * Parse git status --porcelain output
- * Format: XY PATH or XY OLDPATH -> PATH (for renames)
- * X = staged status, Y = unstaged status
+ * Parse `git status --porcelain -z` output.
+ *
+ * The -z form is required, not a nicety: without it git C-quotes any path
+ * containing non-ASCII, quotes or backslashes (café.txt becomes
+ * "caf\303\251.txt"), and that mangled string is then rejected by every
+ * subsequent `git add`/`diff`/`checkout` on the file. -z also removes the
+ * " -> " rename ambiguity, since the old path arrives as its own NUL-terminated
+ * record instead of being embedded in the same field.
+ *
+ * Record shape: `XY <path>` and, for renames/copies, a following `<oldPath>`.
+ * X = staged status, Y = unstaged status.
+ *
+ * @param {string} stdout raw NUL-delimited output
+ * @returns {Array<{x: string, y: string, path: string, oldPath: string|null}>}
  */
-function parseStatusLine(line) {
-  if (!line || line.length < 4) return null;
+function parseStatusRecords(stdout) {
+  const records = [];
+  if (!stdout) return records;
 
-  const x = line[0]; // staged status
-  const y = line[1]; // unstaged status
-  const rest = line.substring(3);
+  const parts = stdout.split('\0');
+  for (let i = 0; i < parts.length; i++) {
+    const entry = parts[i];
+    if (!entry || entry.length < 4) continue;
 
-  // Handle renames: "R  old -> new"
-  let filePath = rest;
-  let oldPath = null;
-  const arrowIdx = rest.indexOf(' -> ');
-  if (arrowIdx !== -1) {
-    oldPath = rest.substring(0, arrowIdx);
-    filePath = rest.substring(arrowIdx + 4);
+    const x = entry[0];
+    const y = entry[1];
+    const filePath = entry.substring(3);
+
+    // In -z mode the field order is reversed and the arrow dropped: the new
+    // path sits in this record and the old path is the next one.
+    let oldPath = null;
+    if (x === 'R' || x === 'C' || y === 'R' || y === 'C') {
+      const next = parts[i + 1];
+      if (next) {
+        oldPath = next;
+        i++;
+      }
+    }
+
+    records.push({ x, y, path: filePath, oldPath });
   }
 
-  return { x, y, path: filePath, oldPath };
+  return records;
 }
 
 /**
@@ -330,7 +352,7 @@ module.exports = {
   formatGitError,
   execGitWithStdin,
   execFileCmd,
-  parseStatusLine,
+  parseStatusRecords,
   isUnmergedStatus,
   parseCommitList,
   parseHunkHeaderLine,
