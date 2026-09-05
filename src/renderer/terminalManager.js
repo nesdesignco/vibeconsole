@@ -300,11 +300,10 @@ class TerminalManager {
   }
 
   _writeKeepingBottom(instance, data) {
-    const wasAtBottom = this._isAtOrNearBottom(instance.terminal, 2);
+    // xterm follows output until the user scrolls away, including while writes
+    // are queued. A pre-write snapshot is stale by the time parsing finishes
+    // and would override a wheel/scrollbar movement made in the meantime.
     instance.terminal.write(data, () => {
-      if (wasAtBottom) {
-        instance.terminal.scrollToBottom();
-      }
       if (typeof instance.scheduleSyncScrollBtn === 'function') {
         instance.scheduleSyncScrollBtn();
       } else {
@@ -771,6 +770,10 @@ class TerminalManager {
   mountTerminal(terminalId, container) {
     const instance = this.terminals.get(terminalId);
     if (instance && container) {
+      if (instance.element.parentElement === container) return;
+      const mountVersion = (instance.mountVersion || 0) + 1;
+      instance.mountVersion = mountVersion;
+
       // Clear container first
       container.innerHTML = '';
 
@@ -786,16 +789,16 @@ class TerminalManager {
         instance.opened = true;
       }
 
-      // Fit after layout is complete: rAF ensures DOM is painted, then setTimeout runs after
+      // Fit the completed layout. Never restore a pre-mount scroll snapshot:
+      // output, reflow, or user input may already have changed the viewport.
       requestAnimationFrame(() => {
-        setTimeout(() => {
-          if (!this._isInDOM(instance)) return;
-          this._fitInstance(terminalId, instance);
-          // Focus if this is the active terminal
-          if (this.activeTerminalId === terminalId) {
-            instance.terminal.focus();
-          }
-        }, 50);
+        if (this.terminals.get(terminalId) !== instance ||
+            instance.mountVersion !== mountVersion ||
+            instance.element.parentElement !== container || !this._isInDOM(instance)) return;
+        this._fitInstance(terminalId, instance);
+        if (this.activeTerminalId === terminalId) {
+          instance.terminal.focus();
+        }
       });
     }
   }
@@ -979,15 +982,28 @@ class TerminalManager {
   }
 
   _fitInstance(terminalId, instance) {
-    const wasAtBottom = this._isAtOrNearBottom(instance.terminal, 2);
+    const wasAtBottom = this._isAtOrNearBottom(instance.terminal, 0);
     const colsBefore = instance.terminal.cols;
     const rowsBefore = instance.terminal.rows;
-    instance.fitAddon.fit();
+    const buffer = instance.terminal.buffer.active;
+    // A marker follows the visible line through wrapping and scrollback trims.
+    // A raw viewportY would point at different text after a column resize.
+    const anchor = !wasAtBottom && buffer.type === 'normal'
+      ? instance.terminal.registerMarker(buffer.viewportY - buffer.baseY - buffer.cursorY)
+      : null;
+    try {
+      instance.fitAddon.fit();
+      if (anchor && !anchor.isDisposed) {
+        instance.terminal.scrollToLine(anchor.line);
+      }
+    } finally {
+      anchor?.dispose();
+    }
     const sizeChanged = colsBefore !== instance.terminal.cols || rowsBefore !== instance.terminal.rows;
     if (sizeChanged) {
       this._sendResize(terminalId);
     }
-    if (wasAtBottom) {
+    if (sizeChanged && wasAtBottom) {
       instance.terminal.scrollToBottom();
     }
     this._syncScrollDownButton(instance);

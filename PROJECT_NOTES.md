@@ -2,6 +2,18 @@
 
 ## Session Notes
 
+### [2026-09-05] Terminal Scroll Races Reproduced in Electron
+- Prepared patch release `1.3.13`; verified 24 real Electron scroll checks, 140 unit tests, lint, typecheck, renderer build and isolated app smoke test before packaging. Release publication uses the existing version-tag workflow.
+- Revisited the August 29 scroll fix with an isolated real Electron/Chromium harness. The blanket claim that every DOM remount resets the viewport to zero did not reproduce in the installed xterm/Electron versions. A concrete jump to zero did reproduce: mount captured viewportY=0, the user returned to the bottom, then the delayed 50 ms callback restored the obsolete zero. The inverse race forced a user reading history back to the bottom.
+- Removed delayed scroll restoration and versioned mount callbacks so superseded mounts cannot fit or focus a later mount. Retained the grid DOM reuse optimization, kept all grid classes on metadata updates, and removed redundant delayed fits on those updates.
+- Removed the pre-write bottom snapshot: xterm already follows output until the user scrolls away. The old asynchronous callback overrode user scrolling, including a deliberate one-line movement and return from the alternate screen. Resize now uses exact bottom detection and a temporary public xterm marker to preserve visible history through height changes, wrapping and buffer trimming.
+- Added `npm run test:scroll`, an isolated Chromium regression suite using production terminal/grid render paths, without PTYs or access to user sessions. The installed application is not replaced by a renderer build; these changes must be launched from this checkout or packaged to reach the installed app.
+
+### [2026-08-29] Terminal Kept Jumping to the Top of Scrollback (Root Cause Found)
+- Symptom: the terminal view constantly ended up at the top of the scrollback and the user had to click the scroll-to-bottom button.
+- Root cause: reattaching an already-opened xterm element to the DOM resets `.xterm-viewport` scrollTop to 0; xterm's `_handleScroll` then interprets that as a real scroll and moves the buffer to the top (its `offsetParent` guard only helps while detached). Remounts happened constantly because `TerminalGrid.render()` rebuilt the whole grid (`innerHTML = ''` + `mountTerminal` for every pane) on *every* state change — and state changes arrive on every AI-tool detection tick, rename, renumber, active switch, etc.
+- Fix, two layers: (1) `mountTerminal` now captures at-bottom/viewportY *before* detaching and restores it after the post-mount fit (`scrollToBottom` or `scrollToLine`); (2) `TerminalGrid.render()` memoizes on `layout|terminalIds` and, when unchanged, only refreshes header names and active styling in place — no DOM teardown, no remount. The skip check requires an actual `.grid-cell` in the container so tab↔grid view switches still rebuild. Side benefit: user-resized grid tracks now survive state updates.
+
 ### [2026-08-07] Deep System Review and Verified Fixes
 - Shipped as `1.3.12`. Security release: it carries a fix for a git flag-injection hole that was reproduced end to end (one click on Pull could run an attacker's script), so users should be moved onto it rather than left on 1.3.11.
 - Ran a five-track review (security, main process, renderer, build/release, tests/quality) and then fixed only the findings that were reproduced first-hand, in five separate commits. Findings that were real but need design decisions were deliberately left out and are listed at the end of this entry.

@@ -181,17 +181,22 @@ function createTerminal(workingDir = null, projectPath = null, shellPath = null)
 
   let ptyProcess;
   try {
+    // If the app itself was launched from an env with NO_COLOR set (e.g. spawned
+    // from a script), it must not leak into terminals — it renders every CLI colorless.
+    /** @type {NodeJS.ProcessEnv} */
+    const ptyEnv = {
+      ...process.env,
+      PATH: buildAugmentedPath(),
+      TERM: 'xterm-256color',
+      COLORTERM: 'truecolor'
+    };
+    delete ptyEnv.NO_COLOR;
     ptyProcess = pty.spawn(shell, shellArgs, {
       name: 'xterm-256color',
       cols: 80,
       rows: 24,
       cwd: cwd,
-      env: {
-        ...process.env,
-        PATH: buildAugmentedPath(),
-        TERM: 'xterm-256color',
-        COLORTERM: 'truecolor'
-      }
+      env: ptyEnv
     });
   } catch (err) {
     throw new Error(`Failed to spawn shell "${shell}": ${err.message}`, { cause: err });

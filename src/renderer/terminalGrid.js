@@ -21,6 +21,7 @@ class TerminalGrid {
     this.cellSizes = new Map(); // Store custom cell sizes
     this._currentRows = 1;
     this._currentCols = 1;
+    this._lastRenderKey = null;
   }
 
   /**
@@ -35,9 +36,20 @@ class TerminalGrid {
     this._currentCols = cols;
     this._currentRows = rows;
 
+    // Re-rendering detaches every terminal element and repeats mount/fit work.
+    // State updates arrive frequently (names, AI
+    // tool detection, active terminal), so only rebuild the DOM when the set
+    // of panes actually changed; otherwise refresh names/active styling in place.
+    const renderKey = `${layout}|${terminalsToShow.map(t => t.id).join(',')}`;
+    if (renderKey === this._lastRenderKey && this.container.querySelector('.grid-cell')) {
+      this._updateCellsInPlace(terminalsToShow);
+      return;
+    }
+    this._lastRenderKey = renderKey;
+
     // Clear container
     this.container.innerHTML = '';
-    this.container.className = 'terminal-grid';
+    this.container.className = 'terminal-content grid-view terminal-grid';
 
     // Set grid template
     this.container.style.display = 'grid';
@@ -59,6 +71,22 @@ class TerminalGrid {
         this.manager.mountTerminal(terminal.id, contentArea);
       } else {
         this.container.appendChild(this._createEmptyCell(index));
+      }
+    }
+  }
+
+  /**
+   * Refresh cell headers and active styling without touching terminal mounts
+   */
+  _updateCellsInPlace(terminals) {
+    for (const terminal of terminals) {
+      const cell = this.container.querySelector(`.grid-cell[data-terminal-id="${terminal.id}"]`);
+      if (!cell) continue;
+      cell.classList.toggle('active', !!terminal.isActive);
+      const nameEl = cell.querySelector('.grid-cell-name');
+      const name = terminal.customName || terminal.name;
+      if (nameEl && nameEl.textContent !== name) {
+        nameEl.textContent = name;
       }
     }
   }

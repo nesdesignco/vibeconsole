@@ -212,11 +212,8 @@ class MultiTerminalUI {
   _renderGridView(state) {
     this._mountedTerminalId = null; // Reset so tabs will re-mount when switching back
     this._lastViewMode = 'grid';
-    this.contentContainer.className = 'terminal-content grid-view';
     this.grid.render(state.terminals, state.gridLayout);
-
-    // Fit after render
-    setTimeout(() => this.manager.fitAll(), 50);
+    // Each changed mount schedules its fit; metadata-only updates need none.
   }
 
   /**

@@ -1,7 +1,7 @@
 {
   "version": "1.1",
   "description": "Claude Code IDE - Module structure and IPC communication map",
-  "lastUpdated": "2026-08-07",
+  "lastUpdated": "2026-09-05",
   "architecture": {
     "type": "electron",
     "mainProcess": "src/main/index.js",
@@ -1639,21 +1639,21 @@
           ]
         },
         "getTerminalsByProject": {
-          "line": 252,
+          "line": 257,
           "params": [
             "projectPath"
           ],
           "purpose": "Get terminals for a specific project"
         },
         "getTerminalInfo": {
-          "line": 267,
+          "line": 272,
           "params": [
             "terminalId"
           ],
           "purpose": "Get terminal info"
         },
         "writeToTerminal": {
-          "line": 278,
+          "line": 283,
           "params": [
             "terminalId",
             "data"
@@ -1661,7 +1661,7 @@
           "purpose": "Write data to specific terminal"
         },
         "resizeTerminal": {
-          "line": 288,
+          "line": 293,
           "params": [
             "terminalId",
             "cols",
@@ -1670,44 +1670,44 @@
           "purpose": "Resize specific terminal"
         },
         "destroyTerminal": {
-          "line": 298,
+          "line": 303,
           "params": [
             "terminalId"
           ],
           "purpose": "Destroy specific terminal"
         },
         "destroyAll": {
-          "line": 311,
+          "line": 316,
           "purpose": "Destroy all terminals"
         },
         "getTerminalCount": {
-          "line": 323,
+          "line": 328,
           "purpose": "Get terminal count"
         },
         "getTerminalIds": {
-          "line": 330,
+          "line": 335,
           "purpose": "Get all terminal IDs"
         },
         "hasTerminal": {
-          "line": 337,
+          "line": 342,
           "params": [
             "terminalId"
           ],
           "purpose": "Check if terminal exists"
         },
         "setupIPC": {
-          "line": 344,
+          "line": 349,
           "params": [
             "ipcMain"
           ],
           "purpose": "Setup IPC handlers for multi-terminal"
         },
         "getTerminalPids": {
-          "line": 408,
+          "line": 413,
           "purpose": "Get shell PIDs for all live terminals (for AI tool process detection)"
         },
         "getTerminalForegroundNames": {
-          "line": 423,
+          "line": 428,
           "purpose": "Get node-pty's foreground process name per terminal (fallback detection path)"
         }
       },
