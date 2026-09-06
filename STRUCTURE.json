@@ -1,7 +1,7 @@
 {
   "version": "1.1",
   "description": "Claude Code IDE - Module structure and IPC communication map",
-  "lastUpdated": "2026-09-05",
+  "lastUpdated": "2026-09-06",
   "architecture": {
     "type": "electron",
     "mainProcess": "src/main/index.js",
@@ -1092,47 +1092,47 @@
       ],
       "functions": {
         "init": {
-          "line": 49,
+          "line": 55,
           "params": [
             "onRefreshFileTree"
           ],
           "purpose": "Initialize editor module"
         },
         "getExtensionFromPath": {
-          "line": 96,
+          "line": 102,
           "params": [
             "filePath"
           ]
         },
         "isImageExt": {
-          "line": 103,
+          "line": 109,
           "params": [
             "extension"
           ]
         },
         "setViewTogglesVisible": {
-          "line": 107,
+          "line": 113,
           "params": [
             "visible"
           ]
         },
         "setActiveToggle": {
-          "line": 112,
+          "line": 118,
           "params": [
             "mode"
           ]
         },
         "setMode": {
-          "line": 125,
+          "line": 131,
           "params": [
             "mode"
           ]
         },
         "getEditorContent": {
-          "line": 146
+          "line": 152
         },
         "setEditorContent": {
-          "line": 151,
+          "line": 157,
           "params": [
             "content",
             "filePath",
@@ -1140,76 +1140,76 @@
           ]
         },
         "focusTextEditor": {
-          "line": 164
+          "line": 170
         },
         "syncEditorToolState": {
-          "line": 172
+          "line": 178
         },
         "setFullscreen": {
-          "line": 190,
+          "line": 196,
           "params": [
             "enabled"
           ]
         },
         "runEditorAction": {
-          "line": 202,
+          "line": 208,
           "params": [
             "actionId",
             "fallbackStatus"
           ]
         },
         "getCommandDefinitions": {
-          "line": 214
+          "line": 220
         },
         "commandMatches": {
-          "line": 230,
+          "line": 236,
           "params": [
             "command",
             "query"
           ]
         },
         "renderCommandPaletteList": {
-          "line": 236
+          "line": 242
         },
         "runCommand": {
-          "line": 292,
+          "line": 298,
           "params": [
             "command"
           ]
         },
         "runCommandById": {
-          "line": 299,
+          "line": 305,
           "params": [
             "commandId"
           ]
         },
         "showCommandPalette": {
-          "line": 304
+          "line": 310
         },
         "hideCommandPalette": {
-          "line": 316,
+          "line": 322,
           "params": [
             "restoreFocus = true"
           ]
         },
         "showGoToLinePrompt": {
-          "line": 321
+          "line": 327
         },
         "toggleWordWrap": {
-          "line": 344
-        },
-        "toggleMinimap": {
           "line": 350
         },
+        "toggleMinimap": {
+          "line": 356
+        },
         "bindEditorTool": {
-          "line": 356,
+          "line": 362,
           "params": [
             "id",
             "handler"
           ]
         },
         "openFile": {
-          "line": 373,
+          "line": 379,
           "params": [
             "filePath",
             "source = 'terminal'",
@@ -1217,15 +1217,15 @@
           ]
         },
         "closeEditor": {
-          "line": 404,
+          "line": 410,
           "purpose": "Close editor"
         },
         "saveFile": {
-          "line": 435,
+          "line": 449,
           "purpose": "Save file"
         },
         "updateStatus": {
-          "line": 455,
+          "line": 474,
           "params": [
             "status",
             "className = ''"
@@ -1233,18 +1233,18 @@
           "purpose": "Update editor status"
         },
         "checkModified": {
-          "line": 465,
+          "line": 484,
           "purpose": "Check if content is modified"
         },
         "updateCursorStatus": {
-          "line": 476,
+          "line": 495,
           "params": [
             "line",
             "col"
           ]
         },
         "scrollToLine": {
-          "line": 487,
+          "line": 506,
           "params": [
             "line",
             "col"
@@ -1252,19 +1252,27 @@
           "purpose": "Navigate textarea to a specific line and column"
         },
         "setupEventHandlers": {
-          "line": 527,
+          "line": 546,
           "purpose": "Setup event handlers"
         },
+        "receiveOpenResult": {
+          "line": 746,
+          "params": [
+            "result",
+            "channel"
+          ],
+          "purpose": "Commit a document switch only after every required read succeeds."
+        },
         "setupIPC": {
-          "line": 727,
+          "line": 796,
           "purpose": "Setup IPC listeners"
         },
         "isEditorOpen": {
-          "line": 804,
+          "line": 833,
           "purpose": "Check if editor is open"
         },
         "getCurrentFile": {
-          "line": 811,
+          "line": 840,
           "purpose": "Get currently editing file path"
         }
       },
@@ -1275,10 +1283,7 @@
           "FILE_SAVED"
         ],
         "emits": [
-          "READ_FILE",
-          "READ_FILE_DATA_URL",
-          "READ_FILE_DATA_URL",
-          "READ_FILE",
+          "channel",
           "WRITE_FILE"
         ]
       }
@@ -1516,53 +1521,64 @@
       "depends": [
         "fs",
         "path",
+        "node:crypto",
         "shared/ipcChannels",
         "projectAccess"
       ],
       "functions": {
         "getMimeTypeForExtension": {
-          "line": 14,
+          "line": 16,
           "params": [
             "extension"
           ]
         },
         "init": {
-          "line": 31,
+          "line": 33,
           "params": [
             "_window"
           ],
           "purpose": "Initialize file editor module"
         },
         "readFile": {
-          "line": 38,
+          "line": 40,
           "params": [
             "filePath"
           ],
           "purpose": "Read file contents"
         },
         "readFileAsDataUrl": {
-          "line": 56,
+          "line": 58,
           "params": [
             "filePath"
           ]
         },
         "writeFile": {
-          "line": 90,
+          "line": 92,
           "params": [
             "filePath",
-            "content"
+            "content",
+            "projectPath"
           ],
           "purpose": "Write file contents"
         },
+        "replaceFile": {
+          "line": 112,
+          "params": [
+            "targetPath",
+            "filePath",
+            "content",
+            "projectPath"
+          ]
+        },
         "getFileExtension": {
-          "line": 109,
+          "line": 142,
           "params": [
             "filePath"
           ],
           "purpose": "Get file extension"
         },
         "safeSend": {
-          "line": 113,
+          "line": 146,
           "params": [
             "sender",
             "channel",
@@ -1570,7 +1586,7 @@
           ]
         },
         "setupIPC": {
-          "line": 120,
+          "line": 153,
           "params": [
             "ipcMain"
           ],
@@ -2848,7 +2864,7 @@
           "purpose": "Save resolved conflict content and stage file."
         },
         "loadCommitDiff": {
-          "line": 457,
+          "line": 459,
           "params": [
             "projectPath",
             "commitHash"
@@ -2856,21 +2872,21 @@
           "purpose": "Load diff for a specific commit"
         },
         "loadChanges": {
-          "line": 514,
+          "line": 515,
           "params": [
             "projectPath"
           ],
           "purpose": "Load git changes (status)"
         },
         "loadChangesCached": {
-          "line": 634,
+          "line": 635,
           "params": [
             "projectPath",
             "options = {}"
           ]
         },
         "loadDiff": {
-          "line": 667,
+          "line": 668,
           "params": [
             "projectPath",
             "filePath",
@@ -2879,7 +2895,7 @@
           "purpose": "diffType: 'staged', 'unstaged', 'untracked', 'conflict'"
         },
         "readGitRevisionBytes": {
-          "line": 736,
+          "line": 737,
           "params": [
             "projectPath",
             "revSpec"
@@ -2887,21 +2903,21 @@
           "purpose": "Returns null if missing or oversized."
         },
         "readWorkingTreeBytes": {
-          "line": 748,
+          "line": 749,
           "params": [
             "fullPath"
           ],
           "purpose": "Read a file from disk as Buffer, capped at MAX_IMAGE_DIFF_BYTES. Returns null on error/oversize."
         },
         "bufferToDataUrl": {
-          "line": 758,
+          "line": 759,
           "params": [
             "buffer",
             "mime"
           ]
         },
         "loadImageDiff": {
-          "line": 768,
+          "line": 769,
           "params": [
             "projectPath",
             "filePath",
@@ -2910,7 +2926,7 @@
           "purpose": "Returns { error, oldDataUrl, newDataUrl, oldSize, newSize, mime, filePath }"
         },
         "stageFile": {
-          "line": 817,
+          "line": 818,
           "params": [
             "projectPath",
             "filePath"
@@ -2918,7 +2934,7 @@
           "purpose": "Stage a file"
         },
         "unstageFile": {
-          "line": 837,
+          "line": 838,
           "params": [
             "projectPath",
             "filePath"
@@ -2926,7 +2942,7 @@
           "purpose": "Unstage a file"
         },
         "discardFile": {
-          "line": 858,
+          "line": 859,
           "params": [
             "projectPath",
             "filePath",
@@ -2935,42 +2951,42 @@
           "purpose": "diffType: 'staged', 'unstaged', 'untracked'"
         },
         "discardAllUnstaged": {
-          "line": 888,
+          "line": 889,
           "params": [
             "projectPath"
           ],
           "purpose": "Discard all unstaged changes"
         },
         "stageAll": {
-          "line": 935,
+          "line": 936,
           "params": [
             "projectPath"
           ],
           "purpose": "Stage all files"
         },
         "unstageAll": {
-          "line": 951,
+          "line": 952,
           "params": [
             "projectPath"
           ],
           "purpose": "Unstage all files"
         },
         "gitAheadBehind": {
-          "line": 977,
+          "line": 978,
           "params": [
             "projectPath"
           ],
           "purpose": "Get ahead/behind count relative to upstream tracking branch"
         },
         "gitAheadBehindCached": {
-          "line": 1003,
+          "line": 1004,
           "params": [
             "projectPath",
             "options = {}"
           ]
         },
         "setupIPC": {
-          "line": 1035,
+          "line": 1036,
           "params": [
             "ipcMain"
           ],
@@ -3306,8 +3322,11 @@
         "handleDownloadCancelled": {
           "line": 62
         },
-        "ensureEventListeners": {
+        "hasPendingUpdate": {
           "line": 69
+        },
+        "ensureEventListeners": {
+          "line": 73
         },
         "init": {
           "line": 154,
@@ -3320,30 +3339,30 @@
           "purpose": "can react immediately without waiting for events to bubble back."
         },
         "setupIPC": {
-          "line": 211,
+          "line": 212,
           "params": [
             "_ipcMain"
           ]
         },
         "getAppBundlePath": {
-          "line": 299
+          "line": 300
         },
         "getInstallLocationBlocker": {
-          "line": 309,
+          "line": 310,
           "purpose": "bundle cannot be replaced, null when installation can proceed."
         },
         "isProperlySignedApp": {
-          "line": 321
+          "line": 322
         },
         "installMacUpdateManually": {
-          "line": 334
+          "line": 335
         },
         "requestOpenModal": {
-          "line": 363,
+          "line": 364,
           "purpose": "The renderer reads the current state via GET_UPDATE_STATE upon receiving this."
         },
         "cleanup": {
-          "line": 367
+          "line": 368
         }
       },
       "ipc": {
@@ -4252,26 +4271,26 @@
       ],
       "functions": {
         "init": {
-          "line": 15,
+          "line": 16,
           "params": [
             "{ showToast",
             "loadChanges }"
           ]
         },
         "setupConflictModalListeners": {
-          "line": 21
+          "line": 23
         },
         "showConflictModal": {
-          "line": 90,
+          "line": 98,
           "params": [
             "filePath"
           ]
         },
         "hideConflictModal": {
-          "line": 133
+          "line": 147
         },
         "_showToast": {
-          "line": 12,
+          "line": 13,
           "params": [
             "_message",
             "_type"
@@ -4279,7 +4298,7 @@
           "purpose": "Callbacks (set by init)"
         },
         "_loadChanges": {
-          "line": 13,
+          "line": 14,
           "params": [
             "_force"
           ]
@@ -4750,113 +4769,113 @@
       ],
       "functions": {
         "init": {
-          "line": 62
+          "line": 64
         },
         "setupListeners": {
-          "line": 93
+          "line": 95
         },
         "setupIpcSubscriptions": {
-          "line": 131
+          "line": 133
         },
         "refreshStateFromMain": {
-          "line": 189
+          "line": 196
         },
         "maybeAutoOpen": {
-          "line": 206,
+          "line": 215,
           "params": [
             "info"
           ]
         },
         "openModal": {
-          "line": 219
+          "line": 228
         },
         "closeModal": {
-          "line": 227
+          "line": 236
         },
         "canDismiss": {
-          "line": 233
+          "line": 242
         },
         "handlePrimary": {
-          "line": 237
+          "line": 246
         },
         "handleSecondary": {
-          "line": 266
+          "line": 276
         },
         "formatBytes": {
-          "line": 290,
+          "line": 300,
           "params": [
             "bytes"
           ]
         },
         "formatDuration": {
-          "line": 298,
+          "line": 308,
           "params": [
             "seconds"
           ]
         },
         "formatReleaseDate": {
-          "line": 306,
+          "line": 316,
           "params": [
             "iso"
           ]
         },
         "normalizeReleaseNotes": {
-          "line": 317,
+          "line": 327,
           "params": [
             "notes"
           ]
         },
         "isProbablyHtml": {
-          "line": 330,
+          "line": 340,
           "params": [
             "raw"
           ]
         },
         "normalizeReleaseNotesHref": {
-          "line": 334,
+          "line": 344,
           "params": [
             "href"
           ]
         },
         "renderSafeLink": {
-          "line": 345,
+          "line": 355,
           "params": [
             "href",
             "labelHtml"
           ]
         },
         "renderMinimalMarkdown": {
-          "line": 352,
+          "line": 362,
           "params": [
             "raw"
           ]
         },
         "renderHtmlNode": {
-          "line": 398,
+          "line": 408,
           "params": [
             "node"
           ]
         },
         "htmlToPlainTextFallback": {
-          "line": 445,
+          "line": 455,
           "params": [
             "raw"
           ]
         },
         "renderHtmlReleaseNotes": {
-          "line": 461,
+          "line": 471,
           "params": [
             "raw"
           ]
         },
         "renderReleaseNotesMarkup": {
-          "line": 470,
+          "line": 480,
           "params": [
             "raw"
           ]
         },
         "setIcon": {
-          "line": 475,
+          "line": 485,
           "params": [
             "target",
             "html",
@@ -4864,47 +4883,47 @@
           ]
         },
         "setStatusIcon": {
-          "line": 480,
+          "line": 490,
           "params": [
             "html"
           ]
         },
         "showVersionRow": {
-          "line": 484,
+          "line": 494,
           "params": [
             "show"
           ]
         },
         "showNotesSection": {
-          "line": 487,
+          "line": 497,
           "params": [
             "show"
           ]
         },
         "showProgressSection": {
-          "line": 490,
+          "line": 500,
           "params": [
             "show"
           ]
         },
         "showStatusSection": {
-          "line": 493,
+          "line": 503,
           "params": [
             "show",
             "modifier"
           ]
         },
         "renderReleaseNotes": {
-          "line": 503,
+          "line": 513,
           "params": [
             "info"
           ]
         },
         "render": {
-          "line": 508
+          "line": 518
         },
         "getStatus": {
-          "line": 645
+          "line": 655
         }
       },
       "ipc": {
@@ -5004,14 +5023,14 @@
           "purpose": "unspecified, and multicast/reserved space."
         },
         "assertPublicHttpUrl": {
-          "line": 125,
+          "line": 136,
           "params": [
             "urlString"
           ],
           "purpose": "Applied to the initial URL and every redirect hop (SSRF hardening)."
         },
         "fetchOneHop": {
-          "line": 158,
+          "line": 169,
           "params": [
             "currentUrl",
             "deadline"
@@ -5019,13 +5038,13 @@
           "purpose": "surfaced to the caller and re-requested after validation instead."
         },
         "downloadUrlToTemp": {
-          "line": 198,
+          "line": 209,
           "params": [
             "url"
           ]
         },
         "setupIPC": {
-          "line": 230,
+          "line": 241,
           "params": [
             "ipcMain"
           ]

@@ -43,6 +43,8 @@ let releaseLinkEl = null;
 
 let isOpen = false;
 let autoOpenedVersion = null;
+let stateRevision = 0;
+let refreshRequestId = 0;
 let currentState = {
   status: 'idle',
   updateInfo: null,
@@ -130,12 +132,16 @@ function setupListeners() {
 
 function setupIpcSubscriptions() {
   ipcRenderer.on(IPC.UPDATE_CHECKING, () => {
+    if (currentState.status === 'downloading' || currentState.status === 'downloaded' || currentState.status === 'installing') return;
+    stateRevision++;
     currentState.status = 'checking';
     currentState.error = null;
     render();
   });
 
   ipcRenderer.on(IPC.UPDATE_AVAILABLE, (event, info) => {
+    if (currentState.status === 'downloading' || currentState.status === 'downloaded' || currentState.status === 'installing') return;
+    stateRevision++;
     currentState.status = 'available';
     currentState.updateInfo = info;
     currentState.progress = null;
@@ -145,13 +151,15 @@ function setupIpcSubscriptions() {
   });
 
   ipcRenderer.on(IPC.UPDATE_NOT_AVAILABLE, (event, data) => {
-    if (currentState.status === 'downloading' || currentState.status === 'downloaded') return;
+    if (currentState.status === 'downloading' || currentState.status === 'downloaded' || currentState.status === 'installing') return;
+    stateRevision++;
     currentState.status = 'not-available';
     if (data && data.currentVersion) currentState.currentVersion = data.currentVersion;
     render();
   });
 
   ipcRenderer.on(IPC.UPDATE_DOWNLOAD_PROGRESS, (event, progress) => {
+    stateRevision++;
     currentState.status = 'downloading';
     currentState.progress = progress;
     // Progress ticks are frequent; skip DOM work while the modal is hidden
@@ -160,22 +168,21 @@ function setupIpcSubscriptions() {
   });
 
   ipcRenderer.on(IPC.UPDATE_DOWNLOADED, (event, info) => {
+    stateRevision++;
     currentState.status = 'downloaded';
     if (info) currentState.updateInfo = info;
     render();
   });
 
   ipcRenderer.on(IPC.UPDATE_CANCELLED, () => {
-    if (currentState.updateInfo) {
-      currentState.status = 'available';
-    } else {
-      currentState.status = 'idle';
-    }
+    stateRevision++;
+    currentState.status = currentState.updateInfo ? 'available' : 'idle';
     currentState.progress = null;
     render();
   });
 
   ipcRenderer.on(IPC.UPDATE_ERROR, (event, data) => {
+    stateRevision++;
     currentState.status = 'error';
     currentState.error = data || { message: 'Unknown update error' };
     render();
@@ -187,9 +194,11 @@ function setupIpcSubscriptions() {
 }
 
 async function refreshStateFromMain() {
+  const revision = stateRevision;
+  const requestId = ++refreshRequestId;
   try {
     const remote = await ipcRenderer.invoke(IPC.GET_UPDATE_STATE);
-    if (!remote) return;
+    if (!remote || revision !== stateRevision || requestId !== refreshRequestId || currentState.status === 'installing') return;
     currentState.currentVersion = remote.currentVersion || currentState.currentVersion;
     if (remote.status && remote.status !== 'idle') {
       currentState.status = remote.status;
@@ -235,6 +244,7 @@ function canDismiss() {
 }
 
 function handlePrimary() {
+  stateRevision++;
   switch (currentState.status) {
     case 'available':
       ipcRenderer.send(IPC.DOWNLOAD_UPDATE);
@@ -253,7 +263,7 @@ function handlePrimary() {
       currentState.status = 'checking';
       currentState.error = null;
       render();
-      ipcRenderer.invoke(IPC.CHECK_FOR_UPDATES).catch(() => { /* surfaced via UPDATE_ERROR */ });
+      ipcRenderer.invoke(IPC.CHECK_FOR_UPDATES).then(() => refreshStateFromMain()).catch(() => { /* surfaced via UPDATE_ERROR */ });
       break;
     case 'not-available':
       closeModal();

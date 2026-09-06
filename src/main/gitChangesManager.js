@@ -415,8 +415,8 @@ async function loadGitConflict(projectPath, filePath) {
 
     const readStage = async (stage) => {
       try {
-        const { stdout } = await execFileGit(['show', `:${stage}:${filePath}`], projectPath, 5 * 1024 * 1024);
-        return stdout;
+        const { stdout } = await execFileGitBuffer(['show', `:${stage}:${filePath}`], projectPath, 5 * 1024 * 1024);
+        return stdout.toString('utf8');
       } catch {
         return '';
       }
@@ -443,6 +443,8 @@ async function resolveGitConflict(projectPath, filePath, resolvedContent) {
 
   try {
     const fullPath = path.join(projectPath, filePath);
+    const { stdout: unmerged } = await execFileGit(['ls-files', '-u', '--', filePath], projectPath);
+    if (!unmerged) return { error: 'File is no longer in conflict state; reload changes' };
     fs.writeFileSync(fullPath, resolvedContent, 'utf8');
     await execFileGit(['add', '--', filePath], projectPath);
     return { error: null };
@@ -466,7 +468,7 @@ async function loadCommitDiff(projectPath, commitHash) {
 
   try {
     // Use null-delimited metadata prefix so parsing stays robust against spaces/newlines.
-    const { stdout } = await execFileGit(
+    const { stdout } = await execFileGitBuffer(
       ['show', '--no-color', '--root', '--format=%H%x00%h%x00%an%x00%ae%x00%ar%x00%aI%x00%s%x00%b%x00', commitHash],
       projectPath,
       8 * 1024 * 1024,
@@ -495,8 +497,7 @@ async function loadCommitDiff(projectPath, commitHash) {
     };
 
     const diffText = (parts.length >= 9 ? parts.slice(8).join('\0') : String(stdout || ''))
-      .replace(/^\r?\n/, '')
-      .trimEnd();
+      .replace(/^\r?\n/, '');
 
     return {
       error: null,
@@ -699,22 +700,22 @@ async function loadDiff(projectPath, filePath, diffType) {
         return { error: 'Cannot read file', diff: '' };
       }
     } else if (diffType === 'staged') {
-      const { stdout } = await execFileGit(['diff', '--cached', '--', filePath], projectPath);
-      if (stdout) {
-        diff = stdout;
+      const { stdout } = await execFileGitBuffer(['diff', '--cached', '--', filePath], projectPath, 1024 * 1024);
+      if (stdout.length) {
+        diff = stdout.toString('utf8');
       } else {
         // Fallback: staging state may have changed since the list was loaded
-        const { stdout: headDiff } = await execFileGit(['diff', 'HEAD', '--', filePath], projectPath);
-        diff = headDiff || '(No diff available)';
+        const { stdout: headDiff } = await execFileGitBuffer(['diff', 'HEAD', '--', filePath], projectPath, 1024 * 1024);
+        diff = headDiff.toString('utf8') || '(No diff available)';
       }
     } else {
-      const { stdout } = await execFileGit(['diff', '--', filePath], projectPath);
-      if (stdout) {
-        diff = stdout;
+      const { stdout } = await execFileGitBuffer(['diff', '--', filePath], projectPath, 1024 * 1024);
+      if (stdout.length) {
+        diff = stdout.toString('utf8');
       } else {
         // Fallback: file may have been staged since the list was loaded
-        const { stdout: headDiff } = await execFileGit(['diff', 'HEAD', '--', filePath], projectPath);
-        diff = headDiff || '(No diff available)';
+        const { stdout: headDiff } = await execFileGitBuffer(['diff', 'HEAD', '--', filePath], projectPath, 1024 * 1024);
+        diff = headDiff.toString('utf8') || '(No diff available)';
       }
     }
 

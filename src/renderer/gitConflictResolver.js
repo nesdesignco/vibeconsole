@@ -7,6 +7,7 @@ const { ipcRenderer, pathApi } = require('./electronBridge');
 const { IPC } = require('../shared/ipcChannels');
 
 let _activeConflictState = null;
+let _requestGeneration = 0;
 
 // Callbacks (set by init)
 let _showToast = (_message, _type) => {};
@@ -16,6 +17,7 @@ function init({ showToast, loadChanges }) {
   _showToast = showToast;
   _loadChanges = loadChanges;
   setupConflictModalListeners();
+  require('./state').onProjectChange(hideConflictModal);
 }
 
 function setupConflictModalListeners() {
@@ -61,16 +63,22 @@ function setupConflictModalListeners() {
     resolveBtn.addEventListener('click', async () => {
       if (!_activeConflictState || !resolvedInput) return;
       const state = require('./state');
-      const projectPath = state.getProjectPath();
-      if (!projectPath) return;
+      const conflict = _activeConflictState;
+      const generation = _requestGeneration;
+      const projectPath = conflict.projectPath;
+      if (!projectPath || state.getProjectPath() !== projectPath) {
+        hideConflictModal();
+        return;
+      }
 
       resolveBtn.disabled = true;
       try {
         const result = await ipcRenderer.invoke(IPC.RESOLVE_GIT_CONFLICT, {
           projectPath,
-          filePath: _activeConflictState.filePath,
+          filePath: conflict.filePath,
           resolvedContent: resolvedInput.value
         });
+        if (generation !== _requestGeneration) return;
         if (result.error) {
           _showToast(result.error, 'error');
           return;
@@ -79,9 +87,9 @@ function setupConflictModalListeners() {
         _showToast('Conflict resolved and staged', 'success');
         await _loadChanges(true);
       } catch {
-        _showToast('Failed to resolve conflict', 'error');
+        if (generation === _requestGeneration) _showToast('Failed to resolve conflict', 'error');
       } finally {
-        resolveBtn.disabled = false;
+        if (generation === _requestGeneration) resolveBtn.disabled = false;
       }
     });
   }
@@ -95,6 +103,9 @@ async function showConflictModal(filePath) {
   const projectPath = state.getProjectPath();
   if (!projectPath) return;
 
+  const generation = ++_requestGeneration;
+  const resolveBtn = modal.querySelector('.conflict-mark-resolved-btn');
+  if (resolveBtn) resolveBtn.disabled = true;
   const filenameEl = modal.querySelector('.conflict-modal-filename');
   const pathEl = modal.querySelector('.conflict-modal-path');
   const baseInput = modal.querySelector('.conflict-base-input');
@@ -113,24 +124,28 @@ async function showConflictModal(filePath) {
 
   try {
     const result = await ipcRenderer.invoke(IPC.LOAD_GIT_CONFLICT, { projectPath, filePath });
+    if (generation !== _requestGeneration || state.getProjectPath() !== projectPath) return;
     if (result.error) {
       hideConflictModal();
       _showToast(result.error, 'error');
       return;
     }
 
-    _activeConflictState = result;
+    _activeConflictState = { ...result, projectPath };
+    if (resolveBtn) resolveBtn.disabled = false;
     if (baseInput) baseInput.value = result.base || '';
     if (oursInput) oursInput.value = result.ours || '';
     if (theirsInput) theirsInput.value = result.theirs || '';
     if (resolvedInput) resolvedInput.value = result.current || result.ours || result.theirs || '';
   } catch {
+    if (generation !== _requestGeneration) return;
     hideConflictModal();
     _showToast('Failed to load conflict details', 'error');
   }
 }
 
 function hideConflictModal() {
+  _requestGeneration++;
   const modal = document.getElementById('git-conflict-modal');
   if (modal) modal.classList.remove('visible');
   _activeConflictState = null;

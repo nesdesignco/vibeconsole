@@ -66,23 +66,23 @@ function handleDownloadCancelled() {
   safeSend(IPC.UPDATE_CANCELLED);
 }
 
+function hasPendingUpdate() {
+  return downloadInFlight || installRequested || state.status === 'downloading' || state.status === 'downloaded';
+}
+
 function ensureEventListeners() {
   if (listenersRegistered) return;
   listenersRegistered = true;
 
   autoUpdater.on('checking-for-update', () => {
+    if (hasPendingUpdate()) return;
     state.status = 'checking';
     state.error = null;
     safeSend(IPC.UPDATE_CHECKING);
   });
 
   autoUpdater.on('update-available', (info) => {
-    // Hourly re-checks re-emit update-available for the same version; don't
-    // regress an in-flight download or a downloaded-and-ready update.
-    if ((state.status === 'downloading' || state.status === 'downloaded') &&
-        state.updateInfo && info && state.updateInfo.version === info.version) {
-      return;
-    }
+    if (hasPendingUpdate()) return;
     state.status = 'available';
     state.updateInfo = normalizeUpdateInfo(info);
     state.progress = null;
@@ -92,7 +92,7 @@ function ensureEventListeners() {
 
   autoUpdater.on('update-not-available', (info) => {
     // Only transition to not-available if we're not already past that point.
-    if (state.status === 'downloading' || state.status === 'downloaded') return;
+    if (hasPendingUpdate()) return;
     state.status = 'not-available';
     // Keep updateInfo null: storing the "latest == current" info here would
     // defeat the !state.updateInfo guard in DOWNLOAD_UPDATE.
@@ -166,13 +166,13 @@ function init(window) {
   ensureEventListeners();
 
   initialCheckTimeout = setTimeout(() => {
-    autoUpdater.checkForUpdates().catch((err) => {
+    triggerManualCheck().catch((err) => {
       console.error('Auto-update check failed:', err && err.message);
     });
   }, 15000);
 
   checkInterval = setInterval(() => {
-    autoUpdater.checkForUpdates().catch((err) => {
+    triggerManualCheck().catch((err) => {
       console.error('Auto-update check failed:', err && err.message);
     });
   }, 3600000);
@@ -183,6 +183,7 @@ function init(window) {
  * can react immediately without waiting for events to bubble back.
  */
 async function triggerManualCheck() {
+  if (hasPendingUpdate()) return { supported: isAutoUpdateSupported() };
   state.error = null;
   if (!isAutoUpdateSupported()) {
     const message = 'Updates are only available in packaged builds';

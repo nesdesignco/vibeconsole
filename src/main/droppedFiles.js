@@ -109,8 +109,19 @@ function isPrivateAddress(ip) {
       (a === 198 && (b === 18 || b === 19)) ||
       a >= 224;
   }
-  const lower = ip.toLowerCase();
-  if (lower.startsWith('::ffff:')) return isPrivateAddress(lower.slice(7));
+  const lower = nodeNet.isIPv6(ip)
+    ? new URL(`http://[${ip}]/`).hostname.slice(1, -1).toLowerCase()
+    : ip.toLowerCase();
+  if (lower.startsWith('::ffff:')) {
+    const mapped = lower.slice(7);
+    if (nodeNet.isIPv4(mapped)) return isPrivateAddress(mapped);
+    // WHATWG URL serializes mapped IPv4 as two hexadecimal IPv6 groups.
+    const groups = /^([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(mapped);
+    if (!groups) return true;
+    const high = parseInt(groups[1], 16);
+    const low = parseInt(groups[2], 16);
+    return isPrivateAddress(`${high >>> 8}.${high & 255}.${low >>> 8}.${low & 255}`);
+  }
   return lower === '::' || lower === '::1' ||
     lower.startsWith('fe8') || lower.startsWith('fe9') ||
     lower.startsWith('fea') || lower.startsWith('feb') ||

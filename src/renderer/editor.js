@@ -37,7 +37,13 @@ let isModified = false;
 let onFileTreeRefreshCallback = null;
 let openedFromSource = null; // Track where the file was opened from ('fileTree', 'terminal', etc.)
 let pendingLineNav = null; // { line, col } to navigate to after file loads
-let pendingOpenFilePath = null;
+let pendingOpenRequest = null;
+let activeOpenRequestId = null;
+let editingProjectPath = null;
+let nextRequestId = 0;
+let textContentLoaded = false;
+let lastSavedRequestId = 0;
+const pendingSaves = new Map();
 let currentMode = 'text'; // 'text' | 'image'
 let isFullscreen = false;
 let visibleCommands = [];
@@ -371,37 +377,41 @@ function bindEditorTool(id, handler) {
  * @param {number} [options.col] - Column number to navigate to (1-based)
  */
 function openFile(filePath, source = 'terminal', options) {
-  openedFromSource = source;
-  pendingLineNav = (options && options.line) ? { line: options.line, col: options.col } : null;
-  pendingOpenFilePath = filePath;
+  if (pendingSaves.size > 0) {
+    updateStatus('Saving… Wait for the save to finish before opening another file.', '');
+    return;
+  }
+  const discardConfirmed = isModified;
+  if (discardConfirmed && !confirm('You have unsaved changes. Open another file anyway?')) return;
 
   const extension = getExtensionFromPath(filePath);
   const projectPath = state.getProjectPath();
-
-  if (extension === 'svg') {
-    setViewTogglesVisible(true);
-    setMode('image'); // default to preview
-    ipcRenderer.send(IPC.READ_FILE, { filePath, projectPath });
-    ipcRenderer.send(IPC.READ_FILE_DATA_URL, { filePath, projectPath });
-    return;
+  const requestId = ++nextRequestId;
+  const channels = extension === 'svg'
+    ? [IPC.READ_FILE, IPC.READ_FILE_DATA_URL]
+    : [isImageExt(extension) ? IPC.READ_FILE_DATA_URL : IPC.READ_FILE];
+  // Keep the active document fully usable until the new document is ready.
+  // SVG text and preview must succeed together before committing the switch.
+  pendingOpenRequest = {
+    requestId, filePath, projectPath, source, extension, discardConfirmed,
+    previousContent: getEditorContent(),
+    lineNav: (options && options.line) ? { line: options.line, col: options.col } : null,
+    remaining: new Set(channels.map(channel => channel === IPC.READ_FILE ? IPC.FILE_CONTENT : IPC.FILE_DATA_URL)),
+    results: new Map()
+  };
+  for (const channel of channels) {
+    ipcRenderer.send(channel, { filePath, projectPath, requestId });
   }
-
-  if (isImageExt(extension)) {
-    setViewTogglesVisible(false);
-    setMode('image');
-    ipcRenderer.send(IPC.READ_FILE_DATA_URL, { filePath, projectPath });
-    return;
-  }
-
-  setViewTogglesVisible(false);
-  setMode('text');
-  ipcRenderer.send(IPC.READ_FILE, { filePath, projectPath });
 }
 
 /**
  * Close editor
  */
 function closeEditor() {
+  if (pendingSaves.size > 0) {
+    updateStatus('Saving… Wait for the save to finish before closing.', '');
+    return;
+  }
   if (isModified) {
     if (!confirm('You have unsaved changes. Close anyway?')) {
       return;
@@ -421,7 +431,11 @@ function closeEditor() {
   originalContent = '';
   isModified = false;
   openedFromSource = null;
-  pendingOpenFilePath = null;
+  pendingOpenRequest = null;
+  activeOpenRequestId = null;
+  editingProjectPath = null;
+  textContentLoaded = false;
+  pendingSaves.clear();
   pendingLineNav = null;
   hideCommandPalette(false);
   setViewTogglesVisible(false);
@@ -434,7 +448,7 @@ function closeEditor() {
  */
 function saveFile() {
   if (!currentEditingFile) return;
-  if (currentMode !== 'text') return;
+  if (currentMode !== 'text' || !textContentLoaded) return;
 
   const content = getEditorContent();
   const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -442,10 +456,15 @@ function saveFile() {
     updateStatus('File too large to save (max 10MB)', 'modified');
     return;
   }
+  // Saving the visible document supersedes an unfinished navigation request.
+  pendingOpenRequest = null;
+  const requestId = ++nextRequestId;
+  pendingSaves.set(requestId, { content, filePath: currentEditingFile, documentId: activeOpenRequestId });
   ipcRenderer.send(IPC.WRITE_FILE, {
+    requestId,
     filePath: currentEditingFile,
     content: content,
-    projectPath: state.getProjectPath()
+    projectPath: editingProjectPath
   });
 }
 
@@ -722,68 +741,78 @@ function setupEventHandlers() {
 }
 
 /**
+ * Commit a document switch only after every required read succeeds.
+ */
+function receiveOpenResult(result, channel) {
+  const request = pendingOpenRequest;
+  if (!request || !result || result.requestId !== request.requestId ||
+      result.filePath !== request.filePath || !request.remaining.has(channel)) return;
+  request.remaining.delete(channel);
+  if (!result.success) {
+    pendingOpenRequest = null;
+    updateStatus('Open failed: ' + result.error, 'modified');
+    return;
+  }
+  request.results.set(channel, result);
+  if (request.remaining.size > 0) return;
+  pendingOpenRequest = null;
+
+  // Changes typed while the read was in flight were not covered by the
+  // original discard confirmation. Give those changes the same protection.
+  if (isModified && (!request.discardConfirmed || getEditorContent() !== request.previousContent) &&
+      !confirm('You have unsaved changes. Open another file anyway?')) return;
+
+  const textResult = request.results.get(IPC.FILE_CONTENT);
+  const imageResult = request.results.get(IPC.FILE_DATA_URL);
+  activeOpenRequestId = request.requestId;
+  currentEditingFile = request.filePath;
+  editingProjectPath = request.projectPath;
+  openedFromSource = request.source;
+  pendingLineNav = request.lineNav;
+  textContentLoaded = Boolean(textResult);
+  originalContent = textResult ? textResult.content : '';
+  isModified = false;
+  setViewTogglesVisible(request.extension === 'svg');
+  setMode(imageResult ? 'image' : 'text');
+  if (editorFilename) editorFilename.textContent = result.fileName;
+  if (editorExt) editorExt.textContent = request.extension.toUpperCase() || 'FILE';
+  if (editorPath) editorPath.textContent = request.filePath;
+  setEditorContent(originalContent, request.filePath, request.extension);
+  if (editorImage) editorImage.src = imageResult ? imageResult.dataUrl : '';
+  updateStatus(imageResult ? `Preview (${imageResult.mime || 'image'}, ${imageResult.sizeBytes || 0} bytes)` : 'Ready', '');
+  editorOverlay.classList.add('visible');
+  if (currentMode === 'text') {
+    focusTextEditor();
+    if (pendingLineNav) {
+      scrollToLine(pendingLineNav.line, pendingLineNav.col);
+      pendingLineNav = null;
+    }
+  }
+}
+
+/**
  * Setup IPC listeners
  */
 function setupIPC() {
-  // Receive file content
-  ipcRenderer.on(IPC.FILE_CONTENT, (event, result) => {
-    if (!result || !result.filePath || (pendingOpenFilePath && result.filePath !== pendingOpenFilePath)) return;
-    if (result.success) {
-      currentEditingFile = result.filePath;
-      originalContent = result.content;
-      isModified = false;
-
-      // Update UI
-      if (editorFilename) editorFilename.textContent = result.fileName;
-      if (editorExt) editorExt.textContent = result.extension.toUpperCase() || 'FILE';
-      setEditorContent(result.content, result.filePath, result.extension);
-      if (editorPath) editorPath.textContent = result.filePath;
-      updateStatus('Ready', '');
-
-      // Show overlay
-      editorOverlay.classList.add('visible');
-
-      // Focus textarea and navigate to pending line
-      if (currentMode === 'text') {
-        focusTextEditor();
-        if (pendingLineNav) {
-          scrollToLine(pendingLineNav.line, pendingLineNav.col);
-          pendingLineNav = null;
-        }
-      }
-    } else {
-      console.error('Error opening file:', result.error);
-    }
-  });
-
-  ipcRenderer.on(IPC.FILE_DATA_URL, (event, result) => {
-    if (!result || !result.filePath || (pendingOpenFilePath && result.filePath !== pendingOpenFilePath)) return;
-    if (result.success) {
-      currentEditingFile = result.filePath;
-
-      if (editorFilename) editorFilename.textContent = result.fileName;
-      if (editorExt) editorExt.textContent = result.extension.toUpperCase() || 'FILE';
-      if (editorPath) editorPath.textContent = result.filePath;
-
-      if (editorImage) editorImage.src = result.dataUrl;
-      updateStatus(`Preview (${result.mime || 'image'}, ${result.sizeBytes || 0} bytes)`, '');
-
-      editorOverlay.classList.add('visible');
-    } else {
-      console.error('Error opening file preview:', result.error);
-    }
-  });
+  ipcRenderer.on(IPC.FILE_CONTENT, (event, result) => receiveOpenResult(result, IPC.FILE_CONTENT));
+  ipcRenderer.on(IPC.FILE_DATA_URL, (event, result) => receiveOpenResult(result, IPC.FILE_DATA_URL));
 
   // Receive save confirmation
   ipcRenderer.on(IPC.FILE_SAVED, (event, result) => {
+    const saved = result && pendingSaves.get(result.requestId);
+    if (!saved) return;
+    pendingSaves.delete(result.requestId);
+    if (saved.documentId !== activeOpenRequestId || saved.filePath !== currentEditingFile ||
+        result.filePath !== saved.filePath || result.requestId < lastSavedRequestId) return;
     if (result.success) {
-      originalContent = getEditorContent();
-      isModified = false;
-      updateStatus('Saved!', 'saved');
+      lastSavedRequestId = result.requestId;
+      originalContent = saved.content;
+      checkModified();
+      if (!isModified) updateStatus('Saved!', 'saved');
 
       // Reset status after 2 seconds
       setTimeout(() => {
-        if (!isModified) {
+        if (!isModified && activeOpenRequestId === saved.documentId && lastSavedRequestId === result.requestId) {
           updateStatus('Ready', '');
         }
       }, 2000);

@@ -6,6 +6,8 @@
 const fs = require('fs');
 const fsp = fs.promises;
 const path = require('path');
+const { randomUUID } = require('node:crypto');
+const pendingWrites = new Map();
 const { IPC } = require('../shared/ipcChannels');
 const { isPathWithinProjectContent } = require('./projectAccess');
 const MAX_EDITOR_FILE_BYTES = 10 * 1024 * 1024; // 10MB
@@ -87,19 +89,50 @@ async function readFileAsDataUrl(filePath) {
 /**
  * Write file contents
  */
-async function writeFile(filePath, content) {
-  const tempPath = `${filePath}.tmp-${process.pid}-${Date.now()}`;
+function writeFile(filePath, content, projectPath) {
+  let targetPath;
   try {
-    await fsp.writeFile(tempPath, content, 'utf8');
-    await fsp.rename(tempPath, filePath);
+    // Resolve before queueing so aliases of the same file share write order.
+    // An editor save requires an existing target; dangling links must not be replaced.
+    targetPath = fs.realpathSync(filePath);
+    if (projectPath && !isPathWithinProjectContent(targetPath, projectPath)) {
+      return Promise.resolve({ success: false, error: PROJECT_PATH_ERROR, filePath });
+    }
+  } catch (err) {
+    return Promise.resolve({ success: false, error: err.message, filePath });
+  }
+  const previous = pendingWrites.get(targetPath) || Promise.resolve();
+  const pending = previous.then(() => replaceFile(targetPath, filePath, content, projectPath));
+  pendingWrites.set(targetPath, pending);
+  return pending.finally(() => {
+    if (pendingWrites.get(targetPath) === pending) pendingWrites.delete(targetPath);
+  });
+}
+
+async function replaceFile(targetPath, filePath, content, projectPath) {
+  let handle;
+  let ownsTemp = false;
+  const tempPath = path.join(path.dirname(targetPath), `.vibe-save-${randomUUID()}`);
+  try {
+    if (projectPath && (!isPathWithinProjectContent(targetPath, projectPath) ||
+        !isPathWithinProjectContent(filePath, projectPath))) {
+      throw new Error(PROJECT_PATH_ERROR);
+    }
+    if (await fsp.realpath(filePath) !== targetPath) throw new Error('File target changed; reopen it before saving');
+    const stats = await fsp.stat(targetPath);
+    handle = await fsp.open(tempPath, 'wx', 0o600);
+    ownsTemp = true;
+    await handle.writeFile(content, 'utf8');
+    await handle.chmod(stats.mode & 0o7777);
+    await handle.close();
+    handle = null;
+    await fsp.rename(tempPath, targetPath);
     return { success: true, filePath };
   } catch (err) {
-    try {
-      await fsp.unlink(tempPath);
-    } catch {
-      // Ignore cleanup errors
-    }
     return { success: false, error: err.message, filePath };
+  } finally {
+    if (handle) await handle.close().catch(() => {});
+    if (ownsTemp) await fsp.unlink(tempPath).catch(() => {});
   }
 }
 
@@ -118,38 +151,45 @@ function safeSend(sender, channel, data) {
  * Setup IPC handlers
  */
 function setupIPC(ipcMain) {
-  ipcMain.on(IPC.READ_FILE, async (event, { filePath, projectPath }) => {
+  ipcMain.on(IPC.READ_FILE, async (event, { filePath, projectPath, requestId }) => {
     if (!projectPath || !isPathWithinProjectContent(filePath, projectPath)) {
-      safeSend(event.sender, IPC.FILE_CONTENT, { success: false, error: PROJECT_PATH_ERROR, filePath });
+      safeSend(event.sender, IPC.FILE_CONTENT, { success: false, error: PROJECT_PATH_ERROR, filePath, requestId });
       return;
     }
     const result = await readFile(filePath);
+    result.requestId = requestId;
     result.extension = getFileExtension(filePath);
     result.fileName = path.basename(filePath);
     safeSend(event.sender, IPC.FILE_CONTENT, result);
   });
 
-  ipcMain.on(IPC.READ_FILE_DATA_URL, async (event, { filePath, projectPath }) => {
+  ipcMain.on(IPC.READ_FILE_DATA_URL, async (event, { filePath, projectPath, requestId }) => {
     if (!projectPath || !isPathWithinProjectContent(filePath, projectPath)) {
-      safeSend(event.sender, IPC.FILE_DATA_URL, { success: false, error: PROJECT_PATH_ERROR, filePath });
+      safeSend(event.sender, IPC.FILE_DATA_URL, { success: false, error: PROJECT_PATH_ERROR, filePath, requestId });
       return;
     }
     const result = await readFileAsDataUrl(filePath);
+    result.requestId = requestId;
     result.extension = getFileExtension(filePath);
     result.fileName = path.basename(filePath);
     safeSend(event.sender, IPC.FILE_DATA_URL, result);
   });
 
-  ipcMain.on(IPC.WRITE_FILE, async (event, { filePath, content, projectPath }) => {
+  ipcMain.on(IPC.WRITE_FILE, async (event, { filePath, content, projectPath, requestId }) => {
     if (!projectPath || !isPathWithinProjectContent(filePath, projectPath)) {
-      safeSend(event.sender, IPC.FILE_SAVED, { success: false, error: PROJECT_PATH_ERROR, filePath });
+      safeSend(event.sender, IPC.FILE_SAVED, { success: false, error: PROJECT_PATH_ERROR, filePath, requestId });
       return;
     }
-    if (Buffer.byteLength(content || '', 'utf8') > MAX_EDITOR_FILE_BYTES) {
-      safeSend(event.sender, IPC.FILE_SAVED, { success: false, error: `File too large to save (max ${Math.floor(MAX_EDITOR_FILE_BYTES / (1024 * 1024))}MB)`, filePath });
+    if (typeof content !== 'string') {
+      safeSend(event.sender, IPC.FILE_SAVED, { success: false, error: 'Invalid file content', filePath, requestId });
       return;
     }
-    const result = await writeFile(filePath, content);
+    if (Buffer.byteLength(content, 'utf8') > MAX_EDITOR_FILE_BYTES) {
+      safeSend(event.sender, IPC.FILE_SAVED, { success: false, error: `File too large to save (max ${Math.floor(MAX_EDITOR_FILE_BYTES / (1024 * 1024))}MB)`, filePath, requestId });
+      return;
+    }
+    const result = await writeFile(filePath, content, projectPath);
+    result.requestId = requestId;
     safeSend(event.sender, IPC.FILE_SAVED, result);
   });
 }
