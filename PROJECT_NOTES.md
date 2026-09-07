@@ -2,6 +2,10 @@
 
 ## Session Notes
 
+### [2026-09-08] Version 1.3.16 Release Preparation
+- Version 1.3.16 packages persistent appearance settings (four light and four dark palettes), shared terminal/editor theming, reviewed skill updates and custom repositories, native scrollbar synchronization, and removal of the dedicated Plugins panel.
+- The feature commit passed GitHub CI, including lint, typecheck, unit tests, renderer build, smoke launch, and terminal scroll regressions. Publish through the existing version-tag workflow so the application and DMG receive Apple notarization and updater metadata is regenerated from the final artifacts.
+
 ### [2026-09-07] Persistent Appearance Settings
 - Added eight palettes (four light and four dark, including Linen and true-black Black), System mode, three styles, and editable interface/terminal colors through the rightmost toolbar Settings button using the existing Lucide icon library. `src/shared/appearance.js` owns palette values, validation, derived CSS variables, and xterm colors; components do not carry separate color palettes.
 - Store actual selected color/style values in versioned `userData/appearance.json`, with temporary-file replacement. Updates fill missing fields only. Invalid files and future schema versions block writes and remain untouched. Reset requires explicit confirmation.
