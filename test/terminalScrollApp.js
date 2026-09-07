@@ -34,7 +34,7 @@ if (!process.versions.electron) {
   const { app, BrowserWindow } = require('electron');
   const loadFile = BrowserWindow.prototype.loadFile;
   BrowserWindow.prototype.loadFile = function() {
-    return loadFile.call(this, path.join(process.argv[2], 'index.html'));
+    return loadFile.call(this, path.join(process.argv.at(-1), 'index.html'));
   };
   app.once('browser-window-created', (_event, win) => {
     win.webContents.once('did-finish-load', async () => {

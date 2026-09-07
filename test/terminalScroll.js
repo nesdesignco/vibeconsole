@@ -27,12 +27,13 @@ if (!process.versions.electron) {
   process.exit(result.status ?? 1);
 } else {
   const { app, BrowserWindow } = require('electron');
-  app.setPath('userData', path.join(process.argv[2], 'userData'));
+  const dir = process.argv.at(-1); // Chromium switches remain in argv on Linux.
+  app.setPath('userData', path.join(dir, 'userData'));
   app.whenReady().then(async () => {
     const win = new BrowserWindow({ width: 1000, height: 750, show: true,
       webPreferences: { backgroundThrottling: false, sandbox: true, contextIsolation: true, nodeIntegration: false } });
     try {
-      await win.loadFile(path.join(process.argv[2], 'index.html'));
+      await win.loadFile(path.join(dir, 'index.html'));
       const results = await win.webContents.executeJavaScript('window.runScrollTests()');
       for (const result of results) console.log(JSON.stringify(result));
       app.exit(results.some(r => !r.pass) ? 1 : 0);
