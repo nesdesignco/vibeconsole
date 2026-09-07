@@ -1,6 +1,7 @@
 /* ==================== PANEL SLIDE ANIMATION ==================== */
 #history-panel,
 #plugins-panel,
+#skills-panel,
 #github-panel,
 #saved-prompts-panel {
   transition: width var(--transition-panel),
@@ -12,6 +13,7 @@
 
 #history-panel.visible,
 #plugins-panel.visible,
+#skills-panel.visible,
 #github-panel.visible,
 #saved-prompts-panel.visible {
   box-shadow: -8px 0 24px rgba(0, 0, 0, 0.2);
@@ -19,6 +21,7 @@
 
 #history-panel > *,
 #plugins-panel > *,
+#skills-panel > *,
 #github-panel > *,
 #saved-prompts-panel > * {
   width: var(--panel-width);
@@ -32,6 +35,7 @@
 
 #history-panel.visible > *,
 #plugins-panel.visible > *,
+#skills-panel.visible > *,
 #github-panel.visible > *,
 #saved-prompts-panel.visible > * {
   opacity: 1;
@@ -41,6 +45,7 @@
 /* Staggered entrance for panel children */
 #history-panel.visible > *:nth-child(1),
 #plugins-panel.visible > *:nth-child(1),
+#skills-panel.visible > *:nth-child(1),
 #github-panel.visible > *:nth-child(1),
 #saved-prompts-panel.visible > *:nth-child(1) {
   transition-delay: 60ms;
@@ -48,6 +53,7 @@
 
 #history-panel.visible > *:nth-child(2),
 #plugins-panel.visible > *:nth-child(2),
+#skills-panel.visible > *:nth-child(2),
 #github-panel.visible > *:nth-child(2),
 #saved-prompts-panel.visible > *:nth-child(2) {
   transition-delay: 120ms;
@@ -55,6 +61,7 @@
 
 #history-panel.visible > *:nth-child(n+3),
 #plugins-panel.visible > *:nth-child(n+3),
+#skills-panel.visible > *:nth-child(n+3),
 #github-panel.visible > *:nth-child(n+3),
 #saved-prompts-panel.visible > *:nth-child(n+3) {
   transition-delay: 160ms;
@@ -63,6 +70,7 @@
 @media (prefers-reduced-motion: reduce) {
   #history-panel,
   #plugins-panel,
+  #skills-panel,
   #github-panel,
   #saved-prompts-panel {
     transition: none;
@@ -70,6 +78,7 @@
 
   #history-panel > *,
   #plugins-panel > *,
+  #skills-panel > *,
   #github-panel > *,
   #saved-prompts-panel > * {
     transition: none;

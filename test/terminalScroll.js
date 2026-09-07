@@ -16,7 +16,9 @@ if (!process.versions.electron) {
     <link rel="stylesheet" href="file://${root}/src/renderer/styles/components/terminal.css">
     <style>*{box-sizing:border-box}body{margin:0}#host{width:900px;height:600px}</style>
     </head><body><div id="host"></div><script src="renderer.js"></script></body></html>`);
-  const result = require('node:child_process').spawnSync(require('electron'), [__filename, dir], {
+  const args = [__filename, dir];
+  if (process.platform === 'linux') args.unshift('--no-sandbox');
+  const result = require('node:child_process').spawnSync(require('electron'), args, {
     env: { ...process.env, ELECTRON_RUN_AS_NODE: '' }, stdio: 'inherit', timeout: 45000
   });
   if (result.error) console.error(result.error);

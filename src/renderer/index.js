@@ -7,6 +7,7 @@ const terminal = require('./terminal');
 const fileTreeUI = require('./fileTreeUI');
 const historyPanel = require('./historyPanel');
 const pluginsPanel = require('./pluginsPanel');
+const skillsPanel = require('./skillsPanel');
 const githubPanel = require('./githubPanel');
 const state = require('./state');
 const projectListUI = require('./projectListUI');
@@ -139,6 +140,7 @@ function init() {
 
   // Initialize plugins panel
   try { pluginsPanel.init(); } catch (err) { console.error('Failed to initialize plugins panel:', err); }
+  try { skillsPanel.init(); } catch (err) { console.error('Failed to initialize skills panel:', err); }
 
   // Initialize GitHub panel
   try { githubPanel.init(); } catch (err) { console.error('Failed to initialize GitHub panel:', err); }

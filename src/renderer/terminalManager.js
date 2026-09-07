@@ -7,6 +7,7 @@ const { ipcRenderer, clipboard, getPathForFile } = require('./electronBridge');
 const { Terminal } = require('@xterm/xterm');
 const { FitAddon } = require('@xterm/addon-fit');
 const { WebLinksAddon } = require('@xterm/addon-web-links');
+const { ScrollbackClearAddon } = require('./scrollbackClearAddon');
 const { IPC } = require('../shared/ipcChannels');
 const { matchAiToolCommand } = require('../shared/aiToolDetection');
 const { writeClipboardText } = require('./clipboardWrite');
@@ -516,6 +517,7 @@ class TerminalManager {
 
     const fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
+    terminal.loadAddon(new ScrollbackClearAddon());
 
     const webLinksAddon = new WebLinksAddon(linkHandler.activate);
     terminal.loadAddon(webLinksAddon);
@@ -982,6 +984,10 @@ class TerminalManager {
   }
 
   _fitInstance(terminalId, instance) {
+    // Connected is not the same as measurable: a hidden ancestor makes the
+    // fit addon infer a tiny terminal from percentage styles. That reflows and
+    // trims history, and sends a bogus SIGWINCH to the CLI before it is shown.
+    if (!instance.element.clientWidth || !instance.element.clientHeight) return;
     const wasAtBottom = this._isAtOrNearBottom(instance.terminal, 0);
     const colsBefore = instance.terminal.cols;
     const rowsBefore = instance.terminal.rows;

@@ -314,6 +314,7 @@
 @container (max-width: 980px) {
   #history-panel.visible,
   #plugins-panel.visible,
+  #skills-panel.visible,
   #github-panel.visible,
   #saved-prompts-panel.visible {
     bottom: 0;
@@ -327,6 +328,7 @@
 @container (max-width: 380px) {
   #history-panel.visible,
   #plugins-panel.visible,
+  #skills-panel.visible,
   #github-panel.visible,
   #saved-prompts-panel.visible {
     max-width: 100%;
@@ -336,6 +338,7 @@
 
   #history-panel > *,
   #plugins-panel > *,
+  #skills-panel > *,
   #github-panel > *,
   #saved-prompts-panel > * {
     min-width: 0;

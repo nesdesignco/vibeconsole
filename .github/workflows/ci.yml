@@ -38,3 +38,5 @@ jobs:
       - name: Smoke Test
         run: xvfb-run -a npm run test:smoke
 
+      - name: Terminal Scroll Regressions
+        run: xvfb-run -a npm run test:scroll

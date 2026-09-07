@@ -6,6 +6,7 @@ declare global {
 
   interface Window {
     terminalSendCommand?: (command: string, terminalId?: string | null) => void;
+    terminalRunInNewSession?: (command: string) => Promise<string>;
     terminalFocus?: () => void;
     fileTreeFocus?: () => void;
     toggleSidebar?: () => void;

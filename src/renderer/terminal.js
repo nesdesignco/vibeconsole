@@ -113,6 +113,13 @@ function getActiveTerminalState() {
 
 // Expose sendCommand globally for modules that can't import terminal directly (circular dependency)
 window.terminalSendCommand = sendCommand;
+window.terminalRunInNewSession = async function(command) {
+  if (!multiTerminalUI) throw new Error('Terminal is not ready');
+  const terminalId = await multiTerminalUI.createTerminalForCurrentProject();
+  if (!terminalId) throw new Error('Could not create a terminal');
+  sendCommand(command, terminalId);
+  return terminalId;
+};
 
 // Expose focus function globally for returning focus from other panels
 window.terminalFocus = function() {

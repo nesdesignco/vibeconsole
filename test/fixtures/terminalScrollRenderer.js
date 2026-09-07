@@ -225,6 +225,103 @@ window.runScrollTests = async () => {
   await wait();
   check('column reflow follows visible content', terminal.buffer.active.getLine(terminal.buffer.active.viewportY).translateToString(true).startsWith('wrapped-50:'), position(terminal));
   check('resize anchors are disposed', anchors.length > 0 && anchors.every(marker => marker.isDisposed));
+
+  const lines = (count, label = 'redraw') => Array.from({ length: count }, (_, i) => `${label} ${i}\r\n`).join('');
+  const seedHistory = async (label = 'redraw') => {
+    terminal.reset();
+    await write(terminal, lines(300, label));
+    // reset() zeroes xterm's DOM row metrics until the first paint. A parser
+    // callback alone does not mean the new history is visible/scrollable yet.
+    await wait();
+    terminal.scrollToLine(70);
+    await wait();
+    if (position(terminal).y !== 70) throw new Error('History fixture did not reach row 70 before the action under test');
+  };
+  // CLI full-frame redraws clear scrollback, then replay a transcript. Test the
+  // actual ANSI parser (including PTY chunk boundaries), not a mocked write.
+  for (const [name, chunks] of [
+    ['ED3', ['\x1b[3J']],
+    ['DECSED3', ['\x1b[?3J']],
+    ['split ED3', ['\x1b', '[', '3', 'J']],
+    ['C1 ED3', ['\x9b3J']],
+    ['full frame redraw', ['\x1b[2J\x1b[3J\x1b[H']]
+  ]) {
+    await seedHistory();
+    for (const chunk of chunks) manager._writeKeepingBottom(a, chunk);
+    manager._writeKeepingBottom(a, lines(200));
+    await write(terminal, '');
+    await wait();
+    check(`${name} resumes following output after clearing history`,
+      terminal.buffer.active.baseY > 100 && position(terminal).y === position(terminal).base, position(terminal));
+  }
+
+  await seedHistory();
+  await write(terminal, '\x1b[2J\x1b[H' + lines(100));
+  await wait();
+  check('ED2 retains history and reading position', position(terminal).y === 70, position(terminal));
+
+  await seedHistory();
+  await write(terminal, '\x1b[?1049h\x1b[3J' + lines(100) + '\x1b[?1049l' + lines(100));
+  await wait();
+  check('ED3 on alternate screen preserves normal history and scroll intent', position(terminal).y === 70, position(terminal));
+
+  // Returning to history after the clear is still an explicit user choice.
+  await write(terminal, '\x1b[3J' + lines(200));
+  terminal.scrollToLine(50);
+  manager._writeKeepingBottom(a, lines(50));
+  await write(terminal, '');
+  await wait();
+  check('user can scroll away again after ED3', position(terminal).y === 50, position(terminal));
+
+  await seedHistory();
+  // The text of an escape command inside OSC must never trigger the fix.
+  await write(terminal, '\x1b]0;literal [3J title\x07' + lines(50));
+  await wait();
+  check('title text does not act as a scrollback clear', position(terminal).y === 70, position(terminal));
+
+  await seedHistory();
+  manager.setActiveTerminal('b'); ui._renderTabView(state());
+  await wait();
+  manager._writeKeepingBottom(a, '\x1b[3J' + lines(200));
+  await write(terminal, '');
+  manager.setActiveTerminal('a'); ui._renderTabView(state());
+  await wait();
+  check('background ED3 follows output when remounted', position(terminal).y === position(terminal).base, position(terminal));
+
+  await seedHistory();
+  terminal.options.scrollback = 0;
+  terminal.options.scrollback = 10000;
+  await wait(); // Let the setup-only scrollback option change reach the DOM.
+  if (terminal.buffer.active.baseY !== 0) throw new Error('Expected empty scrollback before ED3');
+  await write(terminal, '\x1b[3J' + lines(200));
+  await wait();
+  check('ED3 with no remaining history still resets follow-output', position(terminal).y === position(terminal).base, position(terminal));
+
+  terminal.reset();
+  host.style.height = '600px'; manager.fitAll();
+  await write(terminal, lines(300));
+  host.style.height = '450px'; manager.fitAll();
+  terminal.scrollToLine(70);
+  await wait();
+  await write(terminal, '\x1b[?1049h' + lines(100) + '\x1b[3J\x1b[?1049l' + lines(50));
+  await wait();
+  check('alternate ED3 after inactive-buffer resize preserves normal scroll intent', position(terminal).y === 70, position(terminal));
+
+  terminal.options.scrollback = 400;
+  await seedHistory('history text survives hidden panels');
+  const hiddenAnchor = terminal.buffer.active.getLine(70).translateToString(true);
+  const geometry = { cols: terminal.cols, rows: terminal.rows };
+  host.style.display = 'none';
+  manager.fitAll();
+  check('hidden layout never resizes PTY', terminal.cols === geometry.cols && terminal.rows === geometry.rows,
+    { expected: geometry, actual: { cols: terminal.cols, rows: terminal.rows } });
+  host.style.display = '';
+  manager.fitAll();
+  await wait();
+  check('hidden layout return preserves visible history',
+    terminal.buffer.active.getLine(terminal.buffer.active.viewportY).translateToString(true) === hiddenAnchor,
+    { ...position(terminal), expected: hiddenAnchor, actual: terminal.buffer.active.getLine(terminal.buffer.active.viewportY).translateToString(true) });
+
   for (const instance of manager.terminals.values()) instance.terminal.dispose();
   return results;
 };

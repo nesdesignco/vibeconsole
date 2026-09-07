@@ -10,6 +10,11 @@
   <link rel="stylesheet" href="dist/renderer.css">
 </head>
 <body>
+  <svg width="0" height="0" aria-hidden="true" style="position:absolute">
+    <symbol id="icon-refresh" viewBox="0 0 24 24">
+      <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </symbol>
+  </svg>
   <!-- Sidebar -->
   <div id="sidebar">
     <div id="sidebar-resize-handle"></div>
@@ -50,9 +55,7 @@
         <div class="file-explorer-actions">
           <button id="btn-project-context" class="btn" data-size="sm" data-variant="outline" data-tint="accent" tabindex="-1" title="Initialize VibeConsole project context with the selected AI tool" disabled>Initialize Context</button>
           <button id="btn-refresh-tree" class="btn" data-size="icon-sm" data-variant="ghost" tabindex="-1" title="Refresh">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-            </svg>
+            <svg width="11" height="11" aria-hidden="true"><use href="#icon-refresh"/></svg>
           </button>
         </div>
       </div>
@@ -83,6 +86,20 @@
       </div>
     </div>
 
+    <!-- Skills Panel -->
+    <div id="skills-panel" role="region" aria-label="Skills">
+      <div class="panel-header">
+        <h3 class="panel-title" data-color="accent">Skills</h3>
+        <div class="panel-actions">
+          <button id="skills-refresh" class="btn" data-size="icon-sm" data-variant="ghost" data-tint="accent" title="Refresh installed skills" aria-label="Refresh installed skills">
+            <svg width="11" height="11" aria-hidden="true"><use href="#icon-refresh"/></svg>
+          </button>
+          <button id="skills-close" class="btn btn-close panel-close-btn" data-size="icon-sm" data-variant="ghost" aria-label="Close skills">✕</button>
+        </div>
+      </div>
+      <div id="skills-content"></div>
+    </div>
+
     <!-- Plugins Panel -->
     <div id="plugins-panel">
       <div id="plugins-header" class="panel-header">
@@ -107,9 +124,7 @@
             </div>
           </div>
           <button id="plugins-refresh-btn" class="btn" data-size="icon-sm" data-variant="ghost" data-tint="accent" tabindex="-1" title="Refresh plugin list">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-            </svg>
+            <svg width="11" height="11" aria-hidden="true"><use href="#icon-refresh"/></svg>
           </button>
           <button id="plugins-close" class="btn btn-close panel-close-btn" data-size="icon-sm" data-variant="ghost" tabindex="-1" aria-label="Close panel">✕</button>
         </div>
@@ -143,9 +158,7 @@
             </div>
           </div>
           <button id="github-refresh-btn" class="btn" data-size="icon-sm" data-variant="ghost" data-tint="accent" tabindex="-1" title="Refresh">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
-            </svg>
+            <svg width="11" height="11" aria-hidden="true"><use href="#icon-refresh"/></svg>
           </button>
           <button id="github-close" class="btn btn-close panel-close-btn" data-size="icon-sm" data-variant="ghost" tabindex="-1" aria-label="Close panel">✕</button>
         </div>

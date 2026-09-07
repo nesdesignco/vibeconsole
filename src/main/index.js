@@ -31,6 +31,7 @@ const workspace = require('./workspace');
 const fileEditor = require('./fileEditor');
 const droppedFiles = require('./droppedFiles');
 const pluginsManager = require('./pluginsManager');
+const skillsManager = require('./skillsManager');
 const claudeUsageManager = require('./claudeUsageManager');
 const codexUsageManager = require('./codexUsageManager');
 const gitBranchesManager = require('./gitBranchesManager');
@@ -187,6 +188,7 @@ function setupAllIPC() {
   fileEditor.setupIPC(ipcMain);
   droppedFiles.setupIPC(ipcMain);
   pluginsManager.setupIPC(ipcMain);
+  skillsManager.setupIPC(ipcMain);
   claudeUsageManager.setupIPC(ipcMain);
   codexUsageManager.setupIPC(ipcMain);
 

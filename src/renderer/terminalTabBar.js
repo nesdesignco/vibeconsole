@@ -7,6 +7,7 @@ const { ipcRenderer } = require('./electronBridge');
 const { IPC } = require('../shared/ipcChannels');
 const { escapeHtml, escapeAttr } = require('./escapeHtml');
 const pluginsPanel = require('./pluginsPanel');
+const skillsPanel = require('./skillsPanel');
 const githubPanel = require('./githubPanel');
 const savedPromptsPanel = require('./savedPromptsPanel');
 const updaterModal = require('./updaterModal');
@@ -212,6 +213,11 @@ class TerminalTabBar {
               <div class="grid-layout-dropdown-item" data-value="3x3">3×3</div>
             </div>
           </div>
+          <button class="toolbar-btn btn-skills-toggle" title="Skills" aria-label="Skills" aria-controls="skills-panel">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="m13 2-3 8H4l7 12 3-8h6L13 2Z"/>
+            </svg>
+          </button>
           <button class="toolbar-btn btn-plugins-toggle" title="Plugins (Ctrl+Shift+P)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.315 8.685a.98.98 0 0 1 .837-.276c.47.07.802.48.968.925a2.501 2.501 0 1 0 3.214-3.214c-.446-.166-.855-.497-.925-.968a.979.979 0 0 1 .276-.837l1.61-1.61a2.404 2.404 0 0 1 1.705-.707c.617 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 1 1 3.237 3.237c-.464.18-.894.527-.967 1.02Z"/>
@@ -507,6 +513,9 @@ class TerminalTabBar {
     }, { signal: this._abortController.signal });
 
     // Plugins toggle button
+    this.element.querySelector('.btn-skills-toggle').addEventListener('click', () => {
+      skillsPanel.toggle();
+    });
     this.element.querySelector('.btn-plugins-toggle').addEventListener('click', () => {
       pluginsPanel.toggle();
     });

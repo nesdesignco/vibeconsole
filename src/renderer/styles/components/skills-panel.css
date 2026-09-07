@@ -1,0 +1,46 @@
+/* Skills inherits the existing side-panel geometry and controls. */
+#skills-panel {
+  --panel-width: 342px;
+  --panel-min-width: 342px;
+  width: 0;
+  min-width: 0;
+  max-width: var(--panel-width);
+  background: var(--bg-secondary);
+  border-left: 1px solid transparent;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  flex: 0 0 auto;
+}
+
+#skills-panel.visible {
+  width: var(--panel-width);
+  min-width: var(--panel-min-width);
+  border-left-color: var(--border-subtle);
+}
+
+#skills-content { overflow-y: auto; padding: var(--space-md); }
+.skill-entry h5 { font-size: 15px; margin: 0 0 var(--space-sm); color: var(--text-primary); }
+.skills-description { font-size: 12px; line-height: 1.6; color: var(--text-secondary); margin: 0 0 var(--space-sm); }
+.skill-source { background: none; border: 0; padding: 0; color: var(--accent-primary); cursor: pointer; font: inherit; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
+.skills-note { font-size: 12px; line-height: 1.6; color: var(--text-secondary); margin: var(--space-md) 0; overflow-wrap: anywhere; }
+.skill-error { color: var(--error); }
+.skill-controls .toggle-track, .skill-controls .toggle-thumb { display: block; }
+#skills-panel button:disabled { cursor: wait; opacity: 0.6; }
+#skills-panel button:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 3px; }
+
+.skills-providers { display: flex; gap: var(--space-sm); margin-bottom: var(--space-lg); }
+.skills-providers [aria-pressed="true"] { background: var(--accent-primary); color: var(--bg-deep); }
+.skill-entry { border-top: 1px solid var(--border-subtle); padding: var(--space-lg) 0; }
+.skill-heading { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md); }
+.skill-logo { object-fit: contain; flex-shrink: 0; border-radius: var(--radius-sm); color-scheme: dark; }
+.skill-identity { flex: 1; min-width: 0; }
+.skill-heading .plugin-status { margin-left: auto; }
+.skill-controls, .skill-modes { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); }
+.skill-modes { margin-left: auto; }
+.skill-entry .skills-note { margin-bottom: 0; }
+.skills-tabs { display: flex; gap: var(--space-sm); border-bottom: 1px solid var(--border-subtle); }
+.skills-tabs [role="tab"] { border-radius: 0; border-bottom: 2px solid transparent; }
+.skills-tabs [aria-selected="true"] { color: var(--accent-primary); border-bottom-color: currentColor; }
+#skills-list .skill-entry:first-child { border-top: 0; }

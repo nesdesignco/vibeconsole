@@ -1,7 +1,7 @@
 {
   "version": "1.1",
   "description": "Claude Code IDE - Module structure and IPC communication map",
-  "lastUpdated": "2026-09-06",
+  "lastUpdated": "2026-09-07",
   "architecture": {
     "type": "electron",
     "mainProcess": "src/main/index.js",
@@ -32,6 +32,7 @@
         "fileEditor",
         "droppedFiles",
         "pluginsManager",
+        "skillsManager",
         "claudeUsageManager",
         "codexUsageManager",
         "gitBranchesManager",
@@ -44,33 +45,33 @@
       ],
       "functions": {
         "createWindow": {
-          "line": 50,
+          "line": 51,
           "purpose": "Create main application window"
         },
         "isTrustedAppUrl": {
-          "line": 130,
+          "line": 131,
           "params": [
             "rawUrl"
           ],
           "purpose": "Allow only local app URLs to load inside the app window."
         },
         "openExternalSafely": {
-          "line": 153,
+          "line": 154,
           "params": [
             "rawUrl"
           ],
           "purpose": "Avoid forwarding file/custom scheme URLs to the OS."
         },
         "setupAllIPC": {
-          "line": 180,
+          "line": 181,
           "purpose": "Setup all IPC handlers"
         },
         "init": {
-          "line": 238,
+          "line": 240,
           "purpose": "Initialize application"
         },
         "initModulesWithWindow": {
-          "line": 249,
+          "line": 251,
           "params": [
             "window"
           ],
@@ -594,6 +595,7 @@
         "fileTreeUI",
         "historyPanel",
         "pluginsPanel",
+        "skillsPanel",
         "githubPanel",
         "state",
         "projectListUI",
@@ -609,18 +611,18 @@
       ],
       "functions": {
         "toggleSidebarSafe": {
-          "line": 27
+          "line": 28
         },
         "init": {
-          "line": 43,
+          "line": 44,
           "purpose": "Initialize all modules"
         },
         "setupButtonHandlers": {
-          "line": 260,
+          "line": 262,
           "purpose": "Setup button click handlers"
         },
         "setupKeyboardShortcuts": {
-          "line": 328,
+          "line": 330,
           "purpose": "Setup keyboard shortcuts"
         }
       },
@@ -723,7 +725,7 @@
           "purpose": "Get currently active terminal state."
         },
         "getMultiTerminalUI": {
-          "line": 140,
+          "line": 147,
           "purpose": "Get MultiTerminalUI instance"
         }
       },
@@ -1468,6 +1470,7 @@
         "@xterm/xterm",
         "@xterm/addon-fit",
         "@xterm/addon-web-links",
+        "scrollbackClearAddon",
         "shared/ipcChannels",
         "shared/aiToolDetection",
         "clipboardWrite",
@@ -1478,7 +1481,7 @@
       ],
       "functions": {
         "createTerminalLinkHandler": {
-          "line": 50,
+          "line": 51,
           "params": [
             "ipc = ipcRenderer"
           ]
@@ -1838,6 +1841,7 @@
         "shared/ipcChannels",
         "escapeHtml",
         "pluginsPanel",
+        "skillsPanel",
         "githubPanel",
         "savedPromptsPanel",
         "updaterModal",
@@ -5601,6 +5605,216 @@
           ]
         }
       }
+    },
+    "main/skillsManager": {
+      "file": "src/main/skillsManager.js",
+      "description": "/",
+      "exports": [
+        "setupIPC",
+        "getSkills",
+        "installSkill",
+        "toggleSkill",
+        "getSkillCommand",
+        "isExpectedRemote"
+      ],
+      "depends": [
+        "fs",
+        "os",
+        "path",
+        "shared/ipcChannels",
+        "shared/skillsCatalog",
+        "shared/pathUtils",
+        "gitExecUtils"
+      ],
+      "functions": {
+        "validate": {
+          "line": 11,
+          "params": [
+            "provider",
+            "id"
+          ]
+        },
+        "configDir": {
+          "line": 15,
+          "params": [
+            "provider"
+          ]
+        },
+        "readJson": {
+          "line": 21,
+          "params": [
+            "filename"
+          ]
+        },
+        "executable": {
+          "line": 26,
+          "params": [
+            "command"
+          ]
+        },
+        "findExecutable": {
+          "line": 30,
+          "params": [
+            "command"
+          ]
+        },
+        "getSkills": {
+          "line": 39,
+          "params": [
+            "provider"
+          ]
+        },
+        "run": {
+          "line": 76,
+          "params": [
+            "command",
+            "args",
+            "cwd = os.homedir("
+          ]
+        },
+        "errorMessage": {
+          "line": 82,
+          "params": [
+            "err"
+          ]
+        },
+        "isExpectedRemote": {
+          "line": 84,
+          "params": [
+            "remote",
+            "repo"
+          ]
+        },
+        "installPlugin": {
+          "line": 90,
+          "params": [
+            "provider",
+            "skill"
+          ]
+        },
+        "installSkill": {
+          "line": 109,
+          "params": [
+            "provider",
+            "id"
+          ]
+        },
+        "getSkillCommand": {
+          "line": 144,
+          "params": [
+            "provider",
+            "id",
+            "action"
+          ]
+        },
+        "toggleSkill": {
+          "line": 154,
+          "params": [
+            "provider",
+            "id",
+            "enabled"
+          ]
+        },
+        "setupIPC": {
+          "line": 163,
+          "params": [
+            "ipcMain"
+          ]
+        }
+      },
+      "ipc": {
+        "listens": [
+          "LOAD_SKILLS",
+          "INSTALL_SKILL",
+          "TOGGLE_SKILL",
+          "GET_SKILL_COMMAND"
+        ],
+        "emits": []
+      }
+    },
+    "renderer/skillsPanel": {
+      "file": "src/renderer/skillsPanel.js",
+      "description": "",
+      "exports": [
+        "init",
+        "toggle"
+      ],
+      "depends": [
+        "electronBridge",
+        "shared/ipcChannels",
+        "shared/skillsCatalog",
+        "escapeHtml",
+        "panelVisibility",
+        "panelCoordinator",
+        "toast",
+        "clipboardWrite",
+        "spinnerButton"
+      ],
+      "functions": {
+        "init": {
+          "line": 23
+        },
+        "loadSkills": {
+          "line": 61
+        },
+        "actionButton": {
+          "line": 78,
+          "params": [
+            "skill",
+            "action",
+            "label",
+            "disabled = false"
+          ]
+        },
+        "renderSkill": {
+          "line": 82,
+          "params": [
+            "skill"
+          ]
+        },
+        "render": {
+          "line": 129
+        },
+        "runAction": {
+          "line": 140,
+          "params": [
+            "skill",
+            "action"
+          ]
+        }
+      },
+      "ipc": {
+        "listens": [],
+        "emits": [
+          "OPEN_EXTERNAL_URL"
+        ]
+      }
+    },
+    "shared/skillsCatalog": {
+      "file": "src/shared/skillsCatalog.js",
+      "description": "",
+      "exports": [
+        "SKILLS",
+        "getSkill"
+      ],
+      "depends": [],
+      "functions": {
+        "getSkill": {
+          "line": 21,
+          "params": [
+            "id"
+          ]
+        }
+      }
+    },
+    "renderer/scrollbackClearAddon": {
+      "file": "src/renderer/scrollbackClearAddon.js",
+      "description": "C",
+      "exports": [
+        "ScrollbackClearAddon"
+      ],
+      "depends": [],
+      "functions": {}
     }
   },
   "ipcChannels": {

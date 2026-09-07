@@ -56,7 +56,12 @@ __pycache__/
 
 # Local walkthrough or scratch content
 WALKTHROUGH/
+/PRODUCT_FEATURE_RESEARCH.md
 
 # Build assets
 # Keep packaging inputs tracked (e.g. build/icon.icns), but ignore generated iconsets if present.
 build/icon.iconset/
+.wrongstack/
+!/.wrongstack/
+/.wrongstack/*
+!/.wrongstack/project.json

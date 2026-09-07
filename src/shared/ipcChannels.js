@@ -60,6 +60,10 @@ const IPC = {
 
   // Plugins Panel
   LOAD_PLUGINS: 'load-plugins',
+  LOAD_SKILLS: 'load-skills',
+  INSTALL_SKILL: 'install-skill',
+  TOGGLE_SKILL: 'toggle-skill',
+  GET_SKILL_COMMAND: 'get-skill-command',
   TOGGLE_PLUGIN: 'toggle-plugin',
   PLUGIN_TOGGLED: 'plugin-toggled',
   REFRESH_PLUGINS: 'refresh-plugins',

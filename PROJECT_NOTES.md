@@ -2,6 +2,34 @@
 
 ## Session Notes
 
+### [2026-09-07] Shared Skills UI and Design Catalog
+- Skills now has keyboard-accessible Token Saver and UI category tabs, using one catalog, renderer and installation path. The UI catalog includes Impeccable, Design DNA, Anthropic Frontend Design and Vercel Web Design Guidelines, verified against their public repositories.
+- Native user skill directories are checked alongside plugins, including legacy Codex and shared agent skill locations. Existing customized copies are preserved. UI skills expose a copy-command action rather than token-saving mode controls; plugin toggles are offered only for managed plugin installations.
+- Impeccable uses its Claude marketplace or its provider-specific global Codex installer. Codex project hooks are explicitly excluded from this user-wide installation and remain an optional, separately trusted project setup.
+- File tree, Skills, Plugins and Git refresh buttons reference one SVG symbol. Skills reuses the existing spinner helper and status badge styles. Official tool artwork is bundled locally; UI skills without a verified project mark use attributed Lucide illustrations.
+
+### [2026-09-07] Version 1.3.15 Local Signed Build
+- Bumped package and lockfile versions to 1.3.15 for the terminal scrollback/hidden-layout fixes and optional Skills panel. Built Apple Silicon application, DMG, ZIP and updater metadata under `release/v1.3.15` with publication disabled.
+- Verified that packaged renderer/preload bundles, Skills modules, PTY manager and HTML match the checkout. The packaged application passed an isolated smoke launch (`VIBE_SMOKE_OK`) without sharing userData with the installed app.
+- Application and DMG passed Developer ID signature/notarization and Gatekeeper checks; both Apple tickets were stapled and validated. Refreshed the DMG blockmap after stapling and verified both artifact sizes and SHA-512 values against `latest-mac.yml`.
+- No installed application was replaced and no GitHub release was published.
+
+### [2026-09-07] Scrollback Clear and Hidden Layout Regressions
+- Reviewed the prior scroll fixes (`f30a52b`, `f4a0578`, `f5971e9`, `a621e82`), current PTY coalescing/IPC, mount lifecycle, grid rendering, fit callers, and xterm's parser/viewport implementation. The old 24 Chromium cases passed while new output-protocol and hidden-layout cases failed.
+- Reproduced xterm 5.5's ED3 bug: after reading history, `ESC[3J` followed by 200 output lines left `viewportY=0`, `baseY=200`. This is the upstream issue [xtermjs#6046](https://github.com/xtermjs/xterm.js/issues/6046), fixed upstream by [#6081](https://github.com/xtermjs/xterm.js/pull/6081). Added a disposable parser addon using public APIs to reset follow-output before normal-buffer ED3/DECSED3 processing. It does not strip output, restore stale positions, affect ED2, or change normal-buffer scroll intent from the alternate screen. Remove the compatibility addon when the installed xterm includes the upstream fix and these tests pass without it.
+- Reproduced hidden-layout corruption: `isConnected` allowed fitting through a `display:none` ancestor, shrinking 51x28 to 10x6 and reflowing/trimming history. On reveal, the same viewport offset displayed transcript line 268 instead of line 70; the missing history could not be restored. All fit paths now skip elements with zero client width/height before touching xterm or sending PTY resize.
+- Expanded the real Chromium suite to 38 cases, including split/C1 escape sequences, alternate screens, background clears, zero remaining history, and hidden layout. Test history setup waits for the first paint after `reset()` because parser completion alone does not restore xterm's DOM row metrics.
+- Added 9 full-app integration cases with real shell output through node-pty, output coalescing, preload IPC, toolbar, debounced rendering and ResizeObserver. Both suites now run under `npm run test:scroll` (renderer/preload build required) and in CI under Xvfb. Each app test uses temporary userData and explicitly destroys its own PTYs.
+- Validation: 191 unit tests, 47 Electron scroll/integration cases, lint, typecheck and renderer build passed. No installed app was replaced and no release was published; the built checkout contains the fixes.
+
+### [2026-09-07] Optional Token Saver Tools in a Dedicated Skills Panel
+- Added a separate Skills toolbar action and Token Saver catalog containing RTK, Headroom, Caveman, and Ponytail, with independent Claude Code and Codex views.
+- Installation uses native user-scoped tools: Claude plugins, the Ponytail Codex plugin, the global Caveman Codex skill, Homebrew for RTK, and an isolated uv tool environment for Headroom. Listing and app startup never install, upgrade, or enable tools. Existing installations are detected before installation, including after module/app reload; disabled plugins stay disabled. No tools are bundled into or removed with an app update.
+- RTK setup/removal and Headroom wrap/unwrap open a fresh terminal so interactive setup never lands in an existing agent conversation. Binary installation is displayed separately from session activation. RTK's Codex integration supplies agent guidance; it is not presented as guaranteed command rewriting.
+- Claude plugin toggles use the CLI. Codex plugin management and hook trust remain native to Codex. Lite/Full/Ultra/Off buttons copy explicit session commands; they do not claim to change a running agent's mode.
+- Installer tests use temporary user profiles and mocked CLI execution to verify persistence, provider isolation, duplicate prevention, exact installation scope, source checks, and retry behavior. Real Electron UI checks use simulated installation states without installing third-party tools into the developer's profile.
+- Validation: all 191 unit tests, lint, typecheck, renderer build, 12 isolated Electron UI checks, and the full-app smoke test with temporary userData passed. STRUCTURE.json was regenerated. No signed release was built or published.
+
 ### [2026-09-06] Version 1.3.14 Release Preparation
 - Bumped package and lockfile versions to 1.3.14 for the verified editor, Git, updater, and mapped-IPv6 fixes. All 179 tests, lint, typecheck, and renderer build passed; the installed application was not opened.
 - Built Apple Silicon artifacts under `release/v1.3.14`. Verified the packaged main-process files and renderer/preload bundles match the checkout, and the embedded package version is 1.3.14. The application passed Developer ID signature verification, notarization, stapler validation, and Gatekeeper assessment. Publication also requires a separately notarized/stapled DMG and matching ZIP/DMG update hashes.
