@@ -243,4 +243,4 @@ function setupIPC(ipcMain) {
   ipcMain.handle(IPC.DOWNLOAD_URL_TO_TEMP, (event, url) => downloadUrlToTemp(url));
 }
 
-module.exports = { setupIPC, sanitizeFilename, filenameFromUrl, isPrivateAddress, assertPublicHttpUrl };
+module.exports = { downloadUrlToTemp, setupIPC, sanitizeFilename, filenameFromUrl, isPrivateAddress, assertPublicHttpUrl };

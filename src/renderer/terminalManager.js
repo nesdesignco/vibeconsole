@@ -16,30 +16,7 @@ const { registerFilePathLinks } = require('./filePathLinker');
 const { attachClickLinkFallback, registerBareUrlLinks } = require('./urlLinker');
 const { normalizeTerminalUrl } = require('../shared/urlUtils');
 
-// Terminal theme (VS Code dark)
-const terminalTheme = {
-  background: '#12121a',
-  foreground: '#d4d4e4',
-  cursor: '#a78bfa',
-  cursorAccent: '#12121a',
-  selectionBackground: 'rgba(167, 139, 250, 0.25)',
-  black: '#16161e',
-  red: '#f47067',
-  green: '#57cc99',
-  yellow: '#e0a458',
-  blue: '#78a5d4',
-  magenta: '#c4b5fd',
-  cyan: '#56d4dd',
-  white: '#e4e4ed',
-  brightBlack: '#6b6880',
-  brightRed: '#ff8080',
-  brightGreen: '#7ee8b0',
-  brightYellow: '#ffd580',
-  brightBlue: '#a0c4f0',
-  brightMagenta: '#ddd6fe',
-  brightCyan: '#80e8f0',
-  brightWhite: '#f0f0f8'
-};
+const { terminalTheme, defaults, variables } = require('../shared/appearance');
 
 // Session storage key
 const SESSION_STORAGE_KEY = 'vibeconsole-terminal-sessions';
@@ -508,7 +485,7 @@ class TerminalManager {
       cursorBlink: true,
       fontSize: 14,
       fontFamily: '"Geist Mono", "SF Mono", Consolas, monospace',
-      theme: terminalTheme,
+      theme: terminalTheme(window.vibeAppearance?.values || variables(defaults()).values),
       allowTransparency: false,
       scrollback: 10000,
       // OSC 8 hyperlinks otherwise use xterm's built-in warning dialog.
@@ -790,6 +767,8 @@ class TerminalManager {
         instance.terminal.open(instance.element);
         instance.opened = true;
       }
+      instance.needsViewportSync = true;
+      this._syncRemountedViewport(instance);
 
       // Fit the completed layout. Never restore a pre-mount scroll snapshot:
       // output, reflow, or user input may already have changed the viewport.
@@ -983,11 +962,23 @@ class TerminalManager {
     return { ...instance.state };
   }
 
+  _syncRemountedViewport(instance) {
+    if (!instance.needsViewportSync || !instance.element.clientWidth || !instance.element.clientHeight) return;
+    // xterm 5.5 caches scrollTop across DOM detach; native sync must see the reset DOM value.
+    const viewport = instance.terminal._core.viewport;
+    viewport._lastScrollTop = instance.terminal.element.querySelector('.xterm-viewport').scrollTop;
+    viewport.syncScrollArea(true);
+    instance.needsViewportSync = false;
+  }
+
   _fitInstance(terminalId, instance) {
     // Connected is not the same as measurable: a hidden ancestor makes the
     // fit addon infer a tiny terminal from percentage styles. That reflows and
     // trims history, and sends a bogus SIGWINCH to the CLI before it is shown.
-    if (!instance.element.clientWidth || !instance.element.clientHeight) return;
+    if (!instance.element.clientWidth || !instance.element.clientHeight) {
+      instance.needsViewportSync = true;
+      return;
+    }
     const wasAtBottom = this._isAtOrNearBottom(instance.terminal, 0);
     const colsBefore = instance.terminal.cols;
     const rowsBefore = instance.terminal.rows;
@@ -1012,6 +1003,7 @@ class TerminalManager {
     if (sizeChanged && wasAtBottom) {
       instance.terminal.scrollToBottom();
     }
+    this._syncRemountedViewport(instance);
     this._syncScrollDownButton(instance);
   }
 

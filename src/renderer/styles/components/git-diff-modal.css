@@ -61,7 +61,7 @@
   font-weight: 600;
   text-transform: uppercase;
   padding: 2px 8px;
-  border-radius: 4px;
+  border-radius: calc(var(--radius-sm) * 4 / 6);
   letter-spacing: 0.5px;
 }
 
@@ -383,7 +383,7 @@
   justify-content: center;
   min-width: 58px;
   padding: 3px 8px;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -494,13 +494,13 @@
 .diff-word-add {
   background: var(--success-subtle);
   color: var(--success);
-  border-radius: 2px;
+  border-radius: calc(var(--radius-sm) * 2 / 6);
 }
 
 .diff-word-remove {
   background: var(--error-subtle);
   color: var(--error);
-  border-radius: 2px;
+  border-radius: calc(var(--radius-sm) * 2 / 6);
 }
 
 .diff-binary-message {
@@ -552,7 +552,7 @@
   align-items: center;
   justify-content: center;
   border: 1px solid var(--border-subtle);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background:
     linear-gradient(45deg, var(--bg-secondary) 25%, transparent 25%),
     linear-gradient(-45deg, var(--bg-secondary) 25%, transparent 25%),

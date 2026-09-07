@@ -103,7 +103,7 @@
   font-size: 10px;
   font-weight: 600;
   padding: 1px 6px;
-  border-radius: 8px;
+  border-radius: calc(var(--radius-sm) * 8 / 6);
   font-family: var(--font-mono);
 }
 
@@ -570,7 +570,7 @@
   padding: 1px 6px;
   background: var(--git-green-subtle);
   color: var(--success);
-  border-radius: 10px;
+  border-radius: calc(var(--radius-sm) * 10 / 6);
   font-weight: 500;
 }
 

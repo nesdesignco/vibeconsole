@@ -5,12 +5,14 @@ declare global {
   type IDisposable = any;
 
   interface Window {
+    vibeAppearance?: ReturnType<typeof import('../shared/appearance').variables>;
     terminalSendCommand?: (command: string, terminalId?: string | null) => void;
     terminalRunInNewSession?: (command: string) => Promise<string>;
     terminalFocus?: () => void;
     fileTreeFocus?: () => void;
     toggleSidebar?: () => void;
     vibe?: {
+      appearance?: { settings: ReturnType<typeof import('../shared/appearance').defaults>; error: string };
       ipc: {
         send: (channel: string, ...args: unknown[]) => void;
         invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
@@ -31,6 +33,10 @@ declare global {
         getPathForFile: (file: File) => string;
       };
     };
+  }
+
+  interface WindowEventMap {
+    'vibe:appearance-changed': CustomEvent<ReturnType<typeof import('../shared/appearance').variables>>;
   }
 
   /**

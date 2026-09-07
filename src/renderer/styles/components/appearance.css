@@ -1,0 +1,47 @@
+#appearance-panel {
+  --panel-width: 360px;
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  background: var(--bg-secondary);
+  border-left: 0 solid var(--border-default);
+}
+#appearance-panel.visible { width: var(--panel-width); min-width: var(--panel-width); border-left-width: 1px; }
+#appearance-panel .panel-header { justify-content: space-between; }
+.appearance-content { padding: 20px; overflow-y: auto; min-height: 0; }
+.appearance-content fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.appearance-title { font-size: 17px; font-weight: 600; margin-bottom: 20px; color: var(--text-primary); }
+.appearance-content h4 { font-size: 12px; color: var(--text-primary); margin: 24px 0 10px; }
+.appearance-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-size: 12px; color: var(--text-secondary); margin-bottom: 12px; }
+.appearance-content select, .appearance-content input[type="text"] { color: var(--text-primary); background: var(--bg-primary); border: 1px solid var(--border-default); border-radius: var(--radius-sm); padding: 6px 8px; font: inherit; }
+.appearance-select { display: inline-flex; padding-right: 8px; border: 1px solid var(--border-default); border-radius: var(--radius-sm); background: var(--bg-primary); }
+.appearance-select select { border: 0; background: transparent; }
+.appearance-select:has(select:focus-visible) { outline: 2px solid var(--accent-primary); outline-offset: 3px; }
+.appearance-content .appearance-select select:focus-visible { outline: none; }
+.appearance-presets { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.appearance-presets:has(> :nth-child(4)) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.appearance-preset { display: grid; grid-template-rows: 1fr auto; aspect-ratio: 1; padding: 5px; background: var(--bg-primary); border: 1px solid var(--border-default); border-radius: var(--radius-md); color: var(--text-primary); cursor: pointer; font: inherit; font-size: 11px; text-align: left; }
+.appearance-preset > span:last-child { display: block; padding: 7px 2px 3px; }
+.appearance-preset[aria-pressed="true"], .appearance-styles [aria-pressed="true"] { outline: 2px solid var(--accent-primary); outline-offset: 1px; }
+.appearance-swatch { display: grid; grid-template-columns: 25% 1fr; grid-template-rows: repeat(3, 1fr); gap: 5px 7px; min-height: 0; padding: 7px; border-radius: var(--radius-xs); background: var(--preview-bg); }
+.appearance-swatch span { grid-row: span 3; background: var(--preview-panel); border-right: 2px solid var(--preview-accent); }
+.appearance-swatch i { background: var(--preview-text); height: 2px; margin-top: 4px; opacity: 0.55; }
+.appearance-swatch i:last-child { width: 60%; background: var(--preview-accent); opacity: 1; }
+.appearance-styles { display: flex; gap: 8px; }
+.appearance-styles button { flex: 1; }
+.appearance-note { color: var(--text-secondary); font-size: 11px; line-height: 1.6; margin: 12px 0 0; }
+.appearance-color { display: grid; grid-template-columns: 1fr 28px 83px; align-items: center; gap: 8px; margin: 9px 0; font-size: 11px; color: var(--text-secondary); }
+.appearance-color input[type="color"] { appearance: none; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 0; background: none; cursor: pointer; }
+.appearance-color input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.appearance-color input[type="color"]::-webkit-color-swatch { border: 1px solid var(--border-default); border-radius: 0; }
+.appearance-color input[type="text"] { min-width: 0; font-family: var(--font-mono); font-size: 11px; }
+.appearance-content summary { cursor: pointer; color: var(--text-primary); font-size: 12px; padding: 12px 0; }
+.appearance-content details { margin-top: 8px; border-top: 1px solid var(--border-subtle); }
+.appearance-content :is(button, select, input, summary):focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 3px; }
+.appearance-reset { margin-top: 20px; }
+.appearance-content fieldset:disabled { opacity: 0.65; }
+[data-theme-style="flat"] :is(.btn, .toolbar-btn, .terminal-tab, .skill-entry) { box-shadow: none; }
+::selection { background: var(--accent-subtle); color: var(--text-primary); }

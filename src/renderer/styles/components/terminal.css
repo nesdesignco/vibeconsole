@@ -107,7 +107,7 @@
 
 .terminal-tabs::-webkit-scrollbar-thumb {
   background: var(--border-strong);
-  border-radius: 2px;
+  border-radius: calc(var(--radius-sm) * 2 / 6);
 }
 
 .terminal-tab {
@@ -375,7 +375,7 @@
   width: 40px;
   height: 5px;
   background: var(--bg-deep);
-  border-radius: 3px;
+  border-radius: calc(var(--radius-sm) * 3 / 6);
   overflow: hidden;
   flex-shrink: 0;
 }
@@ -383,7 +383,7 @@
 .usage-bar-fill {
   height: 100%;
   background: var(--accent-primary);
-  border-radius: 3px;
+  border-radius: calc(var(--radius-sm) * 3 / 6);
   transition: width var(--transition-normal), background var(--transition-fast);
 }
 
@@ -518,7 +518,7 @@
   font-size: 11px;
   background: var(--bg-tertiary);
   border: 1px solid var(--border-default);
-  border-radius: 4px;
+  border-radius: calc(var(--radius-sm) * 4 / 6);
   color: var(--text-secondary);
 }
 
@@ -568,7 +568,7 @@
   color: var(--text-secondary);
   font-size: 11px;
   font-weight: 600;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   padding: 4px 10px;
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -725,7 +725,7 @@
   color: var(--bg-deep);
   font-size: 9px;
   font-weight: 700;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   display: flex;
   align-items: center;
   justify-content: center;

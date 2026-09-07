@@ -2,11 +2,44 @@
 
 ## Session Notes
 
+### [2026-09-07] Persistent Appearance Settings
+- Added eight palettes (four light and four dark, including Linen and true-black Black), System mode, three styles, and editable interface/terminal colors through the rightmost toolbar Settings button using the existing Lucide icon library. `src/shared/appearance.js` owns palette values, validation, derived CSS variables, and xterm colors; components do not carry separate color palettes.
+- Store actual selected color/style values in versioned `userData/appearance.json`, with temporary-file replacement. Updates fill missing fields only. Invalid files and future schema versions block writes and remain untouched. Reset requires explicit confirmation.
+- Bootstrap the palette with Electron [WebPreferences.additionalArguments](https://www.electronjs.org/docs/latest/api/structures/web-preferences), apply before the window is shown, and synchronize native surfaces with [nativeTheme](https://www.electronjs.org/docs/latest/api/native-theme). Copy validated settings into mutable renderer state because [contextBridge freezes exposed data](https://www.electronjs.org/docs/latest/api/context-bridge).
+- Use public [xterm Terminal.options](https://xtermjs.org/docs/api/terminal/classes/terminal/#options) and Monaco `editor.defineTheme` / `editor.setTheme` (installed `monaco-editor/monaco.d.ts`) to update existing instances. Appearance changes do not recreate PTYs, terminal buffers, or editor models.
+- Regression coverage: `test/appearance.test.js` checks persistence across a simulated preset update, validation, and preset text contrast; `test/terminalScrollApp.js` exercises all palettes/styles through production Electron IPC while retaining terminal history and editor undo state. Manual Electron checks cover native System changes, custom HEX keyboard focus, screenshots, and saved settings after a real process restart.
+
+Appearance review passes:
+1. Renderer state ownership: normalize frozen bridge snapshots into editable state; repeat mode changes through real IPC.
+2. Light/Dark/System transitions: explicit preset selection activates its mode; native System events update appearance.
+3. Selection consistency: only the applied preset is marked pressed; inactive saved palettes remain available.
+4. Persistence and schema: retain actual user values after restart or preset changes; reject malformed colors, arrays, and future schemas.
+5. Write failures: exclusive unique temporary files, cleanup after failed replacement, preserved originals, retry, and symlink refusal.
+6. Terminal lifecycle: update every existing terminal, including inactive tabs; preserve history and native scrollbar position across presets/styles.
+7. Editor lifecycle: preserve the model, unsaved text, and undo history while updating Monaco colors.
+8. Visual consistency: shared corner tokens including Flat zero-radius controls, square color/preset controls, native select arrow spacing, Black backgrounds, and preset text contrast.
+9. Keyboard accessibility: inert hidden settings, expanded toolbar state, visible focus, focus restoration after save/close, and confirmed reset.
+10. Integration and documentation: verify renderer build, typecheck, unit suite, real Electron launch, screenshots, restart persistence, and the documented Settings behavior.
+
+### [2026-09-07] Reviewed Skill Updates and Native Scrollbar Synchronization
+- Skill updates are explicit: stage and review source differences or package versions, verify a backup, apply, and offer rollback. Files changed after review/update are not overwritten. Native plugin sources are verified; linked plugin caches/settings require their native CLI. Interrupted updates retain manual recovery files. Custom edits remain in backups; shared native skill directories remain shared.
+- Reproduced a separate xterm 5.5 remount defect: buffer content remained at bottom while DOM scrollTop reset to zero; the next downward wheel jumped upward. Measurable remounts now rebase xterm's cached scrollTop before native viewport synchronization. Normal fits preserve pending wheel input. Regression coverage measures the native scrollbar, with 45 isolated and 22 full-app PTY checks passing.
+
+### [2026-09-07] Skills Catalog Correction
+- Removed Anthropic Frontend Design from the app catalog and website preview, including its plugin-specific detection branch and unused illustration. Existing personal skill installations are preserved.
+- Replaced the Skills lightning icon with Lucide BookOpen in the app toolbar and website; Design DNA now uses its author's GitHub profile image supplied by the user.
+- Further UI catalog selection should prioritize UI-focused open-source skill repositories by verified GitHub stars. These corrections are local only; the user explicitly prohibits commits, pushes and releases without renewed authorization.
+- Added the user-requested Taste Skill and Scrollcraft repositories to both catalogs. The shared native-skill installer handles both. Scrollcraft's current `scroll-craft` name also recognizes existing `scrollcraft` folders and copies the installed command name, preserving customized legacy installs. Verified both tools are detected as installed for Claude and Codex on this machine without running an installer.
+- Removed Vercel Web Design Guidelines from both catalogs at the user's request. The UI list is now Taste Skill, Impeccable, Scrollcraft and Design DNA.
+- Added the Brain category with Obsidian Skills, QMD, Basic Memory, Obsidian Wiki, Graphiti and Cognee. CLI installation and external service setup have distinct actions; services are not reported as installed without verification.
+- My Skills stores validated GitHub repository roots atomically in the app userData directory. Adding and removing catalog entries never deletes installed skill files. Installation opens the existing skills CLI chooser with overwrite confirmations; repository status follows source-lock records and the selected agent's skill directories. VibeConsole does not automatically update these installations.
+- All skill cards use repository-linked names as headings and purpose statements as subtitles. RTK's installed-state action is labeled Configure Claude Code/Codex to distinguish agent integration from binary installation. Copy-command actions remain available for installed native skills.
+
 ### [2026-09-07] Shared Skills UI and Design Catalog
 - Skills now has keyboard-accessible Token Saver and UI category tabs, using one catalog, renderer and installation path. The UI catalog includes Impeccable, Design DNA, Anthropic Frontend Design and Vercel Web Design Guidelines, verified against their public repositories.
 - Native user skill directories are checked alongside plugins, including legacy Codex and shared agent skill locations. Existing customized copies are preserved. UI skills expose a copy-command action rather than token-saving mode controls; plugin toggles are offered only for managed plugin installations.
 - Impeccable uses its Claude marketplace or its provider-specific global Codex installer. Codex project hooks are explicitly excluded from this user-wide installation and remain an optional, separately trusted project setup.
-- File tree, Skills, Plugins and Git refresh buttons reference one SVG symbol. Skills reuses the existing spinner helper and status badge styles. Official tool artwork is bundled locally; UI skills without a verified project mark use attributed Lucide illustrations.
+- File tree, Skills and Git refresh buttons reference one SVG symbol. Skills reuses the existing spinner helper and status badge styles. Official tool artwork is bundled locally; UI skills without a verified project mark use attributed Lucide illustrations.
 
 ### [2026-09-07] Version 1.3.15 Local Signed Build
 - Bumped package and lockfile versions to 1.3.15 for the terminal scrollback/hidden-layout fixes and optional Skills panel. Built Apple Silicon application, DMG, ZIP and updater metadata under `release/v1.3.15` with publication disabled.

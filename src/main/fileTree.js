@@ -166,6 +166,11 @@ function startWatcherForSender(sender, projectPath) {
 }
 
 function setupIPC(ipcMain) {
+  ipcMain.handle(IPC.LOAD_FILE_TREE, (event, projectPath) => {
+    if (!isKnownProjectRoot(projectPath)) throw new Error('Select a project before refreshing its files.');
+    fs.accessSync(projectPath, fs.constants.R_OK);
+    return getFileTree(projectPath);
+  });
   ipcMain.on(IPC.LOAD_FILE_TREE, (event, projectPath) => {
     // Without this the renderer could enumerate any directory on disk.
     if (!isKnownProjectRoot(projectPath)) {

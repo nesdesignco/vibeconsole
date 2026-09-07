@@ -163,11 +163,15 @@ function clearFileTree() {
 /**
  * Refresh file tree
  */
-function refreshFileTree(projectPath) {
+async function refreshFileTree(projectPath) {
   const path = projectPath || (currentProjectPath && currentProjectPath());
-  if (path) {
-    requestFileTree(path);
-  }
+  if (!path) return false;
+  try {
+    const files = await ipcRenderer.invoke(IPC.LOAD_FILE_TREE, path);
+    if (currentProjectPath && currentProjectPath() !== path) return false;
+    receiveFileTree(files);
+    return true;
+  } catch (err) { console.error('Could not refresh file tree:', err); return false; }
 }
 
 function requestFileTree(projectPath) {
@@ -491,7 +495,16 @@ function restoreExpandedPaths(expandedPaths) {
  * Setup IPC listeners
  */
 function setupIPC() {
-  ipcRenderer.on(IPC.FILE_TREE_DATA, (event, files) => {
+  ipcRenderer.on(IPC.FILE_TREE_DATA, (event, files) => receiveFileTree(files));
+
+  ipcRenderer.on(IPC.FILE_DELETED, (event, result) => {
+    if (!result.success) {
+      alert(`Failed to delete: ${result.error}`);
+    }
+  });
+}
+
+function receiveFileTree(files) {
     const expanded = getExpandedPaths();
     // The tree is rebuilt from scratch on every watcher event, which resets
     // scrollTop; without this the view jumps to the top whenever a build or
@@ -501,13 +514,6 @@ function setupIPC() {
     renderFileTree(files, fileTreeElement);
     restoreExpandedPaths(expanded);
     if (fileTreeElement) fileTreeElement.scrollTop = scrollTop;
-  });
-
-  ipcRenderer.on(IPC.FILE_DELETED, (event, result) => {
-    if (!result.success) {
-      alert(`Failed to delete: ${result.error}`);
-    }
-  });
 }
 
 /**

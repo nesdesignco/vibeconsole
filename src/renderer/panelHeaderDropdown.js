@@ -1,5 +1,5 @@
 /**
- * Shared dropdown used in panel headers (Plugins, Source Control, Saved Prompts).
+ * Shared dropdown used in Source Control and Saved Prompts headers.
  */
 
 function createPanelHeaderDropdown(rootElement, options = {}) {

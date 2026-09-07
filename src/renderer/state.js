@@ -100,10 +100,10 @@ function selectProjectFolder() {
 function showPromptDialog(message) {
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:10000;display:flex;align-items:center;justify-content:center;';
+    overlay.style.cssText = 'position:fixed;inset:0;background:var(--overlay-medium);z-index:10000;display:flex;align-items:center;justify-content:center;';
 
     const box = document.createElement('div');
-    box.style.cssText = 'background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-lg);padding:20px;min-width:320px;max-width:400px;box-shadow:0 8px 32px rgba(0,0,0,0.4);';
+    box.style.cssText = 'background:var(--bg-elevated);border:1px solid var(--border-default);border-radius:var(--radius-lg);padding:20px;min-width:320px;max-width:400px;box-shadow:var(--shadow-lg);';
 
     const label = document.createElement('div');
     label.textContent = message;

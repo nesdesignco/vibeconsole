@@ -50,7 +50,7 @@
   width: 2px;
   height: 40px;
   background: var(--border-default);
-  border-radius: 1px;
+  border-radius: calc(var(--radius-sm) * 1 / 6);
   opacity: 0;
   transition: opacity var(--transition-fast);
 }

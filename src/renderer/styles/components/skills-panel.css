@@ -21,26 +21,123 @@
 }
 
 #skills-content { overflow-y: auto; padding: var(--space-md); }
-.skill-entry h5 { font-size: 15px; margin: 0 0 var(--space-sm); color: var(--text-primary); }
+.skill-entry h5 { font-size: 15px; margin: 0; color: var(--text-primary); }
+.skill-subtitle { font-size: 13px; line-height: 1.5; color: var(--text-primary); margin: 0 0 var(--space-xs); overflow-wrap: anywhere; }
 .skills-description { font-size: 12px; line-height: 1.6; color: var(--text-secondary); margin: 0 0 var(--space-sm); }
-.skill-source { background: none; border: 0; padding: 0; color: var(--accent-primary); cursor: pointer; font: inherit; font-size: 12px; text-decoration: underline; text-underline-offset: 3px; }
+.skill-source { color: inherit; font: inherit; text-decoration: none; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.skill-source:hover { color: var(--accent-primary); text-decoration: underline; }
 .skills-note { font-size: 12px; line-height: 1.6; color: var(--text-secondary); margin: var(--space-md) 0; overflow-wrap: anywhere; }
 .skill-error { color: var(--error); }
 .skill-controls .toggle-track, .skill-controls .toggle-thumb { display: block; }
 #skills-panel button:disabled { cursor: wait; opacity: 0.6; }
-#skills-panel button:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 3px; }
+#skills-panel :is(button, a):focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 3px; }
 
 .skills-providers { display: flex; gap: var(--space-sm); margin-bottom: var(--space-lg); }
 .skills-providers [aria-pressed="true"] { background: var(--accent-primary); color: var(--bg-deep); }
 .skill-entry { border-top: 1px solid var(--border-subtle); padding: var(--space-lg) 0; }
 .skill-heading { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md); }
 .skill-logo { object-fit: contain; flex-shrink: 0; border-radius: var(--radius-sm); color-scheme: dark; }
-.skill-identity { flex: 1; min-width: 0; }
-.skill-heading .plugin-status { margin-left: auto; }
+.skill-identity { flex: 1; min-width: 110px; }
+.skill-identity h5 { overflow-wrap: anywhere; }
+.skill-heading .skill-status { margin-left: auto; }
 .skill-controls, .skill-modes { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); }
 .skill-modes { margin-left: auto; }
 .skill-entry .skills-note { margin-bottom: 0; }
-.skills-tabs { display: flex; gap: var(--space-sm); border-bottom: 1px solid var(--border-subtle); }
+.skills-tabs { display: flex; gap: var(--space-xs); overflow-x: auto; border-bottom: 1px solid var(--border-subtle); }
 .skills-tabs [role="tab"] { border-radius: 0; border-bottom: 2px solid transparent; }
 .skills-tabs [aria-selected="true"] { color: var(--accent-primary); border-bottom-color: currentColor; }
 #skills-list .skill-entry:first-child { border-top: 0; }
+.skill-repository-form { display: grid; gap: var(--space-sm); padding: var(--space-lg) 0; }
+.skill-repository-form label { color: var(--text-primary); font-size: 12px; }
+.skill-repository-form input { width: 100%; min-width: 0; box-sizing: border-box; padding: var(--space-sm); background: var(--bg-primary); color: var(--text-primary); border: 1px solid var(--border-subtle); border-radius: var(--radius-sm); font: inherit; }
+.skill-repository-form input:focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 2px; }
+.skill-repository-form button { justify-self: start; }
+.skill-repository-form .skills-note { margin: 0; }
+.skill-repository-form [role="alert"]:empty { display: none; }
+.skills-update-toolbar { padding-top: var(--space-md); }
+.skill-update { margin-top: var(--space-md); font-size: 12px; color: var(--text-secondary); }
+.skill-update summary { cursor: pointer; padding: var(--space-sm) 0; }
+.skill-update summary:focus-visible { outline: 2px solid var(--accent-primary); }
+.skill-update .skills-note { margin-top: var(--space-sm); margin-bottom: var(--space-sm); }
+.skill-update-link { background: none; border: 0; padding: var(--space-sm) 0; color: var(--accent-primary); cursor: pointer; }
+.skill-update-diff { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 300px; overflow: auto; padding: var(--space-sm); background: var(--bg-primary); font-size: 11px; }
+
+.skill-status {
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: calc(var(--radius-sm) * 4 / 6);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.skill-status.status-enabled {
+  background: var(--success-subtle);
+  color: var(--success);
+}
+.skill-status.status-installed {
+  background: var(--accent-subtle);
+  color: var(--accent-primary);
+}
+.skill-status.status-available {
+  background: var(--bg-hover);
+  color: var(--text-muted);
+}
+.skill-action {
+  font-size: 11px;
+  padding: var(--space-xs) var(--space-sm);
+  background: var(--accent-subtle);
+  border: 1px solid var(--accent-primary);
+  color: var(--accent-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 500;
+  transition: all var(--transition-fast);
+}
+.skill-action:hover {
+  background: var(--accent-primary);
+  color: var(--bg-deep);
+}
+.skill-toggle {
+  width: 44px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  border-radius: calc(var(--radius-sm) * 12 / 6);
+}
+.toggle-track {
+  width: 44px;
+  height: 24px;
+  background: var(--bg-hover);
+  border-radius: calc(var(--radius-sm) * 12 / 6);
+  position: relative;
+  transition: all var(--transition-fast);
+  border: 1px solid var(--border-default);
+}
+.toggle-thumb {
+  width: 18px;
+  height: 18px;
+  background: var(--text-tertiary);
+  border-radius: 50%;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  transition: all var(--transition-fast);
+}
+.skill-toggle.enabled .toggle-track {
+  background: var(--success-subtle);
+  border-color: var(--success);
+}
+.skill-toggle.enabled .toggle-thumb {
+  background: var(--success);
+  transform: translateX(20px);
+}
+.skill-toggle:hover .toggle-track {
+  border-color: var(--text-tertiary);
+}
+.skill-toggle.enabled:hover .toggle-track {
+  border-color: var(--success);
+}

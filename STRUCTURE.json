@@ -31,7 +31,6 @@
         "workspace",
         "fileEditor",
         "droppedFiles",
-        "pluginsManager",
         "skillsManager",
         "claudeUsageManager",
         "codexUsageManager",
@@ -41,37 +40,39 @@
         "aiToolProcessDetector",
         "savedPromptsManager",
         "autoUpdater",
-        "projectContext"
+        "projectContext",
+        "appearance",
+        "shared/appearance"
       ],
       "functions": {
         "createWindow": {
-          "line": 51,
+          "line": 52,
           "purpose": "Create main application window"
         },
         "isTrustedAppUrl": {
-          "line": 131,
+          "line": 139,
           "params": [
             "rawUrl"
           ],
           "purpose": "Allow only local app URLs to load inside the app window."
         },
         "openExternalSafely": {
-          "line": 154,
+          "line": 162,
           "params": [
             "rawUrl"
           ],
           "purpose": "Avoid forwarding file/custom scheme URLs to the OS."
         },
         "setupAllIPC": {
-          "line": 181,
+          "line": 189,
           "purpose": "Setup all IPC handlers"
         },
         "init": {
-          "line": 240,
+          "line": 248,
           "purpose": "Initialize application"
         },
         "initModulesWithWindow": {
-          "line": 251,
+          "line": 259,
           "params": [
             "window"
           ],
@@ -363,6 +364,7 @@
       "ipc": {
         "listens": [
           "LOAD_FILE_TREE",
+          "LOAD_FILE_TREE",
           "START_FILE_TREE_WATCH",
           "STOP_FILE_TREE_WATCH",
           "CREATE_FILE",
@@ -591,10 +593,11 @@
       "description": "R",
       "exports": [],
       "depends": [
+        "appearance",
         "terminal",
+        "shared/appearance",
         "fileTreeUI",
         "historyPanel",
-        "pluginsPanel",
         "skillsPanel",
         "githubPanel",
         "state",
@@ -606,23 +609,24 @@
         "updaterModal",
         "projectContextSetup",
         "toast",
+        "spinnerButton",
         "electronBridge",
         "shared/ipcChannels"
       ],
       "functions": {
         "toggleSidebarSafe": {
-          "line": 28
+          "line": 30
         },
         "init": {
-          "line": 44,
+          "line": 46,
           "purpose": "Initialize all modules"
         },
         "setupButtonHandlers": {
-          "line": 262,
+          "line": 268,
           "purpose": "Setup button click handlers"
         },
         "setupKeyboardShortcuts": {
-          "line": 330,
+          "line": 339,
           "purpose": "Setup keyboard shortcuts"
         }
       },
@@ -802,38 +806,38 @@
           "purpose": "Refresh file tree"
         },
         "requestFileTree": {
-          "line": 173,
+          "line": 177,
           "params": [
             "projectPath"
           ]
         },
         "loadFileTree": {
-          "line": 180,
+          "line": 184,
           "params": [
             "projectPath"
           ],
           "purpose": "Load file tree for path"
         },
         "stopFileTreeWatch": {
-          "line": 188,
+          "line": 192,
           "purpose": "Stop watching file tree changes for the current renderer"
         },
         "validateFileName": {
-          "line": 196,
+          "line": 200,
           "params": [
             "name"
           ],
           "purpose": "Validate a file/folder name"
         },
         "getTargetDir": {
-          "line": 205,
+          "line": 209,
           "params": [
             "file"
           ],
           "purpose": "Get the directory path for creating new items relative to a file"
         },
         "createInlineInput": {
-          "line": 212,
+          "line": 216,
           "params": [
             "fileItem",
             "initialValue",
@@ -843,7 +847,7 @@
           "purpose": "Create an inline input for rename or new file/folder"
         },
         "showNewItemInput": {
-          "line": 289,
+          "line": 293,
           "params": [
             "file",
             "isFolder"
@@ -851,14 +855,14 @@
           "purpose": "Show inline input for creating a new file or folder inside a directory"
         },
         "startRename": {
-          "line": 378,
+          "line": 382,
           "params": [
             "file"
           ],
           "purpose": "Start inline rename for a file item"
         },
         "showContextMenu": {
-          "line": 394,
+          "line": 398,
           "params": [
             "x",
             "y",
@@ -867,37 +871,43 @@
           "purpose": "Show context menu for a file item"
         },
         "getExpandedPaths": {
-          "line": 457,
+          "line": 461,
           "purpose": "Get paths of all currently expanded folders"
         },
         "restoreExpandedPaths": {
-          "line": 475,
+          "line": 479,
           "params": [
             "expandedPaths"
           ],
           "purpose": "Restore expanded state after re-render"
         },
         "setupIPC": {
-          "line": 493,
+          "line": 497,
           "purpose": "Setup IPC listeners"
         },
+        "receiveFileTree": {
+          "line": 507,
+          "params": [
+            "files"
+          ]
+        },
         "focus": {
-          "line": 516,
+          "line": 522,
           "purpose": "Focus file tree for keyboard navigation"
         },
         "getVisibleItems": {
-          "line": 541,
+          "line": 547,
           "purpose": "Get all visible file items (for navigation)"
         },
         "handleKeydown": {
-          "line": 560,
+          "line": 566,
           "params": [
             "e"
           ],
           "purpose": "Handle keyboard navigation in file tree"
         },
         "blur": {
-          "line": 622,
+          "line": 628,
           "purpose": "Blur/unfocus file tree"
         }
       },
@@ -1477,11 +1487,12 @@
         "shellEscape",
         "filePathLinker",
         "urlLinker",
-        "shared/urlUtils"
+        "shared/urlUtils",
+        "shared/appearance"
       ],
       "functions": {
         "createTerminalLinkHandler": {
-          "line": 51,
+          "line": 28,
           "params": [
             "ipc = ipcRenderer"
           ]
@@ -1840,8 +1851,9 @@
         "electronBridge",
         "shared/ipcChannels",
         "escapeHtml",
-        "pluginsPanel",
         "skillsPanel",
+        "appearance",
+        "lucideIcons",
         "githubPanel",
         "savedPromptsPanel",
         "updaterModal",
@@ -1859,243 +1871,6 @@
           "REFRESH_AI_USAGE",
           "LOAD_AI_USAGE"
         ]
-      }
-    },
-    "main/pluginsManager": {
-      "file": "src/main/pluginsManager.js",
-      "description": "P",
-      "exports": [
-        "init",
-        "setupIPC",
-        "getAllPlugins",
-        "togglePlugin",
-        "isValidPluginId",
-        "isTrustedMarketplaceRemote"
-      ],
-      "depends": [
-        "fs",
-        "path",
-        "os",
-        "child_process",
-        "util",
-        "shared/ipcChannels",
-        "shared/pathValidation"
-      ],
-      "functions": {
-        "init": {
-          "line": 38,
-          "params": [
-            "window"
-          ],
-          "purpose": "Initialize plugins manager"
-        },
-        "readJsonFile": {
-          "line": 45,
-          "params": [
-            "filePath",
-            "allowedBase = CLAUDE_DIR"
-          ],
-          "purpose": "Read JSON file safely"
-        },
-        "writeJsonFile": {
-          "line": 63,
-          "params": [
-            "filePath",
-            "data",
-            "allowedBase = CLAUDE_DIR"
-          ],
-          "purpose": "Write JSON file safely"
-        },
-        "getEnabledPlugins": {
-          "line": 93,
-          "purpose": "Get enabled plugins from settings"
-        },
-        "getInstalledPlugins": {
-          "line": 101,
-          "purpose": "Get installed plugins"
-        },
-        "normalizeRemote": {
-          "line": 106,
-          "params": [
-            "remote"
-          ]
-        },
-        "isTrustedMarketplaceRemote": {
-          "line": 110,
-          "params": [
-            "remote"
-          ]
-        },
-        "getMarketplaceOriginUrl": {
-          "line": 115,
-          "params": [
-            "repoPath"
-          ]
-        },
-        "hasTrustedMarketplaceOrigin": {
-          "line": 128,
-          "params": [
-            "repoPath"
-          ]
-        },
-        "isValidPluginId": {
-          "line": 137,
-          "params": [
-            "pluginId"
-          ]
-        },
-        "getMarketplacePlugins": {
-          "line": 144,
-          "purpose": "Get all available plugins from marketplace"
-        },
-        "getAllPlugins": {
-          "line": 195,
-          "purpose": "Get all plugins with their status"
-        },
-        "togglePlugin": {
-          "line": 217,
-          "params": [
-            "pluginId"
-          ],
-          "purpose": "Toggle plugin enabled/disabled status"
-        },
-        "ensureOfficialMarketplace": {
-          "line": 249,
-          "purpose": "Ensure official marketplace exists"
-        },
-        "refreshMarketplace": {
-          "line": 277,
-          "purpose": "Refresh marketplace plugins (git pull or clone)"
-        },
-        "setupIPC": {
-          "line": 309,
-          "params": [
-            "ipcMain"
-          ],
-          "purpose": "Setup IPC handlers"
-        }
-      },
-      "ipc": {
-        "listens": [
-          "LOAD_PLUGINS",
-          "TOGGLE_PLUGIN",
-          "REFRESH_PLUGINS"
-        ],
-        "emits": [
-          "PLUGIN_TOGGLED"
-        ]
-      }
-    },
-    "renderer/pluginsPanel": {
-      "file": "src/renderer/pluginsPanel.js",
-      "description": "P",
-      "exports": [
-        "init",
-        "show",
-        "hide",
-        "toggle",
-        "loadPlugins",
-        "isVisible"
-      ],
-      "depends": [
-        "electronBridge",
-        "shared/ipcChannels",
-        "shellEscape",
-        "panelHeaderDropdown",
-        "spinnerButton",
-        "toast",
-        "panelVisibility",
-        "panelCoordinator",
-        "escapeHtml"
-      ],
-      "functions": {
-        "init": {
-          "line": 29,
-          "purpose": "Initialize plugins panel"
-        },
-        "setupEventListeners": {
-          "line": 49,
-          "purpose": "Setup event listeners"
-        },
-        "setupIPCListeners": {
-          "line": 99,
-          "purpose": "Setup IPC listeners"
-        },
-        "loadPlugins": {
-          "line": 119,
-          "purpose": "Load plugins"
-        },
-        "refreshPlugins": {
-          "line": 133,
-          "purpose": "Refresh plugins from marketplace"
-        },
-        "show": {
-          "line": 154
-        },
-        "hide": {
-          "line": 158
-        },
-        "toggle": {
-          "line": 162
-        },
-        "setFilter": {
-          "line": 169,
-          "params": [
-            "filter",
-            "options = {}"
-          ],
-          "purpose": "Set filter"
-        },
-        "getFilteredPlugins": {
-          "line": 182,
-          "purpose": "Get filtered plugins"
-        },
-        "render": {
-          "line": 198,
-          "purpose": "Render plugins list"
-        },
-        "renderPluginItem": {
-          "line": 224,
-          "params": [
-            "plugin"
-          ],
-          "purpose": "Render single plugin item"
-        },
-        "getPluginIcon": {
-          "line": 270,
-          "params": [
-            "name"
-          ],
-          "purpose": "Get icon for plugin based on name"
-        },
-        "togglePlugin": {
-          "line": 309,
-          "params": [
-            "pluginId"
-          ],
-          "purpose": "Toggle plugin enabled/disabled"
-        },
-        "installPlugin": {
-          "line": 321,
-          "params": [
-            "pluginName"
-          ],
-          "purpose": "Install plugin via terminal command"
-        },
-        "showToast": {
-          "line": 338,
-          "params": [
-            "message",
-            "type = 'info'"
-          ],
-          "purpose": "Show toast notification (delegates to shared toast utility)"
-        }
-      },
-      "ipc": {
-        "listens": [
-          "PLUGIN_TOGGLED"
-        ],
-        "emits": []
       }
     },
     "renderer/githubPanel": {
@@ -2560,7 +2335,7 @@
       ],
       "functions": {
         "init": {
-          "line": 56,
+          "line": 54,
           "params": [
             "window",
             "app"
@@ -2568,34 +2343,34 @@
           "purpose": "Initialize the AI Tool Manager"
         },
         "loadConfig": {
-          "line": 66,
+          "line": 64,
           "purpose": "Load configuration from file"
         },
         "saveConfig": {
-          "line": 81,
+          "line": 79,
           "purpose": "Save configuration to file"
         },
         "getAvailableTools": {
-          "line": 92,
+          "line": 90,
           "purpose": "Get all available AI tools"
         },
         "getActiveTool": {
-          "line": 99,
+          "line": 97,
           "purpose": "Get the currently active tool"
         },
         "setActiveTool": {
-          "line": 107,
+          "line": 105,
           "params": [
             "toolId"
           ],
           "purpose": "Set the active AI tool"
         },
         "getConfig": {
-          "line": 126,
+          "line": 124,
           "purpose": "Get full configuration for renderer"
         },
         "setupIPC": {
-          "line": 136,
+          "line": 134,
           "purpose": "Setup IPC handlers"
         }
       },
@@ -2642,22 +2417,22 @@
           "purpose": "Update UI to reflect current tool"
         },
         "getCurrentTool": {
-          "line": 146,
+          "line": 141,
           "purpose": "Get the current active tool"
         },
         "getStartCommand": {
-          "line": 153,
+          "line": 148,
           "purpose": "Get the start command for current tool"
         },
         "getCommand": {
-          "line": 160,
+          "line": 155,
           "params": [
             "action"
           ],
           "purpose": "Get a specific command for current tool"
         },
         "supportsFeature": {
-          "line": 168,
+          "line": 163,
           "params": [
             "feature"
           ],
@@ -3669,7 +3444,7 @@
       ],
       "functions": {
         "isAllowedChannel": {
-          "line": 12,
+          "line": 13,
           "params": [
             "channel"
           ]
@@ -3783,7 +3558,7 @@
             "rootElement",
             "options = {}"
           ],
-          "purpose": "Shared dropdown used in panel headers (Plugins, Source Control, Saved Prompts)."
+          "purpose": "Shared dropdown used in Source Control and Saved Prompts headers."
         }
       }
     },
@@ -4977,6 +4752,7 @@
       "file": "src/main/droppedFiles.js",
       "description": "D",
       "exports": [
+        "downloadUrlToTemp",
         "setupIPC",
         "sanitizeFilename",
         "filenameFromUrl",
@@ -5103,7 +4879,8 @@
         "monaco-editor/esm/vs/basic-languages/csharp/csharp.contribution.js",
         "monaco-editor/esm/vs/basic-languages/sql/sql.contribution.js",
         "monaco-editor/esm/vs/basic-languages/dockerfile/dockerfile.contribution.js",
-        "monaco-editor/esm/vs/editor/editor.api.js"
+        "monaco-editor/esm/vs/editor/editor.api.js",
+        "shared/appearance"
       ],
       "functions": {
         "distUrl": {
@@ -5119,27 +4896,27 @@
           "line": 100
         },
         "languageForPath": {
-          "line": 135,
+          "line": 140,
           "params": [
             "filePath",
             "extension"
           ]
         },
         "uriForPath": {
-          "line": 141,
+          "line": 146,
           "params": [
             "filePath"
           ]
         },
         "init": {
-          "line": 147,
+          "line": 152,
           "params": [
             "target",
             "options = {}"
           ]
         },
         "setDocument": {
-          "line": 211,
+          "line": 216,
           "params": [
             "{ content",
             "filePath",
@@ -5149,50 +4926,50 @@
           ]
         },
         "reveal": {
-          "line": 234,
+          "line": 239,
           "params": [
             "line",
             "col"
           ]
         },
         "getPosition": {
-          "line": 242
-        },
-        "getValue": {
           "line": 247
         },
+        "getValue": {
+          "line": 252
+        },
         "runAction": {
-          "line": 252,
+          "line": 257,
           "params": [
             "actionId"
           ]
         },
         "undo": {
-          "line": 262
+          "line": 267
         },
         "redo": {
-          "line": 269
+          "line": 274
         },
         "toggleWordWrap": {
-          "line": 276
+          "line": 281
         },
         "toggleMinimap": {
-          "line": 284
+          "line": 289
         },
         "getViewState": {
-          "line": 292
+          "line": 297
         },
         "focus": {
-          "line": 299
+          "line": 304
         },
         "layout": {
-          "line": 303
+          "line": 308
         },
         "isReady": {
-          "line": 307
+          "line": 312
         },
         "dispose": {
-          "line": 311
+          "line": 316
         }
       }
     },
@@ -5207,7 +4984,7 @@
       ],
       "functions": {
         "renderEditorIcons": {
-          "line": 39,
+          "line": 41,
           "params": [
             "root = document"
           ]
@@ -5615,57 +5392,104 @@
         "installSkill",
         "toggleSkill",
         "getSkillCommand",
-        "isExpectedRemote"
+        "isExpectedRemote",
+        "addRepository",
+        "removeRepository",
+        "normalizeRepository"
       ],
       "depends": [
         "fs",
         "os",
         "path",
+        "electron",
         "shared/ipcChannels",
         "shared/skillsCatalog",
         "shared/pathUtils",
-        "gitExecUtils"
+        "gitExecUtils",
+        "skillUpdates"
       ],
       "functions": {
+        "updates": {
+          "line": 12
+        },
+        "normalizeRepository": {
+          "line": 17,
+          "params": [
+            "value"
+          ]
+        },
+        "repositoryFile": {
+          "line": 26
+        },
+        "customRepositories": {
+          "line": 28
+        },
+        "catalog": {
+          "line": 37
+        },
+        "getSkill": {
+          "line": 43,
+          "params": [
+            "id"
+          ]
+        },
+        "saveRepositories": {
+          "line": 45,
+          "params": [
+            "repos"
+          ]
+        },
+        "addRepository": {
+          "line": 52,
+          "params": [
+            "value"
+          ]
+        },
+        "removeRepository": {
+          "line": 62,
+          "params": [
+            "id"
+          ]
+        },
         "validate": {
-          "line": 11,
+          "line": 71,
           "params": [
             "provider",
             "id"
           ]
         },
         "configDir": {
-          "line": 15,
+          "line": 75,
           "params": [
             "provider"
           ]
         },
         "readJson": {
-          "line": 21,
+          "line": 81,
           "params": [
             "filename"
           ]
         },
         "executable": {
-          "line": 26,
+          "line": 86,
           "params": [
             "command"
           ]
         },
         "findExecutable": {
-          "line": 30,
+          "line": 90,
           "params": [
             "command"
           ]
         },
         "getSkills": {
-          "line": 39,
+          "line": 99,
           "params": [
             "provider"
           ]
         },
         "run": {
-          "line": 76,
+          "line": 148,
           "params": [
             "command",
             "args",
@@ -5673,34 +5497,41 @@
           ]
         },
         "errorMessage": {
-          "line": 82,
+          "line": 154,
           "params": [
             "err"
           ]
         },
         "isExpectedRemote": {
-          "line": 84,
+          "line": 156,
           "params": [
             "remote",
             "repo"
           ]
         },
+        "verifyMarketplace": {
+          "line": 162,
+          "params": [
+            "provider",
+            "skill"
+          ]
+        },
         "installPlugin": {
-          "line": 90,
+          "line": 178,
           "params": [
             "provider",
             "skill"
           ]
         },
         "installSkill": {
-          "line": 109,
+          "line": 186,
           "params": [
             "provider",
             "id"
           ]
         },
         "getSkillCommand": {
-          "line": 144,
+          "line": 226,
           "params": [
             "provider",
             "id",
@@ -5708,7 +5539,7 @@
           ]
         },
         "toggleSkill": {
-          "line": 154,
+          "line": 241,
           "params": [
             "provider",
             "id",
@@ -5716,7 +5547,7 @@
           ]
         },
         "setupIPC": {
-          "line": 163,
+          "line": 250,
           "params": [
             "ipcMain"
           ]
@@ -5724,6 +5555,12 @@
       },
       "ipc": {
         "listens": [
+          "CHECK_SKILL_UPDATE",
+          "APPLY_SKILL_UPDATE",
+          "ROLLBACK_SKILL_UPDATE",
+          "OPEN_SKILL_BACKUP",
+          "ADD_SKILL_REPOSITORY",
+          "REMOVE_SKILL_REPOSITORY",
           "LOAD_SKILLS",
           "INSTALL_SKILL",
           "TOGGLE_SKILL",
@@ -5752,13 +5589,13 @@
       ],
       "functions": {
         "init": {
-          "line": 23
+          "line": 24
         },
         "loadSkills": {
-          "line": 61
+          "line": 95
         },
         "actionButton": {
-          "line": 78,
+          "line": 114,
           "params": [
             "skill",
             "action",
@@ -5767,16 +5604,16 @@
           ]
         },
         "renderSkill": {
-          "line": 82,
+          "line": 118,
           "params": [
             "skill"
           ]
         },
         "render": {
-          "line": 129
+          "line": 195
         },
         "runAction": {
-          "line": 140,
+          "line": 213,
           "params": [
             "skill",
             "action"
@@ -5786,13 +5623,15 @@
       "ipc": {
         "listens": [],
         "emits": [
+          "OPEN_EXTERNAL_URL",
+          "OPEN_EXTERNAL_URL",
           "OPEN_EXTERNAL_URL"
         ]
       }
     },
     "shared/skillsCatalog": {
       "file": "src/shared/skillsCatalog.js",
-      "description": "",
+      "description": "/",
       "exports": [
         "SKILLS",
         "getSkill"
@@ -5800,7 +5639,7 @@
       "depends": [],
       "functions": {
         "getSkill": {
-          "line": 21,
+          "line": 62,
           "params": [
             "id"
           ]
@@ -5815,6 +5654,209 @@
       ],
       "depends": [],
       "functions": {}
+    },
+    "main/skillUpdates": {
+      "file": "src/main/skillUpdates.js",
+      "description": "/",
+      "exports": [
+        "createSkillUpdater",
+        "inventory"
+      ],
+      "depends": [
+        "fs",
+        "os",
+        "path",
+        "crypto",
+        "electron",
+        "droppedFiles"
+      ],
+      "functions": {
+        "inventory": {
+          "line": 13,
+          "params": [
+            "root",
+            "rejectLinks = false"
+          ]
+        },
+        "copy": {
+          "line": 40,
+          "params": [
+            "from",
+            "to",
+            "skipGit = false"
+          ]
+        },
+        "atomicJson": {
+          "line": 47,
+          "params": [
+            "file",
+            "value"
+          ]
+        },
+        "fetchJson": {
+          "line": 53,
+          "params": [
+            "url"
+          ]
+        },
+        "createSkillUpdater": {
+          "line": 61,
+          "params": [
+            "{ getSkills",
+            "configDir",
+            "normalizeRepository",
+            "findExecutable",
+            "run",
+            "verifyMarketplace",
+            "request = fetchJson }"
+          ]
+        }
+      }
+    },
+    "main/appearance": {
+      "file": "src/main/appearance.js",
+      "description": "",
+      "exports": [
+        "load",
+        "save",
+        "setupIPC"
+      ],
+      "depends": [
+        "fs",
+        "path",
+        "crypto",
+        "electron",
+        "shared/ipcChannels",
+        "shared/appearance"
+      ],
+      "functions": {
+        "load": {
+          "line": 9
+        },
+        "save": {
+          "line": 19,
+          "params": [
+            "settings"
+          ]
+        },
+        "setupIPC": {
+          "line": 32,
+          "params": [
+            "ipcMain"
+          ]
+        }
+      },
+      "ipc": {
+        "listens": [
+          "SAVE_APPEARANCE"
+        ],
+        "emits": [
+          "APPEARANCE_CHANGED"
+        ]
+      }
+    },
+    "renderer/appearance": {
+      "file": "src/renderer/appearance.js",
+      "description": "",
+      "exports": [
+        "init",
+        "toggle"
+      ],
+      "depends": [
+        "electronBridge",
+        "shared/ipcChannels",
+        "shared/appearance",
+        "escapeHtml",
+        "panelVisibility",
+        "panelCoordinator"
+      ],
+      "functions": {
+        "apply": {
+          "line": 15
+        },
+        "paletteButtons": {
+          "line": 27,
+          "params": [
+            "mode"
+          ]
+        },
+        "colorControl": {
+          "line": 35,
+          "params": [
+            "key",
+            "label"
+          ]
+        },
+        "render": {
+          "line": 39
+        },
+        "save": {
+          "line": 61
+        },
+        "init": {
+          "line": 78
+        },
+        "close": {
+          "line": 138
+        },
+        "toggle": {
+          "line": 143
+        }
+      },
+      "ipc": {
+        "listens": [
+          "APPEARANCE_CHANGED"
+        ],
+        "emits": []
+      }
+    },
+    "shared/appearance": {
+      "file": "src/shared/appearance.js",
+      "description": "Saved palettes contain their values so app updates cannot replace a user's colors.",
+      "exports": [
+        "THEMES",
+        "STYLES",
+        "COLOR_LABELS",
+        "HEX",
+        "defaults",
+        "normalize",
+        "variables",
+        "terminalTheme",
+        "alpha",
+        "contrast"
+      ],
+      "depends": [],
+      "functions": {
+        "defaults": {
+          "line": 73
+        },
+        "normalize": {
+          "line": 76,
+          "params": [
+            "value"
+          ]
+        },
+        "contrast": {
+          "line": 104,
+          "params": [
+            "first",
+            "second"
+          ]
+        },
+        "variables": {
+          "line": 111,
+          "params": [
+            "settings",
+            "systemDark = true"
+          ]
+        },
+        "terminalTheme": {
+          "line": 141,
+          "params": [
+            "values"
+          ]
+        }
+      }
     }
   },
   "ipcChannels": {

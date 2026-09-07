@@ -82,9 +82,6 @@ Save and reuse your most common prompts across sessions. One-click paste to term
 </td>
 <td width="50%" valign="top">
 
-### 🧩 Plugin System
-Extend VibeConsole with **JavaScript plugins**. Official marketplace + local plugin support.
-
 ### 🧠 Context Preservation
 `AGENTS.md`, `STRUCTURE.json`, and `PROJECT_NOTES.md` keep your architectural decisions and project context alive across sessions.
 
@@ -99,6 +96,14 @@ Switch between **Claude Code**, **Codex CLI**, and **Gemini CLI** from the toolb
 </table>
 
 **Also includes:** Prompt history with timestamps • Auto-updater • Keyboard-driven workflow • Drag file → terminal pastes quoted path • macOS native menus
+
+### Appearance
+
+Open **Settings** with the gear at the far right of the terminal toolbar. Choose a palette: Paper, Ivory, Mist, Linen (light); Violet, Charcoal, Midnight, or Black (dark) (true black backgrounds). Choosing a palette immediately activates its Light or Dark mode. Choose **System** to follow macOS using your saved light/dark palettes. **Classic**, **Flat**, and **Soft** adjust corners, control spacing, and shadows; Flat uses square corners.
+
+Use **Personal colors** to change accent and folder colors with a color picker or six-digit HEX value. Expand **All interface colors** or **Terminal palette** for the remaining colors. Changes apply immediately to the interface, existing terminals, and code editor. **Reset appearance**, at the bottom of Settings, asks before restoring Dark / Violet / Classic and removing custom colors.
+
+Preferences are saved in `appearance.json` under Electron's `userData` directory, outside the application bundle. Saved color and style values survive restarts and app updates; new settings receive defaults without replacing existing values. A damaged or unsupported preferences file is preserved and reported in Settings instead of being overwritten.
 
 ---
 
@@ -159,7 +164,7 @@ Unsigned local builds are available for development with `npm run dist:mac:unsig
 
 ```
 src/
-├── main/           # Main process — PTY, file tree, git, plugins
+├── main/           # Main process — PTY, file tree, git
 ├── renderer/       # Renderer process — terminal UI, panels, styles
 └── shared/         # IPC channel constants, path validation
 ```

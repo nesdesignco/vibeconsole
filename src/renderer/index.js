@@ -3,10 +3,11 @@
  * Initializes all UI modules and sets up event handlers
  */
 
+const appearance = require('./appearance');
 const terminal = require('./terminal');
+const { terminalTheme } = require('../shared/appearance');
 const fileTreeUI = require('./fileTreeUI');
 const historyPanel = require('./historyPanel');
-const pluginsPanel = require('./pluginsPanel');
 const skillsPanel = require('./skillsPanel');
 const githubPanel = require('./githubPanel');
 const state = require('./state');
@@ -18,6 +19,7 @@ const savedPromptsPanel = require('./savedPromptsPanel');
 const updaterModal = require('./updaterModal');
 const projectContextSetup = require('./projectContextSetup');
 const { createToast } = require('./toast');
+const { withSpinner } = require('./spinnerButton');
 const { ipcRenderer, pathApi } = require('./electronBridge');
 const { IPC } = require('../shared/ipcChannels');
 let _rendererInitialized = false;
@@ -138,9 +140,13 @@ function init() {
     console.error('Failed to initialize history panel:', err);
   }
 
-  // Initialize plugins panel
-  try { pluginsPanel.init(); } catch (err) { console.error('Failed to initialize plugins panel:', err); }
   try { skillsPanel.init(); } catch (err) { console.error('Failed to initialize skills panel:', err); }
+  appearance.init();
+  window.addEventListener('vibe:appearance-changed', event => {
+    for (const instance of terminal.getTerminal()?.terminals.values() || []) {
+      instance.terminal.options.theme = terminalTheme(event.detail.values);
+    }
+  });
 
   // Initialize GitHub panel
   try { githubPanel.init(); } catch (err) { console.error('Failed to initialize GitHub panel:', err); }
@@ -308,8 +314,11 @@ function setupButtonHandlers() {
   });
 
   // Refresh file tree
-  document.getElementById('btn-refresh-tree').addEventListener('click', () => {
-    fileTreeUI.refreshFileTree();
+  document.getElementById('btn-refresh-tree').addEventListener('click', event => {
+    withSpinner(event.currentTarget, async () => {
+      const success = await fileTreeUI.refreshFileTree();
+      showStartToast(success ? 'Files refreshed.' : 'Could not refresh files. Select an accessible project and retry.', success ? 'success' : 'error');
+    });
   });
 
   // Close history panel
@@ -336,11 +345,6 @@ function setupKeyboardShortcuts() {
     if (modKey && e.shiftKey && key === 'h') {
       e.preventDefault();
       historyPanel.toggleHistoryPanel();
-    }
-    // Ctrl/Cmd+Shift+P - Toggle plugins panel
-    if (modKey && e.shiftKey && key === 'p') {
-      e.preventDefault();
-      pluginsPanel.toggle();
     }
     // Ctrl/Cmd+Shift+G - Toggle GitHub panel
     if (modKey && e.shiftKey && key === 'g') {

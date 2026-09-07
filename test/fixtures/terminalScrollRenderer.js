@@ -5,6 +5,15 @@ const { MultiTerminalUI } = require('../../src/renderer/multiTerminalUI');
 const wait = (ms = 120) => new Promise(resolve => setTimeout(resolve, ms));
 const write = (terminal, data) => new Promise(resolve => terminal.write(data, resolve));
 const position = terminal => ({ y: terminal.buffer.active.viewportY, base: terminal.buffer.active.baseY });
+const scrollbar = terminal => {
+  const viewport = terminal.element.querySelector('.xterm-viewport');
+  const rowHeight = terminal.element.querySelector('.xterm-screen').getBoundingClientRect().height / terminal.rows;
+  return { top: viewport.scrollTop, expected: terminal.buffer.active.viewportY * rowHeight };
+};
+const scrollbarMatches = terminal => {
+  const { top, expected } = scrollbar(terminal);
+  return Math.abs(top - expected) <= 1;
+};
 
 window.runScrollTests = async () => {
   const manager = new TerminalManager();
@@ -25,6 +34,22 @@ window.runScrollTests = async () => {
   await wait();
   const results = [];
   const check = (name, pass, details) => results.push({ name, pass, details });
+
+  manager.setActiveTerminal('b'); ui._renderTabView(state());
+  await wait();
+  manager.setActiveTerminal('a'); ui._renderTabView(state());
+  check('remount immediately restores the native scrollbar', scrollbarMatches(terminal), scrollbar(terminal));
+  terminal.element.dispatchEvent(new WheelEvent('wheel', { deltaY: 100, bubbles: true, cancelable: true }));
+  await wait();
+  check('downward wheel immediately after remount cannot jump upward', position(terminal).y === position(terminal).base && scrollbarMatches(terminal), { ...position(terminal), ...scrollbar(terminal) });
+
+  terminal.scrollToBottom(); await wait();
+  manager.setActiveTerminal('b'); ui._renderTabView(state());
+  await wait();
+  manager.setActiveTerminal('a'); ui._renderTabView(state());
+  await write(terminal, 'output before native scroll event\r\n');
+  await wait();
+  check('remount plus queued output keeps thumb and content at bottom', position(terminal).y === position(terminal).base && scrollbarMatches(terminal), { ...position(terminal), ...scrollbar(terminal) });
 
   terminal.scrollToBottom();
   await wait();
@@ -53,6 +78,7 @@ window.runScrollTests = async () => {
   manager.setActiveTerminal('a'); ui._renderTabView(state());
   await wait();
   check('tab return preserves history', position(terminal).y === 200, position(terminal));
+  check('tab return restores the history scrollbar', scrollbarMatches(terminal), scrollbar(terminal));
 
   terminal.scrollToBottom();
   ui._renderGridView(state());
@@ -82,6 +108,7 @@ window.runScrollTests = async () => {
   ui._renderTabView(state());
   await wait();
   check('grid to tab preserves history', position(terminal).y === 180, position(terminal));
+  check('grid to tab restores the native scrollbar', scrollbarMatches(terminal), scrollbar(terminal));
 
   terminal.scrollToBottom();
   await wait();
@@ -103,6 +130,7 @@ window.runScrollTests = async () => {
   manager.setActiveTerminal('a'); ui._renderTabView(state());
   await wait();
   check('hidden output follows bottom on return', position(terminal).y === position(terminal).base, position(terminal));
+  check('hidden output updates scrollbar height and position on return', scrollbarMatches(terminal), scrollbar(terminal));
 
   // Rapid transitions used to leave several delayed fit/restore callbacks alive.
   terminal.scrollToLine(220);
@@ -153,6 +181,7 @@ window.runScrollTests = async () => {
   manager.setActiveTerminal('a'); ui._renderTabView(state());
   await wait();
   check('hidden output preserves history on return', position(terminal).y === 200, position(terminal));
+  check('hidden output keeps history thumb synchronized', scrollbarMatches(terminal), scrollbar(terminal));
 
   // Verify native resize/reflow using content, not obsolete absolute line offsets.
   host.style.width = '700px'; manager.fitAll();

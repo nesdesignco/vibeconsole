@@ -98,39 +98,44 @@ function setupWorkers() {
 }
 
 function registerTheme() {
-  monaco.editor.defineTheme('vibe-dark', {
-    base: 'vs-dark',
+  const { defaults, variables, alpha } = require('../shared/appearance');
+  const { mode, values: c } = window.vibeAppearance || variables(defaults());
+  monaco.editor.defineTheme('vibe', {
+    base: mode === 'light' ? 'vs' : 'vs-dark',
     inherit: true,
     rules: [
-      { token: '', foreground: 'e4e4ed', background: '101018' },
-      { token: 'comment', foreground: '6b6880', fontStyle: 'italic' },
-      { token: 'keyword', foreground: 'c4b5fd' },
-      { token: 'string', foreground: '98c379' },
-      { token: 'number', foreground: 'e0a458' },
-      { token: 'type', foreground: '78a5d4' }
+      { token: '', foreground: c['text-primary'].slice(1), background: c['bg-primary'].slice(1) },
+      { token: 'comment', foreground: c['text-tertiary'].slice(1), fontStyle: 'italic' },
+      { token: 'keyword', foreground: c['accent-primary'].slice(1) },
+      { token: 'string', foreground: c['ansi-green'].slice(1) },
+      { token: 'number', foreground: c['ansi-yellow'].slice(1) },
+      { token: 'type', foreground: c['ansi-blue'].slice(1) }
     ],
     colors: {
-      'editor.background': '#101018',
-      'editor.foreground': '#e4e4ed',
-      'editorLineNumber.foreground': '#484660',
-      'editorLineNumber.activeForeground': '#9896a8',
-      'editorCursor.foreground': '#c4b5fd',
-      'editor.selectionBackground': '#5b4c8f66',
-      'editor.inactiveSelectionBackground': '#4b436655',
-      'editor.lineHighlightBackground': '#ffffff06',
-      'editorIndentGuide.background1': '#ffffff12',
-      'editorIndentGuide.activeBackground1': '#ffffff26',
-      'editorWidget.background': '#1e1e28',
-      'editorWidget.border': '#ffffff14',
-      'editorSuggestWidget.background': '#1e1e28',
-      'editorSuggestWidget.border': '#ffffff14',
-      'editorSuggestWidget.selectedBackground': '#2a2a38',
-      'input.background': '#101018',
-      'input.border': '#ffffff14',
-      'focusBorder': '#a78bfa'
+      'editor.background': c['bg-primary'],
+      'editor.foreground': c['text-primary'],
+      'editorLineNumber.foreground': c['text-muted'],
+      'editorLineNumber.activeForeground': c['text-secondary'],
+      'editorCursor.foreground': c['accent-primary'],
+      'editor.selectionBackground': alpha(c['accent-primary'], 0.25),
+      'editor.inactiveSelectionBackground': c['accent-subtle'],
+      'editor.lineHighlightBackground': alpha(c['text-primary'], 0.03),
+      'editorIndentGuide.background1': c['border-subtle'],
+      'editorIndentGuide.activeBackground1': c['border-default'],
+      'editorWidget.background': c['bg-tertiary'],
+      'editorWidget.border': c['border-default'],
+      'editorSuggestWidget.background': c['bg-tertiary'],
+      'editorSuggestWidget.border': c['border-default'],
+      'editorSuggestWidget.selectedBackground': c['bg-hover'],
+      'input.background': c['bg-primary'],
+      'input.border': c['border-default'],
+      'focusBorder': c['accent-primary']
     }
   });
 }
+window.addEventListener('vibe:appearance-changed', () => {
+  if (editor) { registerTheme(); monaco.editor.setTheme('vibe'); }
+});
 
 function languageForPath(filePath, extension) {
   const base = ((filePath || '').replace(/\\/g, '/')).split('/').pop() || '';
@@ -181,7 +186,7 @@ function init(target, options = {}) {
     smoothScrolling: true,
     stickyScroll: { enabled: false },
     tabSize: 2,
-    theme: 'vibe-dark',
+    theme: 'vibe',
     wordWrap: 'off'
   });
 

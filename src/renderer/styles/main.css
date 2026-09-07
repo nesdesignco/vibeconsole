@@ -27,8 +27,8 @@
 /* 6. Panels (shared slide animation + one file per panel, in cascade order) */
 @import 'components/panels.css';
 @import 'components/history-panel.css';
-@import 'components/plugins-panel.css';
 @import 'components/skills-panel.css';
+@import 'components/appearance.css';
 @import 'components/github-panel.css';
 @import 'components/modals.css';
 @import 'components/git-changes.css';

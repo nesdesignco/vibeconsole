@@ -32,7 +32,7 @@ body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--border-strong);
-  border-radius: 4px;
+  border-radius: calc(var(--radius-sm) * 4 / 6);
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -254,7 +254,7 @@ body {
   background: var(--accent-subtle);
   color: var(--accent-primary);
   padding: 3px 8px;
-  border-radius: 4px;
+  border-radius: calc(var(--radius-sm) * 4 / 6);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
@@ -304,7 +304,7 @@ body {
   align-items: center;
   height: 28px;
   border: 1px solid var(--border-subtle);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   overflow: hidden;
   flex-shrink: 0;
   background: color-mix(in srgb, var(--bg-secondary) 84%, transparent);
@@ -374,8 +374,8 @@ body {
   width: min(560px, calc(100% - 48px));
   background: var(--bg-elevated);
   border: 1px solid var(--border-default);
-  border-radius: 8px;
-  box-shadow: 0 18px 48px var(--overlay-heavy), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  border-radius: calc(var(--radius-sm) * 8 / 6);
+  box-shadow: 0 18px 48px var(--overlay-heavy), inset 0 1px 0 var(--border-subtle);
   overflow: hidden;
 }
 
@@ -405,7 +405,7 @@ body {
 .editor-command-item {
   width: 100%;
   border: 0;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
   display: grid;
@@ -432,7 +432,7 @@ body {
 .editor-command-icon {
   width: 24px;
   height: 24px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -475,7 +475,7 @@ body {
 
 .editor-command-shortcut {
   border: 1px solid var(--border-subtle);
-  border-radius: 5px;
+  border-radius: calc(var(--radius-sm) * 5 / 6);
   color: var(--text-muted);
   background: color-mix(in srgb, var(--bg-secondary) 72%, transparent);
   font-family: var(--font-mono);
@@ -508,7 +508,7 @@ body {
   align-items: center;
   gap: 0;
   border: 1px solid var(--border-subtle);
-  border-radius: 8px;
+  border-radius: calc(var(--radius-sm) * 8 / 6);
   overflow: hidden;
 }
 

@@ -199,7 +199,7 @@ function execFileCmd(cmd, args, projectPath, maxBuffer = 1024 * 1024, timeout = 
     }
     execFile(resolvedCmd, args, { cwd: projectPath, timeout, maxBuffer, env }, (error, stdout, stderr) => {
       if (error) {
-        reject({ error: error.message, stderr });
+        reject({ error: error.message, stderr, stdout, exitCode: error.code });
       } else {
         resolve({
           stdout: (stdout || '').replace(/\s+$/, ''),

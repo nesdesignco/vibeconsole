@@ -25,8 +25,7 @@ const AI_TOOLS = {
       review: '/review-pr',
       help: '/help'
     },
-    menuLabel: 'Claude Commands',
-    supportsPlugins: true
+    menuLabel: 'Claude Commands'
   },
   codex: {
     id: 'codex',
@@ -39,8 +38,7 @@ const AI_TOOLS = {
       permissions: '/permissions',
       help: '/help'
     },
-    menuLabel: 'Codex Commands',
-    supportsPlugins: false
+    menuLabel: 'Codex Commands'
   }
 };
 

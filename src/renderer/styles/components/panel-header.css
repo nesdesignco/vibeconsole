@@ -96,7 +96,7 @@
   transition: transform var(--transition-fast);
 }
 
-/* Shared header dropdown (Plugins / Source Control / Saved Prompts) */
+/* Shared header dropdown (Source Control / Saved Prompts) */
 .panel-header-dropdown {
   position: relative;
   flex-shrink: 0;

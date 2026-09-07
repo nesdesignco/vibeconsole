@@ -2,11 +2,71 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { app } = require('electron');
 const { IPC } = require('../shared/ipcChannels');
-const { SKILLS, getSkill } = require('../shared/skillsCatalog');
+const { SKILLS } = require('../shared/skillsCatalog');
 const { buildAugmentedPath } = require('../shared/pathUtils');
 const { execFileCmd } = require('./gitExecUtils');
 const pending = new Set();
+let updater;
+function updates() {
+  if (!updater) updater = require('./skillUpdates').createSkillUpdater({ getSkills, configDir, normalizeRepository, findExecutable, run, verifyMarketplace });
+  return updater;
+}
+
+function normalizeRepository(value) {
+  if (typeof value !== 'string' || value.length > 300) throw new Error('Enter a GitHub repository URL.');
+  const repo = value.trim().replace(/^https:\/\/github\.com\//i, '').replace(/\/$/, '').replace(/\.git$/i, '');
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9-]*\/[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(repo) || repo.includes('..')) {
+    throw new Error('Use https://github.com/owner/repository or owner/repository.');
+  }
+  return repo;
+}
+
+function repositoryFile() { return path.join(app.getPath('userData'), 'skill-repositories.json'); }
+
+function customRepositories() {
+  const filename = repositoryFile();
+  if (!fs.existsSync(filename)) return [];
+  const repos = readJson(filename);
+  if (!Array.isArray(repos) || repos.some(repo => typeof repo !== 'string')) throw new Error('Could not read saved skill repositories. The original file has been preserved.');
+  return repos.map(normalizeRepository);
+}
+
+/** @returns {import('../shared/skillsCatalog').Skill[]} */
+function catalog() {
+  return [...SKILLS, ...customRepositories().map(/** @returns {import('../shared/skillsCatalog').Skill} */ repo => ({ id: `repo:${repo.toLowerCase()}`, repo,
+    name: repo.split('/')[1], title: repo, category: 'custom', kind: 'repository', custom: true,
+    description: 'Install skills from this repository for the selected agent. Your saved repository and installed files survive app updates.' }))];
+}
+
+function getSkill(id) { return catalog().find(skill => skill.id === id); }
+
+function saveRepositories(repos) {
+  const filename = repositoryFile();
+  fs.mkdirSync(path.dirname(filename), { recursive: true });
+  fs.writeFileSync(`${filename}.tmp`, JSON.stringify(repos, null, 2), { mode: 0o600 });
+  fs.renameSync(`${filename}.tmp`, filename);
+}
+
+function addRepository(value) {
+  try {
+    const repo = normalizeRepository(value);
+    const existing = catalog().find(skill => skill.repo.toLowerCase() === repo.toLowerCase());
+    if (existing) return { success: true, id: existing.id, category: existing.category, alreadyAdded: true };
+    saveRepositories([...customRepositories(), repo]);
+    return { success: true, id: `repo:${repo.toLowerCase()}`, category: 'custom' };
+  } catch (err) { return { success: false, error: errorMessage(err) }; }
+}
+
+function removeRepository(id) {
+  try {
+    const skill = getSkill(id);
+    if (!skill?.custom) throw new Error('Only your added repositories can be removed from this list.');
+    saveRepositories(customRepositories().filter(repo => repo.toLowerCase() !== skill.repo.toLowerCase()));
+    return { success: true };
+  } catch (err) { return { success: false, error: errorMessage(err) }; }
+}
 
 function validate(provider, id) {
   if (!['claude', 'codex'].includes(provider) || !getSkill(id)) throw new Error('Invalid skill or provider');
@@ -46,7 +106,7 @@ async function getSkills(provider) {
       const enabled = readJson(path.join(configDir(provider), 'settings.json')).enabledPlugins || {};
       plugins = Object.keys(installed)
         .filter(pluginId => Array.isArray(installed[pluginId]) && installed[pluginId].some(entry => !entry.scope || entry.scope === 'user'))
-        .map(pluginId => ({ pluginId, enabled: enabled[pluginId] === true }));
+        .map(pluginId => ({ pluginId, enabled: enabled[pluginId] === true, version: installed[pluginId].find(entry => !entry.scope || entry.scope === 'user')?.version }));
     } else if (executable('codex')) {
       const { stdout } = await run('codex', ['plugin', 'list', '--json']);
       const data = JSON.parse(stdout);
@@ -56,17 +116,29 @@ async function getSkills(provider) {
       pluginError = 'Install Codex CLI first, then refresh.';
     }
   } catch (err) { pluginError = errorMessage(err); }
-  return SKILLS.map(skill => {
+  const roots = [path.join(configDir(provider), 'skills')];
+  if (provider === 'codex') roots.push(path.join(os.homedir(), '.agents', 'skills'));
+  return catalog().map(skill => {
+    if (skill.kind === 'service') return { ...skill, provider, installed: null, enabled: null, statusError: '' };
+    if (skill.kind === 'repository') {
+      try {
+        const tracked = readJson(path.join(os.homedir(), '.agents', '.skill-lock.json')).skills || {};
+        const installedSkills = Object.entries(tracked).filter(([id, entry]) =>
+          /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(id) && !id.includes('..') &&
+          isExpectedRemote(entry?.source || entry?.sourceUrl, skill.repo) &&
+          roots.some(root => fs.existsSync(path.join(root, id, 'SKILL.md')))).map(([id]) => id);
+        return { ...skill, provider, installed: installedSkills.length > 0, installedSkills, enabled: null, statusError: '' };
+      } catch (err) { return { ...skill, provider, installed: false, statusError: errorMessage(err) }; }
+    }
     if (skill.kind === 'cli') return { ...skill, provider, installed: executable(skill.id), enabled: null, statusError: '' };
-    const directories = [path.join(configDir(provider), 'skills', skill.id)];
-    if (provider === 'codex') directories.push(path.join(os.homedir(), '.agents', 'skills', skill.id));
-    const local = directories.some(dir => fs.existsSync(path.join(dir, 'SKILL.md')));
-    const pluginIds = skill.id === 'frontend-design'
-      ? ['frontend-design@claude-plugins-official', 'frontend-design@claude-code-plugins']
-      : [`${skill.id}@${skill.id}`];
-    const plugin = plugins.find(item => pluginIds.includes(item.pluginId));
+    const localId = [skill.id, ...(skill.aliases || [])].find(id => roots.some(root => fs.existsSync(path.join(root, id, 'SKILL.md'))));
+    const local = !!localId;
+    const localFile = local && roots.map(root => path.join(root, localId, 'SKILL.md')).find(file => fs.existsSync(file));
+    const frontmatter = localFile ? fs.readFileSync(localFile, 'utf8').match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)?.[1] : '';
+    const commandName = frontmatter?.match(/^name:\s*["']?([a-zA-Z0-9._-]+)["']?\s*$/m)?.[1] || localId || skill.id;
+    const plugin = plugins.find(item => item.pluginId === `${skill.id}@${skill.id}`);
     const standalone = local || skill.installation === 'skill' || (provider === 'codex' && ['caveman', 'impeccable'].includes(skill.id));
-    return { ...skill, provider, installed: local || !!plugin,
+    return { ...skill, provider, commandName, installed: local || !!plugin, pluginVersion: plugin?.version,
       enabled: local || !plugin ? null : plugin.enabled === true,
       toggleable: !local && !!plugin && provider === 'claude' && !skill.installation,
       statusError: standalone ? '' : pluginError };
@@ -87,7 +159,7 @@ function isExpectedRemote(remote, repo) {
     .some(expected => normalized === expected.toLowerCase());
 }
 
-async function installPlugin(provider, skill) {
+async function verifyMarketplace(provider, skill) {
   const { stdout } = await run(provider, ['plugin', 'marketplace', 'list', '--json']);
   const data = JSON.parse(stdout);
   const marketplaces = provider === 'codex' ? data.marketplaces : data;
@@ -99,7 +171,12 @@ async function installPlugin(provider, skill) {
       remote = (await run('git', ['config', '--get', 'remote.origin.url'], existing.root || existing.installLocation)).stdout;
     }
     if (!isExpectedRemote(remote, skill.repo)) throw new Error(`The ${skill.id} marketplace has a different source. Remove it in your CLI and retry.`);
-  } else {
+  }
+  return existing;
+}
+
+async function installPlugin(provider, skill) {
+  if (!await verifyMarketplace(provider, skill)) {
     await run(provider, ['plugin', 'marketplace', 'add', skill.repo], os.homedir(), 120000);
   }
   await run(provider, ['plugin', provider === 'codex' ? 'add' : 'install', `${skill.id}@${skill.id}`,
@@ -111,6 +188,7 @@ async function installSkill(provider, id) {
   try {
     validate(provider, id);
     const skill = getSkill(id);
+    if (['repository', 'service'].includes(skill.kind)) throw new Error('Use this tool’s setup action.');
     key = skill.kind === 'cli' ? id : `${provider}:${id}`;
     if (pending.has(key)) throw new Error('Installation is already in progress.');
     pending.add(key);
@@ -120,7 +198,11 @@ async function installSkill(provider, id) {
     if (status.installed) return { success: true, alreadyInstalled: true };
     if (status.statusError) throw new Error(status.statusError);
     const skill = getSkill(id);
-    if (id === 'rtk') {
+    if (skill.installCommand) {
+      const [command, ...args] = skill.installCommand;
+      if (!executable(command)) throw new Error(`Install ${command} first, then retry ${skill.name}.`);
+      await run(command, args, os.homedir(), 600000);
+    } else if (id === 'rtk') {
       if (!executable('brew')) throw new Error('Install Homebrew first, then retry RTK.');
       await run('brew', ['install', 'rtk'], os.homedir(), 600000);
     } else if (id === 'headroom') {
@@ -143,6 +225,11 @@ async function installSkill(provider, id) {
 /** Actions with interactive CLI flows run in a fresh terminal, never an existing agent session. */
 function getSkillCommand(provider, id, action) {
   validate(provider, id);
+  const skill = getSkill(id);
+  if (skill.kind === 'repository' && action === 'setup') {
+    // Keep the native chooser and overwrite confirmations; never pass --yes.
+    return `npx --yes skills add https://github.com/${normalizeRepository(skill.repo)} --agent ${provider === 'claude' ? 'claude-code' : 'codex'} --global`;
+  }
   const target = provider === 'codex' ? ' --codex' : '';
   if (id === 'rtk' && action === 'setup') return `rtk init -g${target}`;
   if (id === 'rtk' && action === 'disable') return `rtk init -g${target} --uninstall`;
@@ -161,10 +248,33 @@ async function toggleSkill(provider, id, enabled) {
 }
 
 function setupIPC(ipcMain) {
-  ipcMain.handle(IPC.LOAD_SKILLS, (event, provider) => getSkills(provider));
-  ipcMain.handle(IPC.INSTALL_SKILL, (event, provider, id) => installSkill(provider, id));
+  const updateAction = action => async (event, provider, id, token) => {
+    try {
+      validate(provider, id);
+      return { success: true, update: await updates()[action](provider, id, token) };
+    } catch (err) { return { success: false, error: errorMessage(err) }; }
+  };
+  ipcMain.handle(IPC.CHECK_SKILL_UPDATE, updateAction('check'));
+  ipcMain.handle(IPC.APPLY_SKILL_UPDATE, updateAction('apply'));
+  ipcMain.handle(IPC.ROLLBACK_SKILL_UPDATE, updateAction('rollback'));
+  ipcMain.handle(IPC.OPEN_SKILL_BACKUP, async (event, provider, id, review = false) => {
+    validate(provider, id);
+    if (typeof review !== 'boolean') return { success: false, error: 'Invalid folder request.' };
+    const error = await require('electron').shell.openPath(updates().backupDirectory(provider, id, review));
+    return { success: !error, error };
+  });
+  ipcMain.handle(IPC.ADD_SKILL_REPOSITORY, (event, repo) => addRepository(repo));
+  ipcMain.handle(IPC.REMOVE_SKILL_REPOSITORY, (event, id) => removeRepository(id));
+  ipcMain.handle(IPC.LOAD_SKILLS, async (event, provider) => (await getSkills(provider)).map(skill => {
+    try { return { ...skill, update: updates().state(provider, skill.id) }; }
+    catch (err) { return { ...skill, update: { error: errorMessage(err) } }; }
+  }));
+  ipcMain.handle(IPC.INSTALL_SKILL, async (event, provider, id) => {
+    try { return await updates().exclusive(() => installSkill(provider, id)); }
+    catch (err) { return { success: false, error: errorMessage(err) }; }
+  });
   ipcMain.handle(IPC.TOGGLE_SKILL, (event, provider, id, enabled) => toggleSkill(provider, id, enabled));
   ipcMain.handle(IPC.GET_SKILL_COMMAND, (event, provider, id, action) => getSkillCommand(provider, id, action));
 }
 
-module.exports = { setupIPC, getSkills, installSkill, toggleSkill, getSkillCommand, isExpectedRemote };
+module.exports = { setupIPC, getSkills, installSkill, toggleSkill, getSkillCommand, isExpectedRemote, addRepository, removeRepository, normalizeRepository };

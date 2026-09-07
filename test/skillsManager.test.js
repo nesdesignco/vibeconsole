@@ -18,7 +18,7 @@ function harness(t, options = {}) {
     fs.writeFileSync(destination, typeof value === 'string' ? value : JSON.stringify(value));
   };
   const binary = name => { write(`bin/${name}`, '#!/bin/sh\n'); fs.chmodSync(path.join(bin, name), 0o700); };
-  binary('claude'); binary('codex'); binary('git'); binary('npx'); binary('brew'); binary('uv');
+  binary('claude'); binary('codex'); binary('git'); binary('npx'); binary('brew'); binary('uv'); binary('npm');
   const execFileCmd = async (command, args, cwd) => {
     const name = path.basename(command);
     calls.push({ command: name, args: [...args], cwd });
@@ -29,7 +29,8 @@ function harness(t, options = {}) {
     if (args.join(' ') === 'plugin list --json') return { stdout: JSON.stringify({ installed: codexPlugins }) };
     if (args.join(' ') === 'plugin marketplace list --json') return { stdout: JSON.stringify(name === 'codex' ? { marketplaces: [] } : []) };
     if (name === 'brew') binary('rtk');
-    if (name === 'uv') binary('headroom');
+    if (name === 'uv') binary(args.includes('basic-memory') ? 'basic-memory' : args.includes('obsidian-wiki') ? 'obsidian-wiki' : 'headroom');
+    if (name === 'npm') binary('qmd');
     if (name === 'npx') {
       const id = args[1] === 'impeccable' ? 'impeccable' : args[args.indexOf('--skill') + 1];
       const provider = args.includes('claude-code') ? '.claude' : '.agents';
@@ -47,6 +48,7 @@ function harness(t, options = {}) {
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/main/skillsManager.js'), 'utf8'), {
       module: mod, process: { env: {} }, console,
       require: id => {
+        if (id === 'electron') return { app: { getPath: () => path.join(home, 'app-data') } };
         if (id === 'os') return { homedir: () => home };
         if (id === '../shared/pathUtils') return { buildAugmentedPath: () => bin };
         if (id === './gitExecUtils') return { execFileCmd };
@@ -62,13 +64,72 @@ test('opening and refreshing skills never installs or creates configuration', as
   const h = harness(t);
   for (const provider of ['claude', 'codex']) {
     const skills = await h.manager.getSkills(provider);
-    assert.equal(skills.length, 8);
+    assert.equal(skills.length, 14);
+    assert.ok(skills.every(skill => !['anthropics/skills', 'vercel-labs/agent-skills'].includes(skill.repo)));
     assert.ok(skills.every(skill => !skill.installed));
     await h.manager.getSkills(provider);
   }
   assert.ok(h.calls.every(call => call.args.join(' ') === 'plugin list --json'));
   assert.equal(fs.existsSync(path.join(h.home, '.claude')), false);
   assert.equal(fs.existsSync(path.join(h.home, '.codex')), false);
+});
+
+test('custom repositories are validated, deduplicated and persist across app reloads', async t => {
+  const h = harness(t);
+  for (const bad of ['https://github.com/a/b;touch-x', 'https://user:secret@github.com/a/b', 'https://evil.test/a/b', '../a/b', '--help', 'a/b?token=x', {}, null]) {
+    assert.equal(h.manager.addRepository(bad).success, false);
+  }
+  assert.equal(fs.existsSync(path.join(h.home, 'app-data')), false);
+  const added = h.manager.addRepository('https://github.com/Example/Skill-Pack.git/');
+  assert.equal(added.success, true);
+  assert.equal(h.reload().addRepository('example/skill-pack').alreadyAdded, true);
+  assert.equal(h.manager.addRepository('zanwei/design-dna').alreadyAdded, true);
+  const items = (await h.reload().getSkills('claude')).filter(s => s.custom);
+  assert.equal(items.length, 1);
+  assert.equal(items[0].repo, 'Example/Skill-Pack');
+  assert.equal(h.calls.length, 0);
+  assert.equal(h.manager.getSkillCommand('codex', added.id, 'setup'), 'npx --yes skills add https://github.com/Example/Skill-Pack --agent codex --global');
+  assert.equal((await h.manager.installSkill('codex', added.id)).success, false);
+});
+
+test('repository status follows source and provider; removing a listing keeps installed files', async t => {
+  const h = harness(t);
+  const added = h.manager.addRepository('example/skills');
+  h.write('.agents/.skill-lock.json', { skills: {
+    'my-tool': { source: 'example/skills' }, 'other-tool': { source: 'other/skills' },
+    '../../unsafe': { source: 'example/skills' }
+  } });
+  h.write('.claude/skills/my-tool/SKILL.md', 'my customized instructions');
+  h.write('.claude/skills/other-tool/SKILL.md', 'unrelated');
+  const skill = (await h.reload().getSkills('claude')).find(s => s.id === added.id);
+  assert.equal(skill.installed, true);
+  assert.deepEqual([...skill.installedSkills], ['my-tool']);
+  assert.equal((await h.manager.getSkills('codex')).find(s => s.id === added.id).installed, false);
+  assert.equal(h.manager.removeRepository(added.id).success, true);
+  assert.equal((await h.reload().getSkills('claude')).some(s => s.id === added.id), false);
+  assert.equal(fs.readFileSync(path.join(h.home, '.claude/skills/my-tool/SKILL.md'), 'utf8'), 'my customized instructions');
+  assert.equal(h.manager.removeRepository('design-dna').success, false);
+});
+
+test('a malformed repository registry is preserved instead of overwritten', async t => {
+  const h = harness(t);
+  h.write('app-data/skill-repositories.json', '{broken');
+  assert.equal(h.manager.addRepository('example/skills').success, false);
+  assert.equal(fs.readFileSync(path.join(h.home, 'app-data/skill-repositories.json'), 'utf8'), '{broken');
+});
+
+test('Brain CLI installers verify binaries; services do not pretend to install', async t => {
+  const h = harness(t);
+  for (const id of ['qmd', 'basic-memory', 'obsidian-wiki']) {
+    assert.equal((await h.manager.installSkill('claude', id)).success, true, id);
+    assert.equal((await h.reload().installSkill('codex', id)).alreadyInstalled, true);
+  }
+  h.calls.length = 0;
+  for (const id of ['graphiti', 'cognee']) {
+    assert.equal((await h.manager.getSkills('claude')).find(s => s.id === id).installed, null);
+    assert.equal((await h.manager.installSkill('claude', id)).success, false);
+  }
+  assert.equal(h.calls.length, 0);
 });
 
 test('app restart/update preserves installed disabled skills and install is a no-op', async t => {
@@ -186,7 +247,7 @@ test('a project-only Claude plugin does not suppress the optional user installat
 
 test('UI skills install only for the selected provider and are reused after restart', async t => {
   for (const provider of ['claude', 'codex']) {
-    for (const id of ['impeccable', 'design-dna', 'frontend-design', 'web-design-guidelines']) {
+    for (const id of ['design-taste-frontend', 'impeccable', 'scroll-craft', 'design-dna']) {
       const h = harness(t);
       assert.equal((await h.manager.installSkill(provider, id)).success, true, `${provider}:${id}`);
       const installed = (await h.reload().getSkills(provider)).find(s => s.id === id);
@@ -223,4 +284,20 @@ test('existing native skill folders are detected without overwriting or enabling
   assert.equal((await h.manager.installSkill('codex', 'impeccable')).alreadyInstalled, true);
   assert.ok(h.calls.every(c => c.args.join(' ') === 'plugin list --json'));
   assert.equal(fs.readFileSync(path.join(h.home, '.codex/skills/design-dna/SKILL.md'), 'utf8'), 'custom Codex copy');
+});
+
+test('existing Taste and legacy Scrollcraft installs are reused with their installed command names', async t => {
+  const h = harness(t);
+  for (const provider of ['claude', 'codex']) {
+    for (const [id, installedName] of [['design-taste-frontend', 'design-taste-frontend'], ['scroll-craft', 'scrollcraft']]) {
+      h.write(`.${provider}/skills/${installedName}/SKILL.md`, 'existing customized skill');
+      const skill = (await h.manager.getSkills(provider)).find(s => s.id === id);
+      assert.equal(skill.installed, true);
+      assert.equal(skill.commandName, installedName);
+      assert.equal((await h.manager.installSkill(provider, id)).alreadyInstalled, true);
+      h.write(`.${provider}/skills/${installedName}/SKILL.md`, `---\nname: ${id}\n---\nUpdated upstream name`);
+      assert.equal((await h.manager.getSkills(provider)).find(s => s.id === id).commandName, id);
+    }
+  }
+  assert.ok(h.calls.every(call => call.args.join(' ') === 'plugin list --json'));
 });

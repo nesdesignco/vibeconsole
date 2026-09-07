@@ -30,7 +30,6 @@ const promptLogger = require('./promptLogger');
 const workspace = require('./workspace');
 const fileEditor = require('./fileEditor');
 const droppedFiles = require('./droppedFiles');
-const pluginsManager = require('./pluginsManager');
 const skillsManager = require('./skillsManager');
 const claudeUsageManager = require('./claudeUsageManager');
 const codexUsageManager = require('./codexUsageManager');
@@ -41,6 +40,8 @@ const aiToolProcessDetector = require('./aiToolProcessDetector');
 const savedPromptsManager = require('./savedPromptsManager');
 const autoUpdater = require('./autoUpdater');
 const projectContext = require('./projectContext');
+const appearance = require('./appearance');
+const { variables } = require('../shared/appearance');
 
 
 let mainWindow = null;
@@ -49,10 +50,16 @@ let mainWindow = null;
  * Create main application window
  */
 function createWindow() {
+  const { nativeTheme } = require('electron');
+  const appearanceState = appearance.load();
+  const savedAppearance = appearanceState.settings;
+  nativeTheme.themeSource = savedAppearance.mode;
   mainWindow = new BrowserWindow({
+    show: false,
     width: 1400,
     height: 850,
     webPreferences: {
+      additionalArguments: [`--vibe-appearance=${JSON.stringify(appearanceState)}`],
       preload: path.join(__dirname, '..', '..', 'dist', 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true,
@@ -60,12 +67,13 @@ function createWindow() {
       webSecurity: true,
       allowRunningInsecureContent: false
     },
-    backgroundColor: '#1e1e1e', // Synced with --terminal-bg in variables.css
+    backgroundColor: variables(savedAppearance, nativeTheme.shouldUseDarkColors).values['bg-primary'],
     title: 'Vibe Console',
     icon: path.join(__dirname, '..', '..', 'build', 'icon.png')
   });
 
   mainWindow.loadFile('index.html');
+  mainWindow.once('ready-to-show', () => mainWindow.show());
 
   // Prevent untrusted navigations and popup windows.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -179,6 +187,7 @@ function openExternalSafely(rawUrl) {
  * Setup all IPC handlers
  */
 function setupAllIPC() {
+  appearance.setupIPC(ipcMain);
   // Setup module IPC handlers
   ptyManager.setupIPC(ipcMain);
   dialogs.setupIPC(ipcMain);
@@ -187,7 +196,6 @@ function setupAllIPC() {
   workspace.setupIPC(ipcMain);
   fileEditor.setupIPC(ipcMain);
   droppedFiles.setupIPC(ipcMain);
-  pluginsManager.setupIPC(ipcMain);
   skillsManager.setupIPC(ipcMain);
   claudeUsageManager.setupIPC(ipcMain);
   codexUsageManager.setupIPC(ipcMain);
@@ -251,7 +259,6 @@ function init() {
 function initModulesWithWindow(window) {
   workspace.init(app, window);
   fileEditor.init(window);
-  pluginsManager.init(window);
   claudeUsageManager.init(window);
   codexUsageManager.init(window);
   gitBranchesManager.init(window);

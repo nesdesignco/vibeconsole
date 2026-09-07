@@ -133,11 +133,6 @@ function updateUI() {
     startBtn.textContent = `Start ${currentTool.name}`;
   }
 
-  // Show/hide plugins panel based on tool support
-  const pluginsPanel = document.getElementById('plugins-panel');
-  if (pluginsPanel && !currentTool.supportsPlugins) {
-    // Could hide or show a message - for now just leave it
-  }
 }
 
 /**
@@ -169,8 +164,6 @@ function supportsFeature(feature) {
   if (!currentTool) return false;
 
   switch (feature) {
-    case 'plugins':
-      return currentTool.supportsPlugins;
     case 'init':
       return !!currentTool.commands.init;
     case 'commit':

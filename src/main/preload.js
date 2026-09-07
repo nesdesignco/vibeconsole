@@ -8,12 +8,14 @@ const { IPC } = require('../shared/ipcChannels');
 
 // Allowlist is derived from the single source of truth (ipcChannels.js).
 const allowedChannels = new Set(Object.values(IPC));
+const appearanceArgument = process.argv.find(arg => arg.startsWith('--vibe-appearance='));
 
 function isAllowedChannel(channel) {
   return typeof channel === 'string' && allowedChannels.has(channel);
 }
 
 contextBridge.exposeInMainWorld('vibe', {
+  appearance: appearanceArgument ? JSON.parse(appearanceArgument.slice('--vibe-appearance='.length)) : undefined,
   ipc: {
     send: (channel, ...args) => {
       if (!isAllowedChannel(channel)) return;

@@ -29,6 +29,8 @@ const IPC = {
 
   // Layout
   TOGGLE_SIDEBAR: 'toggle-sidebar',
+  SAVE_APPEARANCE: 'save-appearance',
+  APPEARANCE_CHANGED: 'appearance-changed',
 
   // Commands
   RUN_COMMAND: 'run-command',
@@ -58,15 +60,16 @@ const IPC = {
   TERMINAL_AI_TOOL_DETECTED: 'terminal-ai-tool-detected',
   GET_AVAILABLE_SHELLS: 'get-available-shells',
 
-  // Plugins Panel
-  LOAD_PLUGINS: 'load-plugins',
   LOAD_SKILLS: 'load-skills',
+  ADD_SKILL_REPOSITORY: 'add-skill-repository',
+  REMOVE_SKILL_REPOSITORY: 'remove-skill-repository',
   INSTALL_SKILL: 'install-skill',
   TOGGLE_SKILL: 'toggle-skill',
   GET_SKILL_COMMAND: 'get-skill-command',
-  TOGGLE_PLUGIN: 'toggle-plugin',
-  PLUGIN_TOGGLED: 'plugin-toggled',
-  REFRESH_PLUGINS: 'refresh-plugins',
+  CHECK_SKILL_UPDATE: 'check-skill-update',
+  APPLY_SKILL_UPDATE: 'apply-skill-update',
+  ROLLBACK_SKILL_UPDATE: 'rollback-skill-update',
+  OPEN_SKILL_BACKUP: 'open-skill-backup',
 
   // AI Tool Usage (generic - per-terminal)
   LOAD_AI_USAGE: 'load-ai-usage',

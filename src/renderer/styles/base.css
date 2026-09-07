@@ -25,7 +25,7 @@ html, body {
 
 ::-webkit-scrollbar-thumb {
   background: var(--border-subtle);
-  border-radius: 3px;
+  border-radius: calc(var(--radius-sm) * 3 / 6);
 }
 
 ::-webkit-scrollbar-thumb:hover {

@@ -12,6 +12,7 @@ const {
   Replace,
   Save,
   Search,
+  Settings,
   Undo2,
   WandSparkles,
   WrapText,
@@ -28,6 +29,7 @@ const EDITOR_ICONS = {
   Replace,
   Save,
   Search,
+  Settings,
   Undo2,
   WandSparkles,
   WrapText
