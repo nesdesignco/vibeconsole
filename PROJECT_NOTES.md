@@ -2,9 +2,10 @@
 
 ## Session Notes
 
-### [2026-09-08] Version 1.3.16 Release Preparation
+### [2026-09-08] Version 1.3.16 Release
 - Version 1.3.16 packages persistent appearance settings (four light and four dark palettes), shared terminal/editor theming, reviewed skill updates and custom repositories, native scrollbar synchronization, and removal of the dedicated Plugins panel.
-- The feature commit passed GitHub CI, including lint, typecheck, unit tests, renderer build, smoke launch, and terminal scroll regressions. Publish through the existing version-tag workflow so the application and DMG receive Apple notarization and updater metadata is regenerated from the final artifacts.
+- GitHub CI passed, including lint, typecheck, unit tests, renderer build, smoke launch, and terminal scroll regressions. The release workflow failed at the runner's `security set-key-partition-list` step with `SecKeychainUnlock`; this runner signing issue remains unresolved.
+- Published [v1.3.16](https://github.com/nesdesignco/vibeconsole/releases/tag/v1.3.16) from tag commit `a876104` using locally signed Apple Silicon artifacts under `release/publish`. Verified the embedded version and packaged sources, isolated app launch, application and DMG notarization/stapling, Gatekeeper acceptance, updater SHA-512 metadata, and all five uploaded asset SHA-256 digests. The public latest-release updater endpoint reports version 1.3.16.
 
 ### [2026-09-07] Persistent Appearance Settings
 - Added eight palettes (four light and four dark, including Linen and true-black Black), System mode, three styles, and editable interface/terminal colors through the rightmost toolbar Settings button using the existing Lucide icon library. `src/shared/appearance.js` owns palette values, validation, derived CSS variables, and xterm colors; components do not carry separate color palettes.
