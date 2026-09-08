@@ -34,6 +34,7 @@ function harness(t, options = {}) {
       : id === 'os' ? { homedir: () => home } : require(id)
   });
   const create = () => mod.exports.createSkillUpdater({ getSkills: async provider => [{ ...skill, provider }],
+    skillLockFile: () => path.join(home, '.agents', '.skill-lock.json'),
     configDir: provider => path.join(home, '.' + provider), normalizeRepository: repo => repo,
     findExecutable: command => path.join(home, 'bin', command), run,
     verifyMarketplace: options.verifyMarketplace || (async () => true),
@@ -72,6 +73,19 @@ test('stale reviews and changed files after update are never overwritten', async
   h.write('.claude/skills/my-skill/SKILL.md', 'edit after update');
   await assert.rejects(h.reload().rollback('claude', 'my-skill'), /Files changed/);
   assert.equal(fs.readFileSync(path.join(h.home, '.claude/skills/my-skill/SKILL.md'), 'utf8'), 'edit after update');
+});
+
+test('a canonical source path disambiguates duplicate skill names and rollback preserves the local copy', async t => {
+  const h = harness(t, { skill: { id: 'security-review', repo: 'affaan-m/ECC', sourcePath: 'skills/security-review' } });
+  const local = h.write('.claude/skills/security-review/SKILL.md', 'My existing review');
+  h.write('remote/skills/security-review/SKILL.md', '---\nname: security-review\n---\nCanonical review');
+  h.write('remote/.agents/skills/security-review/SKILL.md', '---\nname: security-review\n---\nAnother distribution');
+  h.write('.agents/.skill-lock.json', { skills: { 'security-review': { source: 'affaan-m/ECC', skillPath: '.agents/skills/security-review/SKILL.md' } } });
+  const review = await h.updater.check('claude', 'security-review');
+  await h.updater.apply('claude', 'security-review', review.token);
+  assert.match(fs.readFileSync(local, 'utf8'), /Canonical review/);
+  await h.updater.rollback('claude', 'security-review');
+  assert.equal(fs.readFileSync(local, 'utf8'), 'My existing review');
 });
 
 test('files named __proto__ remain covered by changed-file checks', async t => {
@@ -115,6 +129,19 @@ test('custom repository updates touch only its installed skills for the selected
   await h.updater.apply('claude', h.skill.id, review.token);
   assert.equal(fs.readFileSync(path.join(h.home, '.codex/skills/my-skill/SKILL.md'), 'utf8'), 'Codex customized');
   assert.equal(fs.readFileSync(path.join(h.home, '.claude/skills/unrelated/SKILL.md'), 'utf8'), 'unrelated');
+});
+
+test('repository-level links do not block skill updates, while linked skill markers are never read', async t => {
+  const h = harness(t, { skill: { id: 'superpowers', repo: 'obra/superpowers', kind: 'repository', installedSkills: ['my-skill'] } });
+  fs.unlinkSync(path.join(h.home, 'remote/SKILL.md'));
+  h.write('remote/skills/my-skill/SKILL.md', '---\nname: my-skill\n---\nNew skill');
+  fs.symlinkSync('/etc/passwd', path.join(h.home, 'remote/AGENTS.md'));
+  const review = await h.updater.check('claude', 'superpowers');
+  await h.updater.apply('claude', 'superpowers', review.token);
+  assert.match(fs.readFileSync(path.join(h.home, '.claude/skills/my-skill/SKILL.md'), 'utf8'), /New skill/);
+  fs.unlinkSync(path.join(h.home, 'remote/skills/my-skill/SKILL.md'));
+  fs.symlinkSync('/etc/passwd', path.join(h.home, 'remote/skills/my-skill/SKILL.md'));
+  await assert.rejects(h.updater.check('claude', 'superpowers'), /Cannot safely identify/);
 });
 
 test('external services expose release information without pretending to update deployment', async t => {

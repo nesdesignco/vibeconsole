@@ -1,7 +1,7 @@
 {
   "version": "1.1",
   "description": "Claude Code IDE - Module structure and IPC communication map",
-  "lastUpdated": "2026-09-07",
+  "lastUpdated": "2026-09-08",
   "architecture": {
     "type": "electron",
     "mainProcess": "src/main/index.js",
@@ -5421,75 +5421,78 @@
         "repositoryFile": {
           "line": 26
         },
-        "customRepositories": {
+        "skillLockFile": {
           "line": 28
         },
+        "customRepositories": {
+          "line": 32
+        },
         "catalog": {
-          "line": 37
+          "line": 41
         },
         "getSkill": {
-          "line": 43,
+          "line": 47,
           "params": [
             "id"
           ]
         },
         "saveRepositories": {
-          "line": 45,
+          "line": 49,
           "params": [
             "repos"
           ]
         },
         "addRepository": {
-          "line": 52,
+          "line": 56,
           "params": [
             "value"
           ]
         },
         "removeRepository": {
-          "line": 62,
+          "line": 66,
           "params": [
             "id"
           ]
         },
         "validate": {
-          "line": 71,
+          "line": 75,
           "params": [
             "provider",
             "id"
           ]
         },
         "configDir": {
-          "line": 75,
+          "line": 79,
           "params": [
             "provider"
           ]
         },
         "readJson": {
-          "line": 81,
+          "line": 85,
           "params": [
             "filename"
           ]
         },
         "executable": {
-          "line": 86,
-          "params": [
-            "command"
-          ]
-        },
-        "findExecutable": {
           "line": 90,
           "params": [
             "command"
           ]
         },
+        "findExecutable": {
+          "line": 94,
+          "params": [
+            "command"
+          ]
+        },
         "getSkills": {
-          "line": 99,
+          "line": 103,
           "params": [
             "provider"
           ]
         },
         "run": {
-          "line": 148,
+          "line": 160,
           "params": [
             "command",
             "args",
@@ -5497,41 +5500,41 @@
           ]
         },
         "errorMessage": {
-          "line": 154,
+          "line": 166,
           "params": [
             "err"
           ]
         },
         "isExpectedRemote": {
-          "line": 156,
+          "line": 168,
           "params": [
             "remote",
             "repo"
           ]
         },
         "verifyMarketplace": {
-          "line": 162,
+          "line": 174,
           "params": [
             "provider",
             "skill"
           ]
         },
         "installPlugin": {
-          "line": 178,
+          "line": 190,
           "params": [
             "provider",
             "skill"
           ]
         },
         "installSkill": {
-          "line": 186,
+          "line": 198,
           "params": [
             "provider",
             "id"
           ]
         },
         "getSkillCommand": {
-          "line": 226,
+          "line": 245,
           "params": [
             "provider",
             "id",
@@ -5539,7 +5542,7 @@
           ]
         },
         "toggleSkill": {
-          "line": 241,
+          "line": 263,
           "params": [
             "provider",
             "id",
@@ -5547,7 +5550,7 @@
           ]
         },
         "setupIPC": {
-          "line": 250,
+          "line": 272,
           "params": [
             "ipcMain"
           ]
@@ -5639,7 +5642,7 @@
       "depends": [],
       "functions": {
         "getSkill": {
-          "line": 62,
+          "line": 68,
           "params": [
             "id"
           ]
@@ -5704,6 +5707,7 @@
           "params": [
             "{ getSkills",
             "configDir",
+            "skillLockFile",
             "normalizeRepository",
             "findExecutable",
             "run",

@@ -37,13 +37,14 @@
 .skill-entry { border-top: 1px solid var(--border-subtle); padding: var(--space-lg) 0; }
 .skill-heading { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md); }
 .skill-logo { object-fit: contain; flex-shrink: 0; border-radius: var(--radius-sm); color-scheme: dark; }
+.skill-logo[src$="/superpowers.png"] { background: #fff; }
 .skill-identity { flex: 1; min-width: 110px; }
 .skill-identity h5 { overflow-wrap: anywhere; }
 .skill-heading .skill-status { margin-left: auto; }
 .skill-controls, .skill-modes { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-sm); }
 .skill-modes { margin-left: auto; }
 .skill-entry .skills-note { margin-bottom: 0; }
-.skills-tabs { display: flex; gap: var(--space-xs); overflow-x: auto; border-bottom: 1px solid var(--border-subtle); }
+.skills-tabs { display: flex; flex-wrap: wrap; gap: var(--space-xs); border-bottom: 1px solid var(--border-subtle); }
 .skills-tabs [role="tab"] { border-radius: 0; border-bottom: 2px solid transparent; }
 .skills-tabs [aria-selected="true"] { color: var(--accent-primary); border-bottom-color: currentColor; }
 #skills-list .skill-entry:first-child { border-top: 0; }

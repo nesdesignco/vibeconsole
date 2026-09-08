@@ -58,7 +58,7 @@ async function fetchJson(url) {
   return JSON.parse(body);
 }
 
-function createSkillUpdater({ getSkills, configDir, normalizeRepository, findExecutable, run, verifyMarketplace, request = fetchJson }) {
+function createSkillUpdater({ getSkills, configDir, skillLockFile, normalizeRepository, findExecutable, run, verifyMarketplace, request = fetchJson }) {
   const plans = new Map();
   let working = false;
   const root = () => path.join(app.getPath('userData'), 'skill-updates');
@@ -127,7 +127,8 @@ function createSkillUpdater({ getSkills, configDir, normalizeRepository, findExe
     const repo = normalizeRepository(skill.repo);
     const checkout = path.join(directory, 'source');
     await run('git', ['-c', 'core.hooksPath=/dev/null', '-c', 'protocol.file.allow=never', 'clone', '--depth=1', '--no-recurse-submodules', '--', `https://github.com/${repo}.git`, checkout], os.homedir(), 120000);
-    inventory(checkout, true);
+    // File updates validate selected skill directories; unrelated repository links are never followed.
+    inventory(checkout, !compiled);
     const revision = (await run('git', ['rev-parse', 'HEAD'], checkout)).stdout.trim();
     if (!/^[a-f0-9]{40,64}$/.test(revision)) throw new Error('Could not verify the source revision.');
     return { checkout, revision };
@@ -137,7 +138,7 @@ function createSkillUpdater({ getSkills, configDir, normalizeRepository, findExe
     const found = [];
     function walk(dir) {
       const marker = path.join(dir, 'SKILL.md');
-      if (exists(marker)) {
+      if (exists(marker) && fs.lstatSync(marker).isFile()) {
         const text = fs.readFileSync(marker, 'utf8');
         const frontmatter = text.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)?.[1] || '';
         const name = frontmatter.match(/^name:\s*["']?([a-zA-Z0-9._-]+)["']?\s*$/m)?.[1] || path.basename(dir);
@@ -154,12 +155,13 @@ function createSkillUpdater({ getSkills, configDir, normalizeRepository, findExe
   async function prepareFiles(skill, plan, locals) {
     const { checkout, revision } = await stageRepository(skill, plan.directory, true);
     const sources = sourceSkills(checkout);
-    const lockFile = path.join(os.homedir(), '.agents', '.skill-lock.json');
+    const lockFile = skillLockFile();
     const lock = exists(lockFile) ? json(lockFile).skills || {} : {};
     plan.targets = [];
     const changes = [];
     for (const local of locals) {
       let candidates = sources.filter(source => source.name === local.name || (skill.kind !== 'repository' && [skill.id, ...(skill.aliases || [])].includes(source.name)));
+      if (skill.sourcePath) candidates = candidates.filter(source => path.relative(checkout, source.path).split(path.sep).join('/') === skill.sourcePath);
       const tracked = lock[local.name];
       if (tracked && String(tracked.source).toLowerCase() === skill.repo.toLowerCase() && typeof tracked.skillPath === 'string') {
         const lockedPath = path.resolve(checkout, path.dirname(tracked.skillPath));
@@ -172,6 +174,7 @@ function createSkillUpdater({ getSkills, configDir, normalizeRepository, findExe
         candidates = candidates.filter(candidate => candidate.path.includes(`${path.sep}${providerFolder}${path.sep}`));
       }
       if (candidates.length !== 1) throw new Error(`Cannot safely identify the source for ${local.name}. Use this repository’s installer.`);
+      inventory(candidates[0].path, true);
       const stagedSource = path.join(plan.directory, 'next', String(plan.targets.length));
       copy(candidates[0].path, stagedSource, true);
       const item = { ...target(local.path), source: stagedSource, label: local.name, sourceHash: '' };

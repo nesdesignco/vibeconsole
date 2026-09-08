@@ -2,6 +2,16 @@
 
 ## Session Notes
 
+### [2026-09-09] Security and Development Skills
+- Prepared version 1.3.17 for release with the Security and Development catalog additions and installation/update fixes below.
+- Added ECC Security Review under Security and the Superpowers skill repository under Development, with upstream project artwork stored locally. Category tabs wrap within the existing side panel.
+- ECC installation and reviewed updates select only `skills/security-review`; the repository contains other distributions with the same skill name. Existing same-name skills with an unverified repository source are preserved and reported instead of overwritten.
+- Superpowers uses the existing provider-specific skill chooser and source-lock detection. This installs selected skill files, without session-start hooks; the card explains how to invoke the workflow. No user skills are installed by opening the catalog.
+- File update staging tolerates unrelated repository symlinks without following them, while selected skill directories still reject links before copying. Regression checks cover canonical-source selection, source collisions, repository detection, update/rollback, and linked skill markers.
+- Follow-up review reproduced and fixed Codex-first ECC installation blocking Claude: the second agent now links the verified shared copy without downloading or replacing edits. Source-lock reads follow the skills CLI's `XDG_STATE_HOME` override through one shared path resolver.
+- The skills CLI automatically enables noninteractive installation when it detects inherited agent environment variables. Repository chooser commands now clear those detection variables for that command only. A real terminal check reached the 14-skill selection screen and was cancelled before installation.
+- Validation: 227 unit tests, lint, typecheck, renderer build, isolated real upstream installs, update/rollback for both entries, and actual Electron rendering with installed states and local logos. Bundled logo SHA-256 values match upstream artwork; light and dark presentation were inspected. Personal agent installations were not changed.
+
 ### [2026-09-08] Version 1.3.16 Release
 - Version 1.3.16 packages persistent appearance settings (four light and four dark palettes), shared terminal/editor theming, reviewed skill updates and custom repositories, native scrollbar synchronization, and removal of the dedicated Plugins panel.
 - GitHub CI passed, including lint, typecheck, unit tests, renderer build, smoke launch, and terminal scroll regressions. The release workflow failed at the runner's `security set-key-partition-list` step with `SecKeychainUnlock`; this runner signing issue remains unresolved.

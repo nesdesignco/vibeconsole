@@ -10,7 +10,7 @@ const { execFileCmd } = require('./gitExecUtils');
 const pending = new Set();
 let updater;
 function updates() {
-  if (!updater) updater = require('./skillUpdates').createSkillUpdater({ getSkills, configDir, normalizeRepository, findExecutable, run, verifyMarketplace });
+  if (!updater) updater = require('./skillUpdates').createSkillUpdater({ getSkills, configDir, skillLockFile, normalizeRepository, findExecutable, run, verifyMarketplace });
   return updater;
 }
 
@@ -24,6 +24,10 @@ function normalizeRepository(value) {
 }
 
 function repositoryFile() { return path.join(app.getPath('userData'), 'skill-repositories.json'); }
+
+function skillLockFile() {
+  return process.env.XDG_STATE_HOME ? path.join(process.env.XDG_STATE_HOME, 'skills', '.skill-lock.json') : path.join(os.homedir(), '.agents', '.skill-lock.json');
+}
 
 function customRepositories() {
   const filename = repositoryFile();
@@ -122,7 +126,7 @@ async function getSkills(provider) {
     if (skill.kind === 'service') return { ...skill, provider, installed: null, enabled: null, statusError: '' };
     if (skill.kind === 'repository') {
       try {
-        const tracked = readJson(path.join(os.homedir(), '.agents', '.skill-lock.json')).skills || {};
+        const tracked = readJson(skillLockFile()).skills || {};
         const installedSkills = Object.entries(tracked).filter(([id, entry]) =>
           /^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(id) && !id.includes('..') &&
           isExpectedRemote(entry?.source || entry?.sourceUrl, skill.repo) &&
@@ -133,12 +137,20 @@ async function getSkills(provider) {
     if (skill.kind === 'cli') return { ...skill, provider, installed: executable(skill.id), enabled: null, statusError: '' };
     const localId = [skill.id, ...(skill.aliases || [])].find(id => roots.some(root => fs.existsSync(path.join(root, id, 'SKILL.md'))));
     const local = !!localId;
+    let sharedPath;
+    if (skill.sourcePath && [...roots, path.join(os.homedir(), '.agents', 'skills')].some(root => fs.existsSync(path.join(root, skill.id, 'SKILL.md')))) {
+      try {
+        const tracked = readJson(skillLockFile()).skills?.[skill.id];
+        if (!isExpectedRemote(tracked?.source || tracked?.sourceUrl, skill.repo)) throw new Error(`An existing ${skill.id} skill could not be matched to ${skill.repo}. Its files have been preserved.`);
+        if (!local) sharedPath = path.join(os.homedir(), '.agents', 'skills', skill.id);
+      } catch (err) { return { ...skill, provider, installed: false, enabled: null, statusError: errorMessage(err) }; }
+    }
     const localFile = local && roots.map(root => path.join(root, localId, 'SKILL.md')).find(file => fs.existsSync(file));
     const frontmatter = localFile ? fs.readFileSync(localFile, 'utf8').match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)?.[1] : '';
     const commandName = frontmatter?.match(/^name:\s*["']?([a-zA-Z0-9._-]+)["']?\s*$/m)?.[1] || localId || skill.id;
     const plugin = plugins.find(item => item.pluginId === `${skill.id}@${skill.id}`);
     const standalone = local || skill.installation === 'skill' || (provider === 'codex' && ['caveman', 'impeccable'].includes(skill.id));
-    return { ...skill, provider, commandName, installed: local || !!plugin, pluginVersion: plugin?.version,
+    return { ...skill, provider, commandName, sharedPath, installed: local || !!plugin, pluginVersion: plugin?.version,
       enabled: local || !plugin ? null : plugin.enabled === true,
       toggleable: !local && !!plugin && provider === 'claude' && !skill.installation,
       statusError: standalone ? '' : pluginError };
@@ -197,6 +209,12 @@ async function installSkill(provider, id) {
     const status = (await getSkills(provider)).find(skill => skill.id === id);
     if (status.installed) return { success: true, alreadyInstalled: true };
     if (status.statusError) throw new Error(status.statusError);
+    if ('sharedPath' in status && status.sharedPath) {
+      const directory = path.join(configDir(provider), 'skills');
+      fs.mkdirSync(directory, { recursive: true });
+      fs.symlinkSync(status.sharedPath, path.join(directory, id), 'dir');
+      return { success: true };
+    }
     const skill = getSkill(id);
     if (skill.installCommand) {
       const [command, ...args] = skill.installCommand;
@@ -211,7 +229,8 @@ async function installSkill(provider, id) {
     } else if (id === 'impeccable' && provider === 'codex') {
       await run('npx', ['--yes', 'impeccable', 'install', '--providers=codex', '--scope=global', '--no-hooks'], os.homedir(), 180000);
     } else if (skill.installation === 'skill' || (id === 'caveman' && provider === 'codex')) {
-      await run('npx', ['--yes', 'skills', 'add', skill.repo, '--skill', id, '--agent', provider === 'claude' ? 'claude-code' : 'codex', '--global', '--yes'], os.homedir(), 180000);
+      const source = skill.sourcePath ? `https://github.com/${skill.repo}/tree/main/${skill.sourcePath}` : skill.repo;
+      await run('npx', ['--yes', 'skills', 'add', source, '--skill', id, '--agent', provider === 'claude' ? 'claude-code' : 'codex', '--global', '--yes'], os.homedir(), 180000);
     } else {
       await installPlugin(provider, skill);
     }
@@ -227,8 +246,11 @@ function getSkillCommand(provider, id, action) {
   validate(provider, id);
   const skill = getSkill(id);
   if (skill.kind === 'repository' && action === 'setup') {
-    // Keep the native chooser and overwrite confirmations; never pass --yes.
-    return `npx --yes skills add https://github.com/${normalizeRepository(skill.repo)} --agent ${provider === 'claude' ? 'claude-code' : 'codex'} --global`;
+    // Agent detection forces --yes upstream; remove inherited signals only for this interactive command.
+    const agentEnv = ['AI_AGENT', 'CURSOR_TRACE_ID', 'CURSOR_AGENT', 'CURSOR_EXTENSION_HOST_ROLE', 'GEMINI_CLI',
+      'CODEX_SANDBOX', 'CODEX_CI', 'CODEX_THREAD_ID', 'ANTIGRAVITY_AGENT', 'AUGMENT_AGENT', 'OPENCODE_CLIENT',
+      'CLAUDECODE', 'CLAUDE_CODE', 'REPL_ID', 'COPILOT_MODEL', 'COPILOT_ALLOW_ALL', 'COPILOT_GITHUB_TOKEN'].map(name => `-u ${name}`).join(' ');
+    return `env ${agentEnv} npx --yes skills add https://github.com/${normalizeRepository(skill.repo)} --agent ${provider === 'claude' ? 'claude-code' : 'codex'} --global`;
   }
   const target = provider === 'codex' ? ' --codex' : '';
   if (id === 'rtk' && action === 'setup') return `rtk init -g${target}`;

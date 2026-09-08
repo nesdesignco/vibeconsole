@@ -19,7 +19,7 @@ const busy = new Set();
 const errors = new Map();
 let checkingAll = false;
 const names = { claude: 'Claude Code', codex: 'Codex' };
-const categories = { 'token-saver': 'Token Saver', ui: 'UI', brain: 'Brain', custom: 'My Skills' };
+const categories = { 'token-saver': 'Token Saver', ui: 'UI', brain: 'Brain', security: 'Security', development: 'Development', custom: 'My Skills' };
 
 function init() {
   const panel = document.getElementById('skills-panel');
@@ -129,7 +129,7 @@ function renderSkill(skill) {
     help = skill.setupNote;
   } else if (skill.kind === 'repository') {
     controls = actionButton(skill, 'setup', 'Choose skills', pending);
-    help = 'Opens the native installer for the selected agent. Review skills and existing files there, then refresh this panel. Detected installs come from the skills CLI.';
+    help = skill.setupNote || 'Opens the native installer for the selected agent. Review skills and existing files there, then refresh this panel. Detected installs come from the skills CLI.';
     if (skill.custom) controls += actionButton(skill, 'remove', 'Remove from list', pending);
   } else if (skill.installed) {
     if (skill.setupUrl) {

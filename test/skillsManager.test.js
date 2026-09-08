@@ -46,7 +46,7 @@ function harness(t, options = {}) {
   const create = () => {
     const mod = { exports: {} };
     vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../src/main/skillsManager.js'), 'utf8'), {
-      module: mod, process: { env: {} }, console,
+      module: mod, process: { env: options.env || {} }, console,
       require: id => {
         if (id === 'electron') return { app: { getPath: () => path.join(home, 'app-data') } };
         if (id === 'os') return { homedir: () => home };
@@ -64,7 +64,7 @@ test('opening and refreshing skills never installs or creates configuration', as
   const h = harness(t);
   for (const provider of ['claude', 'codex']) {
     const skills = await h.manager.getSkills(provider);
-    assert.equal(skills.length, 14);
+    assert.equal(skills.length, 16);
     assert.ok(skills.every(skill => !['anthropics/skills', 'vercel-labs/agent-skills'].includes(skill.repo)));
     assert.ok(skills.every(skill => !skill.installed));
     await h.manager.getSkills(provider);
@@ -88,8 +88,72 @@ test('custom repositories are validated, deduplicated and persist across app rel
   assert.equal(items.length, 1);
   assert.equal(items[0].repo, 'Example/Skill-Pack');
   assert.equal(h.calls.length, 0);
-  assert.equal(h.manager.getSkillCommand('codex', added.id, 'setup'), 'npx --yes skills add https://github.com/Example/Skill-Pack --agent codex --global');
+  assert.ok(h.manager.getSkillCommand('codex', added.id, 'setup').endsWith('npx --yes skills add https://github.com/Example/Skill-Pack --agent codex --global'));
   assert.equal((await h.manager.installSkill('codex', added.id)).success, false);
+});
+
+test('ECC installs only its canonical Security Review skill for either agent and preserves existing copies', async t => {
+  const h = harness(t, { run: async (command, args, { write }) => {
+    if (command !== 'npx') return;
+    assert.deepEqual([...args], ['--yes', 'skills', 'add', 'https://github.com/affaan-m/ECC/tree/main/skills/security-review', '--skill', 'security-review', '--agent', args.includes('claude-code') ? 'claude-code' : 'codex', '--global', '--yes']);
+    write(`${args.includes('claude-code') ? '.claude' : '.agents'}/skills/security-review/SKILL.md`, '---\nname: security-review\n---\nECC');
+    write('.agents/.skill-lock.json', { skills: { 'security-review': { source: 'affaan-m/ECC', skillPath: 'skills/security-review/SKILL.md' } } });
+    return { stdout: '' };
+  } });
+  for (const provider of ['claude', 'codex']) {
+    assert.equal((await h.manager.installSkill(provider, 'security-review')).success, true);
+    assert.equal((await h.reload().installSkill(provider, 'security-review')).alreadyInstalled, true);
+  }
+  assert.equal(h.calls.filter(c => c.command === 'npx').length, 2);
+  h.write('.agents/.skill-lock.json', { skills: { 'security-review': { source: 'someone/another-pack' } } });
+  h.calls.length = 0;
+  const result = await h.manager.installSkill('claude', 'security-review');
+  assert.equal(result.success, false);
+  assert.match(result.error, /could not be matched/);
+  assert.equal(h.calls.length, 0);
+  assert.match(fs.readFileSync(path.join(h.home, '.claude/skills/security-review/SKILL.md'), 'utf8'), /ECC/);
+});
+
+test('Superpowers uses the repository chooser and detects only skills installed from its source', async t => {
+  const h = harness(t);
+  h.write('.agents/.skill-lock.json', { skills: {
+    'using-superpowers': { source: 'obra/superpowers' }, 'writing-plans': { source: 'other/skills' }
+  } });
+  for (const provider of ['claude', 'codex']) {
+    h.write(`.${provider}/skills/using-superpowers/SKILL.md`, 'Superpowers');
+    h.write(`.${provider}/skills/writing-plans/SKILL.md`, 'Unrelated');
+    const skill = (await h.manager.getSkills(provider)).find(s => s.id === 'superpowers');
+    assert.deepEqual([...skill.installedSkills], ['using-superpowers']);
+    const command = h.manager.getSkillCommand(provider, 'superpowers', 'setup');
+    assert.ok(command.startsWith('env -u AI_AGENT '));
+    assert.ok(command.includes('-u CODEX_THREAD_ID '));
+    assert.ok(command.includes('-u CLAUDECODE '));
+    assert.ok(command.endsWith(`npx --yes skills add https://github.com/obra/superpowers --agent ${provider === 'claude' ? 'claude-code' : 'codex'} --global`));
+    assert.doesNotMatch(command, /--global --yes|--all/);
+  }
+});
+
+test('ECC links an existing shared install to Claude without downloading or overwriting edits', async t => {
+  const h = harness(t);
+  h.write('.agents/skills/security-review/SKILL.md', 'My edited ECC skill');
+  h.write('.agents/.skill-lock.json', { skills: { 'security-review': { source: 'affaan-m/ECC' } } });
+  assert.equal((await h.manager.installSkill('claude', 'security-review')).success, true);
+  assert.equal(fs.realpathSync(path.join(h.home, '.claude/skills/security-review')), fs.realpathSync(path.join(h.home, '.agents/skills/security-review')));
+  assert.equal(fs.readFileSync(path.join(h.home, '.claude/skills/security-review/SKILL.md'), 'utf8'), 'My edited ECC skill');
+  assert.equal((await h.manager.installSkill('claude', 'security-review')).alreadyInstalled, true);
+  assert.equal(h.calls.length, 0);
+});
+
+test('native skill source detection respects XDG_STATE_HOME', async t => {
+  const env = {};
+  const h = harness(t, { env });
+  env.XDG_STATE_HOME = path.join(h.home, 'state');
+  h.write('state/skills/.skill-lock.json', { skills: { 'security-review': { source: 'affaan-m/ECC' }, 'using-superpowers': { source: 'obra/superpowers' } } });
+  h.write('.claude/skills/security-review/SKILL.md', 'ECC');
+  h.write('.claude/skills/using-superpowers/SKILL.md', 'Superpowers');
+  const skills = await h.manager.getSkills('claude');
+  assert.equal(skills.find(s => s.id === 'security-review').installed, true);
+  assert.deepEqual([...skills.find(s => s.id === 'superpowers').installedSkills], ['using-superpowers']);
 });
 
 test('repository status follows source and provider; removing a listing keeps installed files', async t => {

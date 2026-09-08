@@ -53,6 +53,14 @@ test('Skills uses shared refresh artwork and shows accurate installation states 
   assert.doesNotMatch(ui, /id="skill-rtk"/);
   assert.doesNotMatch(ui, /data-action="lite"/);
   assert.equal((ui.match(/data-action="use"/g) || []).length, 4);
+  for (const [category, id, name] of [['security', 'security-review', 'ECC Security Review'], ['development', 'superpowers', 'Superpowers']]) {
+    await listeners.get('skills-content:click')({ target: { closest: () => ({ matches: () => false, dataset: { category } }) } });
+    const rendered = element('skills-content').innerHTML;
+    assert.match(rendered, new RegExp(`aria-labelledby="skills-tab-${category}"`));
+    assert.match(rendered, new RegExp(`id="skill-${id}"`));
+    assert.ok(rendered.includes(name));
+    assert.equal((rendered.match(/<article/g) || []).length, 1);
+  }
   await listeners.get('skills-content:click')({ target: { closest: () => ({ matches: () => false, dataset: { category: 'token-saver' } }) } });
 
   const retry = listeners.get('skills-refresh:click')();

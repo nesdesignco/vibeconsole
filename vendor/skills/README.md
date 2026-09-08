@@ -12,6 +12,8 @@ Original project artwork, stored locally for offline display. Names and marks be
 | scrollcraft.png | https://avatars.githubusercontent.com/u/253835467?v=4 — nateherkai’s GitHub profile image, used to represent Scrollcraft |
 | impeccable.svg | https://impeccable.style/favicon.svg |
 | design-dna.jpg | https://avatars.githubusercontent.com/u/40333372?v=4 — zanwei's GitHub profile image, used to represent Design DNA; not a separate project logo |
+| ecc-security-review.svg | https://github.com/affaan-m/ECC/blob/main/assets/ecc-icon.svg (MIT) — ECC project icon |
+| superpowers.png | https://github.com/obra/superpowers/blob/main/assets/app-icon.png (MIT) — Superpowers project icon |
 
 The Skills toolbar uses Lucide BookOpen. See `LICENSE-lucide` for its license.
 

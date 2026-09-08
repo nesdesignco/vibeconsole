@@ -12,6 +12,7 @@
  * @property {boolean} [custom]
  * @property {boolean} [modes]
  * @property {string} [installation]
+ * @property {string} [sourcePath] Canonical skill directory within the repository.
  * @property {string[]} [aliases]
  * @property {string[]} [installCommand]
  * @property {string} [setupUrl]
@@ -35,6 +36,11 @@ const SKILLS = [
     description: 'Plan and build interactive landing pages with scroll-driven video, layered scenes and responsive motion.', kind: 'skill' },
   { id: 'design-dna', category: 'ui', installation: 'skill', name: 'Design DNA', logo: 'design-dna.jpg', title: 'Extract a design language', repo: 'zanwei/design-dna',
     description: 'Turn screenshots and reference sites into design tokens, style and visual effects, then build from that profile.', kind: 'skill' },
+  { id: 'security-review', category: 'security', installation: 'skill', sourcePath: 'skills/security-review', name: 'ECC Security Review', logo: 'ecc-security-review.svg', title: 'Review application security', repo: 'affaan-m/ECC',
+    description: 'Review authentication, API endpoints, input validation, secrets and sensitive data handling. Installs only the Security Review skill from ECC.', kind: 'skill' },
+  { id: 'superpowers', category: 'development', name: 'Superpowers', logo: 'superpowers.png', title: 'Plan, test and review your work', repo: 'obra/superpowers', kind: 'repository',
+    description: 'Choose skills for planning, test-driven development, systematic debugging and code review.',
+    setupNote: 'Choose the skills you want to install. Start a new agent session and invoke using-superpowers to begin the workflow. This installs skill files; automatic session-start hooks are not included.' },
   { id: 'obsidian-skills', category: 'brain', name: 'Obsidian Skills', logo: 'obsidian-skills.png', title: 'Work with your Obsidian vault', repo: 'kepano/obsidian-skills', kind: 'repository',
     description: 'A complete skill pack for Obsidian Markdown, Bases, Canvas, the Obsidian CLI and clean web-page extraction.' },
   { id: 'qmd', category: 'brain', name: 'QMD', logo: 'qmd.png', title: 'Search your local knowledge', repo: 'tobi/qmd', kind: 'cli',
