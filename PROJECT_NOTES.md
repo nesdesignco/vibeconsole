@@ -2,10 +2,11 @@
 
 ## Session Notes
 
-### [2026-09-10] Version 1.3.19 Release
-- Prepared 1.3.19 with six additional AI CLIs, local provider logos, missing-command installation guidance, the Peekaboo Computer Use setup/task panel, toolbar ordering and wrapped-history resize fixes.
+### [2026-09-10] Version 1.3.19 Published
+- Published [v1.3.19](https://github.com/nesdesignco/vibeconsole/releases/tag/v1.3.19) from `60924b8` with six additional AI CLIs, local provider logos, missing-command installation guidance, the Peekaboo Computer Use setup/task panel, toolbar ordering and wrapped-history resize fixes.
 - Validation before release: 243 unit tests, lint, typecheck, real Electron terminal scroll checks and all eight CLI integration checks passed. Desktop-control integration uses isolated CLI fixtures; live model-driven Mac actions remain untested.
-- Build signed and notarized Apple Silicon artifacts locally using the existing Developer ID and keychain profile, with automatic publication disabled. Publish the DMG, ZIP, blockmaps and updater metadata together after verification.
+- GitHub CI passed, including Linux smoke and scroll regressions. Used the verified local signing path because previous release runners failed to unlock their signing keychain; canceled the duplicate tag-triggered release job before publishing locally built artifacts.
+- Verified 103 packaged source/assets against the checkout, packaged renderer launch with an isolated home/profile, strict application signatures, application/DMG notarization and Gatekeeper acceptance, updater SHA-512 metadata and all five uploaded SHA-256 digests. Published the DMG, ZIP, blockmaps and updater metadata together as the latest release.
 
 ### [2026-09-10] Preserve wrapped terminal history when closing panels
 - xterm deletes wrapped continuation rows when the terminal widens, disposing markers attached to those rows. Resize now anchors the logical line and clamps the visible offset to its remaining wraps.
