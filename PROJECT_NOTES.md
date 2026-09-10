@@ -2,6 +2,11 @@
 
 ## Session Notes
 
+### [2026-09-10] Version 1.3.18 Published
+- Published [v1.3.18](https://github.com/nesdesignco/vibeconsole/releases/tag/v1.3.18) from `3cf76f1` with terminal media links and Source Control file navigation. GitHub CI passed unit tests, lint, typecheck, renderer build, smoke and terminal scroll regressions.
+- The release runner still fails at `security set-key-partition-list` with `SecKeychainUnlock`. Built the Apple Silicon artifacts locally under `release/1.3.18` using the existing Developer ID and `vibeconsole-notary` profile, with automatic publication disabled.
+- Verified packaged sources/bundles against the checkout, packaged application launch, strict signature validation, application and DMG notarization/stapling, Gatekeeper acceptance, updater SHA-512 metadata and all five uploaded SHA-256 digests. The public latest-release updater endpoint serves verified 1.3.18 metadata.
+
 ### [2026-09-10] Terminal Media Links and Git File Navigation
 - Prepared version 1.3.18 for the media-link and Source Control navigation update.
 - Terminal file links now recognize the supported image and video extensions. Native activation and the capture-phase fallback share deduplication, and file hit-testing uses buffer cell positions across wrapped rows so TUI redraws and wide-character prefixes do not lose clicks.
