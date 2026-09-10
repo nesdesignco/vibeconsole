@@ -2,6 +2,14 @@
 
 ## Session Notes
 
+### [2026-09-10] Terminal Media Links and Git File Navigation
+- Prepared version 1.3.18 for the media-link and Source Control navigation update.
+- Terminal file links now recognize the supported image and video extensions. Native activation and the capture-phase fallback share deduplication, and file hit-testing uses buffer cell positions across wrapped rows so TUI redraws and wide-character prefixes do not lose clicks.
+- Images use the existing editor preview. Videos open in the system's default player through `OPEN_VIDEO`, which validates the registered project, resolved target, extension and regular-file status before calling Electron `shell.openPath`. Video bytes never enter the text editor or its 10MB read limit; opening a video preserves unsaved documents.
+- Source Control change rows reuse the Files context-menu component for Open File, Reveal in Finder, Copy Path and Copy Relative Path. Menus close when the panel hides or the project changes.
+- Regression checks cover media paths, wrapped coordinates, redraw fallback, duplicate clicks, selection gestures, video access restrictions, unsaved edits and delegated Git context menus.
+- Validation: 233 unit tests, lint, typecheck and renderer build passed. Real Electron mouse events opened the image preview during normal and mouse-reporting/redraw states; video and Finder actions reached the correct native shell methods exactly once (shell methods intercepted in the test).
+
 ### [2026-09-09] Security and Development Skills
 - Prepared version 1.3.17 for release with the Security and Development catalog additions and installation/update fixes below.
 - Added ECC Security Review under Security and the Superpowers skill repository under Development, with upstream project artwork stored locally. Category tabs wrap within the existing side panel.

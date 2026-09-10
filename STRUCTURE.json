@@ -1,7 +1,7 @@
 {
   "version": "1.1",
   "description": "Claude Code IDE - Module structure and IPC communication map",
-  "lastUpdated": "2026-09-08",
+  "lastUpdated": "2026-09-10",
   "architecture": {
     "type": "electron",
     "mainProcess": "src/main/index.js",
@@ -1098,53 +1098,54 @@
       "depends": [
         "electronBridge",
         "shared/ipcChannels",
+        "shared/mediaTypes",
         "state",
         "monacoEditor",
         "lucideIcons"
       ],
       "functions": {
         "init": {
-          "line": 55,
+          "line": 56,
           "params": [
             "onRefreshFileTree"
           ],
           "purpose": "Initialize editor module"
         },
         "getExtensionFromPath": {
-          "line": 102,
+          "line": 103,
           "params": [
             "filePath"
           ]
         },
         "isImageExt": {
-          "line": 109,
+          "line": 110,
           "params": [
             "extension"
           ]
         },
         "setViewTogglesVisible": {
-          "line": 113,
+          "line": 114,
           "params": [
             "visible"
           ]
         },
         "setActiveToggle": {
-          "line": 118,
+          "line": 119,
           "params": [
             "mode"
           ]
         },
         "setMode": {
-          "line": 131,
+          "line": 132,
           "params": [
             "mode"
           ]
         },
         "getEditorContent": {
-          "line": 152
+          "line": 153
         },
         "setEditorContent": {
-          "line": 157,
+          "line": 158,
           "params": [
             "content",
             "filePath",
@@ -1152,76 +1153,76 @@
           ]
         },
         "focusTextEditor": {
-          "line": 170
+          "line": 171
         },
         "syncEditorToolState": {
-          "line": 178
+          "line": 179
         },
         "setFullscreen": {
-          "line": 196,
+          "line": 197,
           "params": [
             "enabled"
           ]
         },
         "runEditorAction": {
-          "line": 208,
+          "line": 209,
           "params": [
             "actionId",
             "fallbackStatus"
           ]
         },
         "getCommandDefinitions": {
-          "line": 220
+          "line": 221
         },
         "commandMatches": {
-          "line": 236,
+          "line": 237,
           "params": [
             "command",
             "query"
           ]
         },
         "renderCommandPaletteList": {
-          "line": 242
+          "line": 243
         },
         "runCommand": {
-          "line": 298,
+          "line": 299,
           "params": [
             "command"
           ]
         },
         "runCommandById": {
-          "line": 305,
+          "line": 306,
           "params": [
             "commandId"
           ]
         },
         "showCommandPalette": {
-          "line": 310
+          "line": 311
         },
         "hideCommandPalette": {
-          "line": 322,
+          "line": 323,
           "params": [
             "restoreFocus = true"
           ]
         },
         "showGoToLinePrompt": {
-          "line": 327
+          "line": 328
         },
         "toggleWordWrap": {
-          "line": 350
+          "line": 351
         },
         "toggleMinimap": {
-          "line": 356
+          "line": 357
         },
         "bindEditorTool": {
-          "line": 362,
+          "line": 363,
           "params": [
             "id",
             "handler"
           ]
         },
         "openFile": {
-          "line": 379,
+          "line": 380,
           "params": [
             "filePath",
             "source = 'terminal'",
@@ -1229,15 +1230,15 @@
           ]
         },
         "closeEditor": {
-          "line": 410,
+          "line": 416,
           "purpose": "Close editor"
         },
         "saveFile": {
-          "line": 449,
+          "line": 455,
           "purpose": "Save file"
         },
         "updateStatus": {
-          "line": 474,
+          "line": 480,
           "params": [
             "status",
             "className = ''"
@@ -1245,18 +1246,18 @@
           "purpose": "Update editor status"
         },
         "checkModified": {
-          "line": 484,
+          "line": 490,
           "purpose": "Check if content is modified"
         },
         "updateCursorStatus": {
-          "line": 495,
+          "line": 501,
           "params": [
             "line",
             "col"
           ]
         },
         "scrollToLine": {
-          "line": 506,
+          "line": 512,
           "params": [
             "line",
             "col"
@@ -1264,11 +1265,11 @@
           "purpose": "Navigate textarea to a specific line and column"
         },
         "setupEventHandlers": {
-          "line": 546,
+          "line": 552,
           "purpose": "Setup event handlers"
         },
         "receiveOpenResult": {
-          "line": 746,
+          "line": 752,
           "params": [
             "result",
             "channel"
@@ -1276,15 +1277,15 @@
           "purpose": "Commit a document switch only after every required read succeeds."
         },
         "setupIPC": {
-          "line": 796,
+          "line": 802,
           "purpose": "Setup IPC listeners"
         },
         "isEditorOpen": {
-          "line": 833,
+          "line": 839,
           "purpose": "Check if editor is open"
         },
         "getCurrentFile": {
-          "line": 840,
+          "line": 846,
           "purpose": "Get currently editing file path"
         }
       },
@@ -1494,7 +1495,10 @@
         "createTerminalLinkHandler": {
           "line": 28,
           "params": [
-            "ipc = ipcRenderer"
+            "ipc = ipcRenderer",
+            "onFileActivate = (_path",
+            "_line",
+            "_col"
           ]
         }
       },
@@ -1537,37 +1541,39 @@
         "path",
         "node:crypto",
         "shared/ipcChannels",
-        "projectAccess"
+        "shared/mediaTypes",
+        "projectAccess",
+        "electron"
       ],
       "functions": {
         "getMimeTypeForExtension": {
-          "line": 16,
+          "line": 17,
           "params": [
             "extension"
           ]
         },
         "init": {
-          "line": 33,
+          "line": 34,
           "params": [
             "_window"
           ],
           "purpose": "Initialize file editor module"
         },
         "readFile": {
-          "line": 40,
+          "line": 41,
           "params": [
             "filePath"
           ],
           "purpose": "Read file contents"
         },
         "readFileAsDataUrl": {
-          "line": 58,
+          "line": 59,
           "params": [
             "filePath"
           ]
         },
         "writeFile": {
-          "line": 92,
+          "line": 93,
           "params": [
             "filePath",
             "content",
@@ -1576,7 +1582,7 @@
           "purpose": "Write file contents"
         },
         "replaceFile": {
-          "line": 112,
+          "line": 113,
           "params": [
             "targetPath",
             "filePath",
@@ -1585,14 +1591,14 @@
           ]
         },
         "getFileExtension": {
-          "line": 142,
+          "line": 143,
           "params": [
             "filePath"
           ],
           "purpose": "Get file extension"
         },
         "safeSend": {
-          "line": 146,
+          "line": 147,
           "params": [
             "sender",
             "channel",
@@ -1600,7 +1606,7 @@
           ]
         },
         "setupIPC": {
-          "line": 153,
+          "line": 154,
           "params": [
             "ipcMain"
           ],
@@ -1609,6 +1615,7 @@
       },
       "ipc": {
         "listens": [
+          "OPEN_VIDEO",
           "READ_FILE",
           "READ_FILE_DATA_URL",
           "WRITE_FILE"
@@ -1891,6 +1898,8 @@
         "panelHeaderDropdown",
         "spinnerButton",
         "toast",
+        "contextMenu",
+        "clipboardWrite",
         "panelVisibility",
         "panelCoordinator",
         "gitDiffViewer",
@@ -1903,39 +1912,40 @@
         "githubPanel/delegatedEvents",
         "githubPanel/operations",
         "state",
+        "editor",
         "escapeHtml"
       ],
       "functions": {
         "init": {
-          "line": 71,
+          "line": 74,
           "purpose": "Initialize GitHub panel"
         },
         "setupGitWatcher": {
-          "line": 144,
+          "line": 149,
           "purpose": "Setup .git directory watcher for auto-refresh when panel is visible"
         },
         "setupEventListeners": {
-          "line": 174,
+          "line": 179,
           "purpose": "Setup event listeners"
         },
         "setupContentDelegation": {
-          "line": 203
+          "line": 208
         },
         "refreshIssues": {
-          "line": 252,
+          "line": 271,
           "purpose": "Refresh current tab"
         },
         "show": {
-          "line": 269
+          "line": 288
         },
         "hide": {
-          "line": 273
+          "line": 292
         },
         "toggle": {
-          "line": 277
+          "line": 296
         },
         "setTab": {
-          "line": 284,
+          "line": 303,
           "params": [
             "tab",
             "options = {}"
@@ -1943,21 +1953,21 @@
           "purpose": "Set active tab"
         },
         "renderLoading": {
-          "line": 323,
+          "line": 342,
           "params": [
             "message = 'Loading...'"
           ],
           "purpose": "Render loading state"
         },
         "renderError": {
-          "line": 340,
+          "line": 359,
           "params": [
             "message"
           ],
           "purpose": "Render error state"
         },
         "showToast": {
-          "line": 364,
+          "line": 383,
           "params": [
             "message",
             "type = 'info'"
@@ -1965,35 +1975,35 @@
           "purpose": "Show toast notification (delegates to shared toast utility)"
         },
         "publishGitChangesCount": {
-          "line": 368,
+          "line": 387,
           "params": [
             "count"
           ]
         },
         "loadAutoStagePreference": {
-          "line": 375
-        },
-        "persistAutoStagePreference": {
-          "line": 386
-        },
-        "syncAutoStageToggle": {
           "line": 394
         },
+        "persistAutoStagePreference": {
+          "line": 405
+        },
+        "syncAutoStageToggle": {
+          "line": 413
+        },
         "computeChangesHash": {
-          "line": 408,
+          "line": 427,
           "params": [
             "data"
           ],
           "purpose": "==================== CHANGES FUNCTIONALITY ===================="
         },
         "clearActivitySlot": {
-          "line": 428
+          "line": 447
         },
         "getActivityRenderOptions": {
-          "line": 434
+          "line": 453
         },
         "renderActivitySlot": {
-          "line": 441,
+          "line": 460,
           "params": [
             "activity",
             "totalHint = null",
@@ -2001,112 +2011,118 @@
           ]
         },
         "setActivityPending": {
-          "line": 465,
+          "line": 484,
           "params": [
             "pending"
           ]
         },
         "loadChanges": {
-          "line": 472,
+          "line": 491,
           "params": [
             "force"
           ]
         },
         "_loadChangesImpl": {
-          "line": 479
+          "line": 498
         },
         "renderChanges": {
-          "line": 524,
+          "line": 543,
           "params": [
             "gen"
           ],
           "purpose": "Render source control sections with clear separation (merge, working tree, staged, sync)."
         },
         "toggleSection": {
-          "line": 734,
+          "line": 753,
           "params": [
             "sectionId"
           ],
           "purpose": "Toggle a collapsible section"
         },
         "loadStashSection": {
-          "line": 747,
+          "line": 766,
           "params": [
             "gen"
           ],
           "purpose": "Load and render stash section"
         },
         "renderChangesError": {
-          "line": 797,
+          "line": 816,
           "params": [
             "message"
           ],
           "purpose": "Render changes error"
         },
         "setupCommitArea": {
-          "line": 819,
+          "line": 838,
           "purpose": "Setup commit area event listeners"
         },
         "syncRemoteButtonsState": {
-          "line": 981
+          "line": 1000
         },
         "setDescriptionVisibility": {
-          "line": 1002,
+          "line": 1021,
           "params": [
             "visible"
           ]
         },
         "updateCommitBtnState": {
-          "line": 1026,
+          "line": 1045,
           "purpose": "Update commit button enabled/disabled state"
         },
         "updateCommitArea": {
-          "line": 1054,
+          "line": 1073,
           "purpose": "Update commit area visibility and button labels"
         },
         "buildCommitMessage": {
-          "line": 1088,
+          "line": 1107,
           "purpose": "Build full commit message from summary + description"
         },
         "clearCommitInputs": {
-          "line": 1098,
+          "line": 1117,
           "purpose": "Clear commit inputs"
         },
         "handleCommit": {
-          "line": 1114,
+          "line": 1133,
           "purpose": "Handle creating a commit (native execFile)"
         },
         "handleCommitAndPush": {
-          "line": 1185,
+          "line": 1204,
           "purpose": "Handle commit and push"
         },
         "handleAmendCommit": {
-          "line": 1193,
+          "line": 1212,
           "purpose": "Handle amending the last commit"
         },
         "handleFetch": {
-          "line": 1225,
+          "line": 1244,
           "params": [
             "options = {}"
           ],
           "purpose": "Fetch remote refs and refresh sync indicators."
         },
         "handlePull": {
-          "line": 1258,
+          "line": 1277,
           "purpose": "Handle pull (IPC background)"
         },
         "handlePush": {
-          "line": 1299,
+          "line": 1318,
           "purpose": "Handle push (IPC background)"
         },
         "updateSyncStatus": {
-          "line": 1338,
+          "line": 1357,
           "purpose": "Update sync status (ahead/behind counts)"
         },
         "renderBranchBar": {
-          "line": 1360,
+          "line": 1379,
           "purpose": "Branch/upstream info now lives in the activity header."
         }
+      },
+      "ipc": {
+        "listens": [],
+        "emits": [
+          "REVEAL_IN_FINDER"
+        ]
       }
     },
     "main/claudeUsageManager": {
@@ -3868,24 +3884,35 @@
       "description": "F",
       "exports": [
         "registerFilePathLinks",
-        "findFilePathMatches"
+        "findFilePathMatches",
+        "getFilePathLinks"
       ],
-      "depends": [],
+      "depends": [
+        "shared/mediaTypes"
+      ],
       "functions": {
         "findFilePathMatches": {
-          "line": 41,
+          "line": 43,
           "params": [
             "text"
           ],
           "purpose": "Pure helper so the pattern can be tested without an xterm instance."
         },
-        "registerFilePathLinks": {
-          "line": 66,
+        "getFilePathLinks": {
+          "line": 68,
           "params": [
             "terminal",
+            "bufferLineNumber",
             "onActivate"
           ],
           "purpose": "Create and register a file path link provider on a terminal instance."
+        },
+        "registerFilePathLinks": {
+          "line": 97,
+          "params": [
+            "terminal",
+            "onActivate"
+          ]
         }
       }
     },
@@ -5258,11 +5285,12 @@
         "registerBareUrlLinks"
       ],
       "depends": [
-        "shared/urlUtils"
+        "shared/urlUtils",
+        "filePathLinker"
       ],
       "functions": {
         "registerBareUrlLinks": {
-          "line": 19,
+          "line": 20,
           "params": [
             "terminal",
             "onActivate"
@@ -5270,7 +5298,7 @@
           "purpose": "Create and register a bare URL link provider on a terminal instance."
         },
         "resolveOscUriAtCell": {
-          "line": 62,
+          "line": 63,
           "params": [
             "terminal",
             "bufferRow",
@@ -5279,7 +5307,7 @@
           "purpose": "to \"no OSC link found\" instead of breaking clicks."
         },
         "attachClickLinkFallback": {
-          "line": 88,
+          "line": 89,
           "params": [
             "terminal",
             "element",
@@ -5861,6 +5889,16 @@
           ]
         }
       }
+    },
+    "shared/mediaTypes": {
+      "file": "src/shared/mediaTypes.js",
+      "description": "",
+      "exports": [
+        "IMAGE_EXTENSIONS",
+        "VIDEO_EXTENSIONS"
+      ],
+      "depends": [],
+      "functions": {}
     }
   },
   "ipcChannels": {

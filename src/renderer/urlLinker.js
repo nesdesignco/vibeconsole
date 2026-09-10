@@ -9,6 +9,7 @@
  */
 
 const { BARE_URL_REGEX, findUrlAtColumn, stripTrailingJunk } = require('../shared/urlUtils');
+const { getFilePathLinks } = require('./filePathLinker');
 
 /**
  * Create and register a bare URL link provider on a terminal instance.
@@ -105,30 +106,28 @@ function attachClickLinkFallback(terminal, element, linkHandler) {
     const upAt = Date.now();
     const clientX = event.clientX;
     const clientY = event.clientY;
+    const screen = element.querySelector('.xterm-screen');
+    if (!screen) return;
+    const rect = screen.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const col = Math.floor((clientX - rect.left) / (rect.width / terminal.cols));
+    const row = Math.floor((clientY - rect.top) / (rect.height / terminal.rows));
+    if (col < 0 || row < 0 || col >= terminal.cols || row >= terminal.rows) return;
+    const bufferRow = terminal.buffer.active.viewportY + row;
+    // Snapshot before the TUI reacts to mouseup and replaces the visible text.
+    const fileLink = getFilePathLinks(terminal, bufferRow + 1, linkHandler.activateFile).find(({ range }) =>
+      (bufferRow + 1 > range.start.y || (bufferRow + 1 === range.start.y && col + 1 >= range.start.x)) &&
+      (bufferRow + 1 < range.end.y || (bufferRow + 1 === range.end.y && col + 1 <= range.end.x)));
+    const oscUri = resolveOscUriAtCell(terminal, bufferRow, col);
+    const lineText = terminal.buffer.active.getLine(bufferRow)?.translateToString(false) ?? '';
+    const uri = oscUri || findUrlAtColumn(lineText, col);
     // Defer past xterm's own mouseup handling; if the native path already
     // opened a link for this click, stay out of the way.
     setTimeout(() => {
       if (linkHandler.lastSentAt >= upAt) return;
 
-      const screen = element.querySelector('.xterm-screen');
-      if (!screen) return;
-      const rect = screen.getBoundingClientRect();
-      if (!rect.width || !rect.height) return;
-      const col = Math.floor((clientX - rect.left) / (rect.width / terminal.cols));
-      const row = Math.floor((clientY - rect.top) / (rect.height / terminal.rows));
-      if (col < 0 || row < 0 || col >= terminal.cols || row >= terminal.rows) return;
-      const bufferRow = terminal.buffer.active.viewportY + row;
-
-      const oscUri = resolveOscUriAtCell(terminal, bufferRow, col);
-      if (oscUri) {
-        linkHandler.activate(event, oscUri);
-        return;
-      }
-      // translateToString(false): untrimmed keeps string index == column
-      // (except wide chars, where links are ASCII anyway).
-      const lineText = terminal.buffer.active.getLine(bufferRow)?.translateToString(false) ?? '';
-      const uri = findUrlAtColumn(lineText, col);
-      if (uri) linkHandler.activate(event, uri);
+      if (fileLink && linkHandler.activateFile && !oscUri) fileLink.activate();
+      else if (uri) linkHandler.activate(event, uri);
     }, 30);
   }, true);
 }

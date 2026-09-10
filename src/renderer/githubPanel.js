@@ -8,6 +8,8 @@ const { IPC } = require('../shared/ipcChannels');
 const { createPanelHeaderDropdown } = require('./panelHeaderDropdown');
 const { withSpinner } = require('./spinnerButton');
 const { createToast } = require('./toast');
+const { createContextMenu } = require('./contextMenu');
+const { writeClipboardText } = require('./clipboardWrite');
 const { createPanelVisibility } = require('./panelVisibility');
 const { registerPanel, showPanel, hidePanel, togglePanel } = require('./panelCoordinator');
 const gitDiffViewer = require('./gitDiffViewer');
@@ -36,6 +38,7 @@ let _lastAutoFetchAt = 0;
 let _activityPending = false;
 
 const AUTO_FETCH_INTERVAL_MS = 30000;
+const fileContextMenu = createContextMenu();
 
 // Load deduplication: generation counters discard stale IPC responses,
 // _hasData flags prevent showing the loading spinner on subsequent refreshes.
@@ -82,6 +85,7 @@ function init() {
 
   _toast = createToast(panelElement);
   _panel = createPanelVisibility(panelElement, {
+    onHide: () => fileContextMenu.close(),
     onShow: () => {
       setTab('changes');
       updateSyncStatus();
@@ -124,6 +128,7 @@ function init() {
   // Reset changesData when project changes
   const state = require('./state');
   state.onProjectChange(() => {
+    fileContextMenu.close();
     changesData = createEmptyChangesData();
     _hasChangesData = false;
     _lastChangesHash = null;
@@ -202,6 +207,20 @@ function setupEventListeners() {
 
 function setupContentDelegation() {
   bindDelegatedEvents(contentElement, {
+    onFileContextMenu: (x, y, filePath) => {
+      const projectPath = require('./state').getProjectPath();
+      if (!projectPath) return;
+      const fullPath = pathApi.join(projectPath, filePath);
+      fileContextMenu.show(x, y, menu => {
+        menu.addItem('Open File', () => require('./editor').openFile(fullPath, 'changes'));
+        menu.addItem('Reveal in Finder', () => {
+          ipcRenderer.send(IPC.REVEAL_IN_FINDER, { filePath: fullPath, projectPath });
+        });
+        menu.addSeparator();
+        menu.addItem('Copy Path', () => writeClipboardText(fullPath));
+        menu.addItem('Copy Relative Path', () => writeClipboardText(filePath));
+      });
+    },
     onToggleSection: toggleSection,
     onOpenFileDiff: (filePath, diffType) => gitDiffViewer.showDiffModal(filePath, diffType),
     onOpenConflict: (filePath) => gitConflictResolver.showConflictModal(filePath),

@@ -8,6 +8,25 @@ const { loadModule, createElements } = require('./helpers/loadModule');
 const manager = require('../src/main/gitChangesManager');
 const { registerProjectRoot } = require('../src/main/projectAccess');
 const { IPC } = require('../src/shared/ipcChannels');
+
+test('Git file right-click delegates nested targets once without opening the diff', () => {
+  const listeners = new Map(), menus = [];
+  class Element {
+    closest(selector) { return selector === '.git-change-item' ? this.item : null; }
+  }
+  const { bindDelegatedEvents } = loadModule('src/renderer/githubPanel/delegatedEvents.js', {}, { Element });
+  const content = { addEventListener: (name, listener) => { assert.ok(!listeners.has(name)); listeners.set(name, listener); } };
+  const handlers = { onFileContextMenu: (...args) => menus.push(args) };
+  bindDelegatedEvents(content, handlers); bindDelegatedEvents(content, handlers);
+  const target = new Element(); target.item = { dataset: { path: 'clips/arrival v2.mp4' } };
+  let prevented = 0, stopped = 0;
+  const event = { target, clientX: 300, clientY: 450, preventDefault: () => prevented++, stopPropagation: () => stopped++ };
+  listeners.get('contextmenu')(event);
+  assert.deepEqual(menus, [[300, 450, 'clips/arrival v2.mp4']]);
+  assert.equal(prevented, 1); assert.equal(stopped, 1);
+  target.item = null; listeners.get('contextmenu')(event);
+  assert.equal(menus.length, 1);
+});
 const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8', env: {
   ...process.env, GIT_CONFIG_GLOBAL: '/dev/null', GIT_CONFIG_NOSYSTEM: '1'
 } });

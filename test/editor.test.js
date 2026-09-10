@@ -4,7 +4,7 @@ const { loadModule, createElements } = require('./helpers/loadModule');
 const { IPC } = require('../src/shared/ipcChannels');
 
 function fixture(monaco = false) {
-  const element = createElements(), handlers = new Map(), sent = [], timers = [];
+  const element = createElements(), handlers = new Map(), sent = [], timers = [], invoked = [], alerts = [];
   let confirmations = 0, allowDiscard = false, activeProject = '/project-a', text = '', onChange;
   const codeEditor = monaco ? {
     isReady: () => true, init: (_el, callbacks) => { onChange = callbacks.onChange; return true; },
@@ -12,10 +12,12 @@ function fixture(monaco = false) {
     setLanguage() {}, getCursorPosition: () => ({ lineNumber: 1, column: 1 })
   } : { isReady: () => false, init: () => false };
   const editor = loadModule('src/renderer/editor.js', {
-    './electronBridge': { ipcRenderer: { on: (c, fn) => handlers.set(c, fn), send: (c, data) => sent.push({ c, data }) } },
+    './electronBridge': { ipcRenderer: { on: (c, fn) => handlers.set(c, fn), send: (c, data) => sent.push({ c, data }),
+      invoke: async (c, data) => { invoked.push({ c, data }); return { success: true }; } } },
     './state': { getProjectPath: () => activeProject }, './monacoEditor': codeEditor,
     './lucideIcons': { renderEditorIcons() {} }
   }, { document: { getElementById: element, addEventListener() {} }, window: {},
+    alert: message => alerts.push(message),
     confirm: () => { confirmations++; return allowDiscard; }, setTimeout: fn => { timers.push(fn); return timers.length; } });
   editor.init();
   function reply(request, content = 'original', success = true) {
@@ -25,7 +27,7 @@ function fixture(monaco = false) {
       fileName: 'file', extension: image ? 'svg' : 'txt', content, dataUrl: 'data:image/svg+xml;base64,PHN2Zy8+', error: 'fixture error'
     });
   }
-  return { editor, element, sent, reply, timers,
+  return { editor, element, sent, reply, timers, invoked, alerts,
     open: (name = '/project-a/a.txt') => { editor.openFile(name); const r = sent.at(-1); reply(r); return r; },
     edit: value => { if (monaco) { text = value; onChange(); } else { element('editor-textarea').value = value; element('editor-textarea').listeners.get('input')(); } },
     save: () => { editor.saveFile(); return sent.at(-1); },
@@ -52,6 +54,20 @@ test('successive save acknowledgements cannot move the saved baseline backwards'
   const f = fixture(); f.open(); f.edit('first'); const first = f.save();
   f.edit('second'); const second = f.save(); f.ack(second); f.ack(first);
   f.close(); assert.equal(f.confirmations(), 0); assert.equal(f.editor.isEditorOpen(), false);
+});
+
+test('video clicks use the player without reading binary text or disturbing unsaved edits', async () => {
+  const f = fixture(); f.open(); f.edit('keep this edit');
+  const before = f.sent.length;
+  await f.editor.openFile('/project-a/clip.MP4');
+  assert.equal(f.invoked[0].c, IPC.OPEN_VIDEO);
+  assert.equal(f.invoked[0].data.filePath, '/project-a/clip.MP4');
+  assert.equal(f.invoked[0].data.projectPath, '/project-a');
+  assert.equal(f.sent.length, before);
+  assert.equal(f.confirmations(), 0);
+  assert.equal(f.editor.getCurrentFile(), '/project-a/a.txt');
+  assert.equal(f.element('editor-textarea').value, 'keep this edit');
+  assert.equal(f.alerts.length, 0);
 });
 
 test('save error retains dirty content and original project follows the document', () => {

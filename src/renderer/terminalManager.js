@@ -25,9 +25,16 @@ const GLOBAL_PROJECT_KEY = '__global__';
 // cycle; a null detection within this window must not clear the tag.
 const AI_TOOL_DETECTION_GRACE_MS = 5000;
 
-function createTerminalLinkHandler(ipc = ipcRenderer) {
+function createTerminalLinkHandler(ipc = ipcRenderer, onFileActivate = (_path, _line, _col) => {}) {
   let lastSent = { url: null, at: 0 };
   return {
+    activateFile: (filePath, line, col) => {
+      const url = JSON.stringify([filePath, line, col]);
+      const now = Date.now();
+      if (url === lastSent.url && now - lastSent.at < 500) return;
+      lastSent = { url, at: now };
+      onFileActivate(filePath, line, col);
+    },
     activate: (_event, uri) => {
       // Normalize before sending: strips prose punctuation and adds the
       // missing protocol for bare-domain links (form-drive.vercel.app).
@@ -480,7 +487,9 @@ class TerminalManager {
    * Initialize xterm.js instance for a terminal
    */
   _initializeTerminal(terminalId, options) {
-    const linkHandler = createTerminalLinkHandler();
+    const linkHandler = createTerminalLinkHandler(ipcRenderer, (filePath, line, col) => {
+      this.onFilePathActivate?.(filePath, line, col);
+    });
     const terminal = new Terminal({
       cursorBlink: true,
       fontSize: 14,
@@ -500,11 +509,7 @@ class TerminalManager {
     terminal.loadAddon(webLinksAddon);
 
     // File path link provider (e.g. src/renderer/editor.js:42 → open in editor)
-    registerFilePathLinks(terminal, (filePath, line, col) => {
-      if (this.onFilePathActivate) {
-        this.onFilePathActivate(filePath, line, col);
-      }
-    });
+    registerFilePathLinks(terminal, linkHandler.activateFile);
 
     // Protocol-less web URLs (form-drive.vercel.app, www.*, localhost:3000);
     // WebLinksAddon only covers http(s):// text.

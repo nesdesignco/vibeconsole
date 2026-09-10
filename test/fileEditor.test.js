@@ -59,7 +59,7 @@ test('failed atomic replacement preserves original contents and cleans temporary
 test('editor IPC echoes request IDs for successful and rejected reads and saves', async t => {
   const dir = fixture(t), file = path.join(dir, 'file.svg'); fs.writeFileSync(file, '<svg/>');
   const handlers = new Map(), messages = [];
-  editor.setupIPC({ on: (channel, handler) => handlers.set(channel, handler) });
+  editor.setupIPC({ on: (channel, handler) => handlers.set(channel, handler), handle() {} });
   const event = { sender: { isDestroyed: () => false, send: (channel, result) => messages.push({ channel, result }) } };
   let requestId = 0;
   for (const channel of [IPC.READ_FILE, IPC.READ_FILE_DATA_URL, IPC.WRITE_FILE]) {
@@ -69,4 +69,31 @@ test('editor IPC echoes request IDs for successful and rejected reads and saves'
       assert.equal(messages.at(-1).result.success, projectPath !== null);
     }
   }
+});
+
+test('video IPC opens only existing project videos in the system player and reports failures', async t => {
+  const dir = fixture(t), outside = fixture(t), opened = [], handlers = new Map();
+  let playerError = '';
+  const module = loadModule('src/main/fileEditor.js', {
+    electron: { shell: { openPath: async file => { opened.push(file); return playerError; } } }
+  });
+  module.setupIPC({ on() {}, handle: (channel, handler) => handlers.set(channel, handler) });
+  const open = filePath => handlers.get(IPC.OPEN_VIDEO)(null, { filePath, projectPath: dir });
+  const video = path.join(dir, 'clip.MP4');
+  // Larger than the text/image editor limit: video must never be read into IPC.
+  fs.writeFileSync(video, ''); fs.truncateSync(video, 12 * 1024 * 1024);
+  assert.equal((await open(video)).success, true);
+  assert.deepEqual(opened, [fs.realpathSync(video)]);
+  const script = path.join(dir, 'run.sh'); fs.writeFileSync(script, 'echo test');
+  const escaped = path.join(outside, 'outside.mp4'); fs.writeFileSync(escaped, '');
+  fs.symlinkSync(script, path.join(dir, 'script.mp4'));
+  fs.symlinkSync(escaped, path.join(dir, 'escape.mp4'));
+  fs.mkdirSync(path.join(dir, 'directory.mp4'));
+  for (const file of [script, escaped, 'missing.mp4', 'script.mp4', 'escape.mp4', 'directory.mp4', '.git/clip.mp4']) {
+    assert.equal((await open(path.isAbsolute(file) ? file : path.join(dir, file))).success, false, file);
+  }
+  assert.equal((await handlers.get(IPC.OPEN_VIDEO)(null, { filePath: video, projectPath: '/' })).success, false);
+  assert.deepEqual(opened, [fs.realpathSync(video)]);
+  playerError = 'No application can open this file';
+  assert.equal((await open(video)).error, playerError);
 });

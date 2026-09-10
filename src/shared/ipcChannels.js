@@ -49,6 +49,7 @@ const IPC = {
   FILE_DATA_URL: 'file-data-url',
   WRITE_FILE: 'write-file',
   FILE_SAVED: 'file-saved',
+  OPEN_VIDEO: 'open-video',
 
   // Multi-Terminal
   TERMINAL_CREATE: 'terminal-create',

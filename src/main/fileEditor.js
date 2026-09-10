@@ -9,6 +9,7 @@ const path = require('path');
 const { randomUUID } = require('node:crypto');
 const pendingWrites = new Map();
 const { IPC } = require('../shared/ipcChannels');
+const { VIDEO_EXTENSIONS } = require('../shared/mediaTypes');
 const { isPathWithinProjectContent } = require('./projectAccess');
 const MAX_EDITOR_FILE_BYTES = 10 * 1024 * 1024; // 10MB
 const PROJECT_PATH_ERROR = 'Path is outside project directory or targets protected metadata';
@@ -151,6 +152,21 @@ function safeSend(sender, channel, data) {
  * Setup IPC handlers
  */
 function setupIPC(ipcMain) {
+  ipcMain.handle(IPC.OPEN_VIDEO, async (_event, request) => {
+    try {
+      const { filePath, projectPath } = request || {};
+      if (!isPathWithinProjectContent(filePath, projectPath)) throw new Error(PROJECT_PATH_ERROR);
+      const targetPath = await fsp.realpath(filePath);
+      if (!isPathWithinProjectContent(targetPath, projectPath)) throw new Error(PROJECT_PATH_ERROR);
+      if (!VIDEO_EXTENSIONS.includes(getFileExtension(targetPath))) throw new Error('Unsupported video type');
+      if (!(await fsp.stat(targetPath)).isFile()) throw new Error('Not a video file');
+      const error = await require('electron').shell.openPath(targetPath);
+      return { success: !error, error };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  });
+
   ipcMain.on(IPC.READ_FILE, async (event, { filePath, projectPath, requestId }) => {
     if (!projectPath || !isPathWithinProjectContent(filePath, projectPath)) {
       safeSend(event.sender, IPC.FILE_CONTENT, { success: false, error: PROJECT_PATH_ERROR, filePath, requestId });

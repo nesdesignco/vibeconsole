@@ -1,6 +1,15 @@
 function bindDelegatedEvents(contentElement, handlers) {
   if (!contentElement || contentElement.__vibeGitDelegatedBound) return;
 
+  contentElement.addEventListener('contextmenu', (event) => {
+    if (!(event.target instanceof Element)) return;
+    const item = event.target.closest('.git-change-item');
+    if (!item?.dataset.path) return;
+    event.preventDefault();
+    event.stopPropagation();
+    handlers.onFileContextMenu(event.clientX, event.clientY, item.dataset.path);
+  });
+
   contentElement.addEventListener('click', async (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;

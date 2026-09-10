@@ -5,6 +5,7 @@
 
 const { ipcRenderer } = require('./electronBridge');
 const { IPC } = require('../shared/ipcChannels');
+const { IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } = require('../shared/mediaTypes');
 const state = require('./state');
 const codeEditor = require('./monacoEditor');
 const { renderEditorIcons } = require('./lucideIcons');
@@ -107,7 +108,7 @@ function getExtensionFromPath(filePath) {
 }
 
 function isImageExt(extension) {
-  return new Set(['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'ico', 'svg']).has((extension || '').toLowerCase());
+  return IMAGE_EXTENSIONS.includes((extension || '').toLowerCase());
 }
 
 function setViewTogglesVisible(visible) {
@@ -377,6 +378,13 @@ function bindEditorTool(id, handler) {
  * @param {number} [options.col] - Column number to navigate to (1-based)
  */
 function openFile(filePath, source = 'terminal', options) {
+  const extension = getExtensionFromPath(filePath);
+  const projectPath = state.getProjectPath();
+  if (VIDEO_EXTENSIONS.includes(extension)) {
+    return ipcRenderer.invoke(IPC.OPEN_VIDEO, { filePath, projectPath }).then(result => {
+      if (!result.success) alert('Unable to open video: ' + result.error);
+    }).catch(err => alert('Unable to open video: ' + err.message));
+  }
   if (pendingSaves.size > 0) {
     updateStatus('Saving… Wait for the save to finish before opening another file.', '');
     return;
@@ -384,8 +392,6 @@ function openFile(filePath, source = 'terminal', options) {
   const discardConfirmed = isModified;
   if (discardConfirmed && !confirm('You have unsaved changes. Open another file anyway?')) return;
 
-  const extension = getExtensionFromPath(filePath);
-  const projectPath = state.getProjectPath();
   const requestId = ++nextRequestId;
   const channels = extension === 'svg'
     ? [IPC.READ_FILE, IPC.READ_FILE_DATA_URL]

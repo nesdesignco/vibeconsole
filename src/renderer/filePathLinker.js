@@ -4,6 +4,8 @@
  * Uses terminal.registerLinkProvider() custom ILinkProvider API.
  */
 
+const { IMAGE_EXTENSIONS, VIDEO_EXTENSIONS } = require('../shared/mediaTypes');
+
 // Extension-anchored regex:
 // - Must contain at least one slash (avoids false positives like "package.json")
 // - Matches absolute (/x/y.js), explicit-relative (./x.js, ../x.js) and bare
@@ -16,7 +18,7 @@ const KNOWN_EXTENSIONS = 'js|jsx|ts|tsx|mjs|cjs|py|rb|go|rs|java|c|cpp|h|hpp|cs|
 const FILE_PATH_RE = new RegExp(
   // Not preceded by word char, colon, slash, dot or @ — keeps the match from
   // starting midway through a URL, a domain or a longer path.
-  '(?<![\\w:/.@])' +
+  '(?<![\\w:/.@-])' +
   '(' +
     '(?:' +
       '(?:\\.{1,2}/|/)(?:[\\w.@_-]+/)*' +   // /abs/…, ./rel/…, ../rel/…
@@ -25,7 +27,7 @@ const FILE_PATH_RE = new RegExp(
       // such as example.com/app.js stay with the URL linker instead.
       '[\\w@_-]+/(?:[\\w.@_-]+/)*' +
     ')' +
-    '[\\w.@_-]+\\.(?:' + KNOWN_EXTENSIONS + ')' +
+    '[\\w.@_-]+\\.(?:' + [KNOWN_EXTENSIONS, ...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS].join('|') + ')' +
   ')' +
   '(?::(\\d+)(?::(\\d+))?)?' +               // optional :line:col
   '(?=[\\s\'",;)\\]}>|`]|$)',                 // lookahead: ends at whitespace, punctuation, or EOL
@@ -63,26 +65,39 @@ function findFilePathMatches(text) {
  * @param {Function} onActivate - callback(filePath, line, col)
  * @returns {IDisposable} disposable to unregister the provider
  */
+function getFilePathLinks(terminal, bufferLineNumber, onActivate) {
+  const buffer = terminal.buffer.active;
+  let firstRow = bufferLineNumber - 1;
+  if (!buffer.getLine(firstRow)) return [];
+  while (firstRow > 0 && buffer.getLine(firstRow).isWrapped) firstRow--;
+
+  // Keep a string-index → cell map: wrapped lines and wide/combined characters
+  // otherwise put the clickable region on the wrong text.
+  let text = '';
+  const positions = [];
+  for (let row = firstRow; row < buffer.length; row++) {
+    const line = buffer.getLine(row);
+    if (row > firstRow && !line.isWrapped) break;
+    for (let col = 0; col < line.length; col++) {
+      const cell = line.getCell(col);
+      if (!cell || cell.getWidth() === 0) continue;
+      const chars = cell.getChars() || ' ';
+      text += chars;
+      for (let i = 0; i < chars.length; i++) positions.push({ x: col + 1, y: row + 1 });
+    }
+  }
+
+  return findFilePathMatches(text).map(match => ({
+    range: { start: positions[match.index], end: positions[match.index + match.length - 1] },
+    text: match.text,
+    activate() { onActivate(match.path, match.line, match.col); }
+  }));
+}
+
 function registerFilePathLinks(terminal, onActivate) {
   const provider = {
     provideLinks(bufferLineNumber, callback) {
-      const line = terminal.buffer.active.getLine(bufferLineNumber - 1);
-      if (!line) {
-        callback(undefined);
-        return;
-      }
-
-      const text = line.translateToString(true);
-      const links = findFilePathMatches(text).map(({ path: filePath, line: lineNum, col: colNum, index, length, text: matchText }) => ({
-        range: {
-          start: { x: index + 1, y: bufferLineNumber },  // x is 1-based
-          end: { x: index + length + 1, y: bufferLineNumber }
-        },
-        text: matchText,
-        activate() {
-          onActivate(filePath, lineNum, colNum);
-        }
-      }));
+      const links = getFilePathLinks(terminal, bufferLineNumber, onActivate);
 
       callback(links.length > 0 ? links : undefined);
     }
@@ -91,4 +106,4 @@ function registerFilePathLinks(terminal, onActivate) {
   return terminal.registerLinkProvider(provider);
 }
 
-module.exports = { registerFilePathLinks, findFilePathMatches };
+module.exports = { registerFilePathLinks, findFilePathMatches, getFilePathLinks };
