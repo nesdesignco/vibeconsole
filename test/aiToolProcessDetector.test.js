@@ -1,5 +1,9 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { spawn, execFileSync } = require('node:child_process');
 
 // aiToolProcessDetector requires ptyManager, which requires node-pty (a
 // native module built for Electron's ABI) - stub it like ptyManager.test.js.
@@ -12,6 +16,83 @@ require.cache[nodePtyPath] = {
 };
 
 const detector = require('../src/main/aiToolProcessDetector');
+
+test('detects native and interpreter CLIs without matching prompt arguments', () => {
+  const entries = [
+    ['grok', 'grok', 'grok'],
+    ['/bin/node', 'node /usr/local/bin/gemini', 'gemini'],
+    ['node', 'node /opt/lib/node_modules/@google/gemini-cli/dist/index.js', 'gemini'],
+    ['node', 'node --no-warnings /opt/lib/node_modules/@qwen-code/qwen-code/dist/index.js', 'qwen'],
+    ['node', 'node /opt/lib/node_modules/@github/copilot/npm-loader.js', 'copilot'],
+    ['node', 'node /opt/lib/node_modules/@moonshot-ai/kimi-code/dist/main.mjs', 'kimi'],
+    ['node', 'node /opt/cursor-agent/versions/2026.09/index.js', 'cursor'],
+    ['python3.13', 'python3.13 /Users/me/.local/bin/kimi', 'kimi'],
+    ['python3', 'python3 -m kimi_cli', 'kimi'],
+    ['node', 'node "/Users/my name/.local/bin/qwen"', 'qwen'],
+    ['node', 'node app.js /opt/bin/gemini', null],
+    ['node', 'node -e "qwen"', null],
+    ['python3', 'python3 -c "kimi"', null],
+    ['zsh', 'zsh -c grok', null],
+    ['node', 'node /app/not-gemini-cli/index.js --prompt kimi', null]
+  ];
+  for (const [comm, args, expected] of entries) {
+    const maps = detector.parsePsOutput(`300 200 ${comm}`);
+    maps.argsByPid = new Map([[300, args]]);
+    assert.equal(detector.detectToolForPid(200, maps), expected, args);
+  }
+  for (const name of ['grok', 'gemini', 'copilot', 'cursor-agent', 'qwen', 'kimi', 'kimi-cli']) {
+    assert.ok(detector.commToTool(`/Users/me/Application Support/bin/${name}`), name);
+  }
+  assert.equal(detector.commToTool('grok-helper'), null);
+  assert.equal(detector.commToTool('constructor'), null);
+});
+
+test('shared agent alias is identified by its target, never by its name alone', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vibe-agent-alias-'));
+  try {
+    for (const [folder, binary, expected] of [
+      ['grok', 'grok-macos-aarch64', 'grok'], ['cursor', 'cursor-agent', 'cursor'], ['other', 'other-agent', null]
+    ]) {
+      const folderPath = path.join(dir, folder);
+      fs.mkdirSync(folderPath);
+      fs.writeFileSync(path.join(folderPath, binary), 'test binary');
+      fs.symlinkSync(binary, path.join(folderPath, 'agent'));
+      assert.equal(detector.commToTool(path.join(folderPath, 'agent')), expected);
+    }
+    assert.equal(detector.commToTool('agent'), null);
+    assert.equal(detector.commToTool('/nonexistent/agent'), null);
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('real interpreter processes with spaces in executable and script paths are detected', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'vibe-process-space-'));
+  const installDir = path.join(dir, 'Example User', 'CLI Tools');
+  fs.mkdirSync(installDir, { recursive: true });
+  const node = path.join(installDir, 'node');
+  const script = path.join(installDir, 'qwen');
+  fs.symlinkSync(process.execPath, node);
+  fs.writeFileSync(script, 'process.stdout.write("ready"); setInterval(() => {}, 1000);');
+  const child = spawn(node, [script], { stdio: ['ignore', 'pipe', 'pipe'] });
+  try {
+    await new Promise((resolve, reject) => {
+      child.stdout.once('data', resolve);
+      child.once('error', reject);
+      child.once('exit', code => reject(new Error(`Child exited: ${code}`)));
+    });
+    const comm = execFileSync('/bin/ps', ['-p', String(child.pid), '-o', 'comm=']).toString().trim();
+    const args = execFileSync('/bin/ps', ['-ww', '-p', String(child.pid), '-o', 'args=']).toString().trim();
+    assert.equal(detector.interpreterToTool(comm, args), 'qwen');
+    assert.equal(detector.interpreterToTool('node', `node --no-warnings ${script}`), 'qwen');
+    const otherScript = path.join(installDir, 'app.js');
+    fs.writeFileSync(otherScript, '');
+    assert.equal(detector.interpreterToTool('node', `node ${otherScript} ${script}`), null);
+    assert.equal(detector.interpreterToTool('node', `node -e "console.log('${script}')"`), null);
+  } finally {
+    child.kill();
+    await new Promise(resolve => child.once('close', resolve));
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
 
 test('parsePsOutput builds pid/ppid/comm maps, comm may contain spaces', () => {
   const output = [

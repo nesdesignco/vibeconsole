@@ -98,6 +98,10 @@ function waitForReadyTerminal(terminalId, projectPath, aiToolId) {
       const manager = terminal.getTerminal();
       const instance = manager?.getTerminal(terminalId);
       const terminalState = instance?.state;
+      if (terminalState?.missingAiTool === aiToolId) {
+        reject(new Error('AI command not found. Use the installation instructions shown in the terminal.'));
+        return;
+      }
       if (terminalState?.aiTool === aiToolId && terminalState.aiToolProcessDetected === true) {
         resolve(terminalState);
         return;

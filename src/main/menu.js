@@ -144,7 +144,7 @@ function buildAICommandsSubmenu(tool) {
     });
   }
 
-  // Codex-specific commands
+  // Model selection when supported
   if (tool.commands.model) {
     submenu.push({
       label: `Switch Model (${tool.commands.model})`,
@@ -172,8 +172,15 @@ function buildAICommandsSubmenu(tool) {
   submenu.push({
     label: `Start ${tool.name}`,
     accelerator: 'CmdOrCtrl+K',
-    click: () => sendCommand(tool.command)
+    click: () => sendCommand({ startAiTool: true })
   });
+
+  if (tool.docsUrl) {
+    submenu.push({
+      label: `${tool.name} Setup Guide…`,
+      click: () => shell.openExternal(tool.docsUrl)
+    });
+  }
 
   submenu.push({ type: 'separator' });
 
@@ -216,8 +223,6 @@ function buildToolSwitcherSubmenu() {
     checked: tool.id === activeTool.id,
     click: () => {
       aiToolManager.setActiveTool(tool.id);
-      // Rebuild menu with new tool
-      createMenu();
     }
   }));
 }

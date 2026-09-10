@@ -1,6 +1,6 @@
 /**
  * AI Tool Process Detector Module
- * Determines which AI CLI (claude/codex) is actually running inside each
+ * Determines which AI CLI is actually running inside each
  * PTY by walking the shell's process tree, and pushes per-terminal
  * detections to the renderer. This is the authoritative signal; the
  * renderer's keystroke heuristic only provides instant feedback.
@@ -8,8 +8,11 @@
 
 const { execFile } = require('child_process');
 const { promisify } = require('util');
+const fs = require('fs');
+const path = require('path');
 const { IPC } = require('../shared/ipcChannels');
 const ptyManager = require('./ptyManager');
+const { AI_TOOL_COMMAND_MAP } = require('../shared/aiToolDetection');
 
 const execFileAsync = promisify(execFile);
 
@@ -57,24 +60,83 @@ function parsePsOutput(text) {
  * Map a process comm (name or full path) to an AI tool id.
  * Exact basename match only, so helpers like `codex-code-mode-host`
  * don't count (their parent `codex` is already in the tree).
- * @returns {'claude'|'codex'|null}
+ * @returns {string|null}
  */
 function commToTool(comm) {
   if (typeof comm !== 'string' || !comm) return null;
 
   const basename = comm.slice(comm.lastIndexOf('/') + 1).toLowerCase();
-  if (basename === 'claude') return 'claude';
-  if (basename === 'codex') return 'codex';
-  return null;
+  if (basename === 'agent' && path.isAbsolute(comm)) {
+    // Both installers provide this alias. Identify its actual target instead
+    // of assigning every `agent` process to Cursor.
+    try {
+      const target = path.basename(fs.realpathSync(comm));
+      if (target === 'cursor-agent') return 'cursor';
+      if (/^grok-(?:macos|linux)-(?:aarch64|x86_64)$/.test(target) || target === 'grok') return 'grok';
+    } catch { /* Missing or unreadable aliases carry no provider identity. */ }
+    return null;
+  }
+  return Object.hasOwn(AI_TOOL_COMMAND_MAP, basename) ? AI_TOOL_COMMAND_MAP[basename] : null;
+}
+
+// ps flattens argv, including spaces inside executable/script paths. Recover
+// an existing absolute file prefix before falling back to token parsing. Stop
+// at the first file so paths in later prompt arguments cannot become scripts.
+function takeProcessArgument(text) {
+  const input = text.trimStart();
+  if (path.isAbsolute(input)) {
+    const boundaries = input.matchAll(/\s+|$/g);
+    for (const boundary of boundaries) {
+      // macOS paths are limited to 1024 bytes; keep failed probes bounded.
+      if (Buffer.byteLength(input.slice(0, boundary.index)) > 1024) break;
+      const candidate = input.slice(0, boundary.index);
+      try {
+        if (fs.statSync(candidate).isFile()) {
+          return [candidate, input.slice(boundary.index).trimStart()];
+        }
+      } catch { /* A partial path can be absent until the next space. */ }
+    }
+  }
+  const match = /^(?:"([^"]*)"|'([^']*)'|(\S+))\s*/.exec(input);
+  return match ? [match[1] ?? match[2] ?? match[3], input.slice(match[0].length)] : ['', ''];
+}
+
+// Interpreter processes expose "node"/"python" as comm. Inspect only their
+// entry script, never arbitrary prompt arguments or shell command strings.
+function interpreterToTool(comm, args) {
+  const runtime = (comm || '').split('/').pop().toLowerCase();
+  if (!/^(node|nodejs|bun|python(?:\d+(?:\.\d+)*)?)$/.test(runtime) || !args) return null;
+  let [, remaining] = takeProcessArgument(args);
+  let [script, rest] = takeProcessArgument(remaining);
+  while (/^(--no-warnings|--enable-source-maps|--experimental-[\w-]+|--inspect(?:-brk)?(?:=.*)?|-u|-B)$/.test(script)) {
+    [script, rest] = takeProcessArgument(rest);
+  }
+  if (runtime.startsWith('python') && script === '-m') {
+    return takeProcessArgument(rest)[0] === 'kimi_cli' ? 'kimi' : null;
+  }
+  if (script.startsWith('-')) return null;
+  const direct = commToTool(script);
+  if (direct) return direct;
+  /** @type {Array<[RegExp, string]>} */
+  const entries = [
+    [/\/@google\/gemini-cli\/dist\/index\.js$/, 'gemini'],
+    [/\/@qwen-code\/qwen-code\/dist\/index\.js$/, 'qwen'],
+    [/\/@github\/copilot\/(?:npm-loader|index)\.js$/, 'copilot'],
+    [/\/@moonshot-ai\/kimi-code\/dist\/main\.mjs$/, 'kimi'],
+    [/\/@anthropic-ai\/claude-code\/cli\.js$/, 'claude'],
+    [/\/@openai\/codex\/bin\/codex\.js$/, 'codex'],
+    [/\/cursor-agent\/versions\/[^/]+\/index\.js$/, 'cursor']
+  ];
+  return entries.find(([pattern]) => pattern.test(script))?.[1] || null;
 }
 
 /**
  * BFS over the shell's descendants; the match nearest to the shell wins
  * (if claude is launched from inside codex, the tool the user started
  * from the shell is reported).
- * @returns {'claude'|'codex'|null}
+ * @returns {string|null}
  */
-function detectToolForPid(shellPid, { commByPid, childrenByPpid }) {
+function detectToolForPid(shellPid, { commByPid, childrenByPpid, argsByPid = new Map() }) {
   const visited = new Set();
   let frontier = childrenByPpid.get(shellPid) || [];
 
@@ -84,7 +146,7 @@ function detectToolForPid(shellPid, { commByPid, childrenByPpid }) {
       if (visited.has(pid)) continue;
       visited.add(pid);
 
-      const tool = commToTool(commByPid.get(pid));
+      const tool = commToTool(commByPid.get(pid)) || interpreterToTool(commByPid.get(pid), argsByPid.get(pid));
       if (tool) return tool;
 
       const children = childrenByPpid.get(pid);
@@ -140,7 +202,16 @@ async function pollOnce() {
         ['-ax', '-o', 'pid=,ppid=,comm='],
         { encoding: 'utf8', timeout: 5000, maxBuffer: 5 * 1024 * 1024 }
       );
-      maps = parsePsOutput(stdout);
+      maps = { ...parsePsOutput(stdout), argsByPid: new Map() };
+      try {
+        const { stdout: args } = await execFileAsync(
+          '/bin/ps', ['-axww', '-o', 'pid=,ppid=,args='],
+          { encoding: 'utf8', timeout: 5000, maxBuffer: 5 * 1024 * 1024 }
+        );
+        maps.argsByPid = parsePsOutput(args).commByPid;
+      } catch {
+        // Keep native executable detection if argv inspection is unavailable.
+      }
     } catch {
       maps = null;
     }
@@ -213,6 +284,7 @@ module.exports = {
   pollOnce,
   parsePsOutput,
   commToTool,
+  interpreterToTool,
   detectToolForPid,
   nextDetectionState
 };

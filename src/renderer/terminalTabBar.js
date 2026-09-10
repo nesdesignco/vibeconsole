@@ -8,17 +8,15 @@ const { IPC } = require('../shared/ipcChannels');
 const { escapeHtml, escapeAttr } = require('./escapeHtml');
 const skillsPanel = require('./skillsPanel');
 const appearance = require('./appearance');
+const computerUse = require('./computerUse');
 const { renderEditorIcons } = require('./lucideIcons');
 const githubPanel = require('./githubPanel');
 const savedPromptsPanel = require('./savedPromptsPanel');
 const updaterModal = require('./updaterModal');
-const { AI_TOOL_ICONS } = require('./aiToolSelector');
+const { AI_TOOL_ICONS, DEFAULT_AI_TOOL_ICON } = require('./aiToolSelector');
 const { createToast } = require('./toast');
 
-const AI_TOOL_FULL_NAMES = {
-  claude: 'Claude Code',
-  codex: 'Codex CLI'
-};
+const { AI_TOOLS } = require('../shared/aiTools');
 
 class TerminalTabBar {
   constructor(container, manager) {
@@ -230,13 +228,14 @@ class TerminalTabBar {
               <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
             </svg>
           </button>
+          <button class="toolbar-btn btn-computer" title="Computer Use" aria-label="Computer Use" aria-controls="computer-panel" aria-expanded="${document.querySelector('#computer-panel')?.classList.contains('visible') || false}"><i data-lucide="monitor" aria-hidden="true"></i></button>
+          <button class="toolbar-btn btn-settings" title="Settings" aria-label="Settings" aria-controls="appearance-panel" aria-expanded="${document.querySelector('#appearance-panel')?.classList.contains('visible') || false}"><i data-lucide="settings" aria-hidden="true"></i></button>
           <button class="toolbar-btn btn-upgrade" title="Update available" style="display: none;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 5v14M19 12l-7 7-7-7"/>
             </svg>
             <span class="upgrade-badge"></span>
           </button>
-          <button class="toolbar-btn btn-settings" title="Settings" aria-label="Settings" aria-controls="appearance-panel" aria-expanded="${document.querySelector('#appearance-panel')?.classList.contains('visible') || false}"><i data-lucide="settings" aria-hidden="true"></i></button>
         </div>
       </div>
       <div class="terminal-tab-bar">
@@ -342,6 +341,14 @@ class TerminalTabBar {
     const activeTerminal = state.terminals.find(t => t.id === state.activeTerminalId);
     const aiTool = activeTerminal ? activeTerminal.aiTool : null;
 
+    const tracksUsage = !!AI_TOOLS[aiTool]?.usageTracking;
+    usageBars.querySelector('.usage-metrics').style.display = tracksUsage ? '' : 'none';
+    usageBars.style.cursor = tracksUsage ? 'pointer' : 'default';
+    if (!tracksUsage || aiTool !== this._currentUsageTool) {
+      clearTimeout(this._usageRetryTimer);
+      this._usageRetryTimer = null;
+    }
+
     if (!aiTool) {
       // Plain shell - hide usage bars
       usageBars.style.display = 'none';
@@ -353,7 +360,11 @@ class TerminalTabBar {
     // Show usage bars
     usageBars.style.display = '';
     this._setUsageToolIndicator(aiTool);
-    usageBars.title = this._getUsageRefreshTitle();
+    if (!tracksUsage) {
+      this._currentUsageTool = null;
+      usageBars.title = `Usage tracking is not available for ${AI_TOOLS[aiTool]?.name || 'this tool'} in VibeConsole.`;
+      return;
+    }
 
     // If tool changed, request new data
     if (aiTool !== this._currentUsageTool) {
@@ -368,6 +379,7 @@ class TerminalTabBar {
       }
       // Request fresh data for this tool
       ipcRenderer.send(IPC.LOAD_AI_USAGE, aiTool);
+      usageBars.title = this._getUsageRefreshTitle();
     }
   }
 
@@ -512,6 +524,7 @@ class TerminalTabBar {
 
     // Skills toggle button
     this.element.querySelector('.btn-settings').addEventListener('click', () => appearance.toggle());
+    this.element.querySelector('.btn-computer').addEventListener('click', () => computerUse.toggle());
     this.element.querySelector('.btn-skills-toggle').addEventListener('click', () => {
       skillsPanel.toggle();
     });
@@ -628,14 +641,14 @@ class TerminalTabBar {
       return;
     }
 
-    const name = AI_TOOL_FULL_NAMES[toolId] || 'AI Tool';
-    const icon = AI_TOOL_ICONS[toolId] || '';
+    const name = AI_TOOLS[toolId]?.name || 'AI Tool';
+    const icon = AI_TOOL_ICONS[toolId] || DEFAULT_AI_TOOL_ICON;
     iconEl.innerHTML = icon;
     nameEl.textContent = name;
   }
 
   _getUsageRefreshTitle(prefix = '', sourceLimitId = null, sourceTimestamp = null, expired = false) {
-    const name = AI_TOOL_FULL_NAMES[this._currentUsageTool] || 'AI Tool';
+    const name = AI_TOOLS[this._currentUsageTool]?.name || 'AI Tool';
     let suffix = sourceLimitId ? `\nSource: ${sourceLimitId}` : '';
     const age = sourceTimestamp ? this._formatAge(sourceTimestamp) : '';
     if (age) {

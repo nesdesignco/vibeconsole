@@ -50,7 +50,7 @@ function harness(t, options = {}) {
       require: id => {
         if (id === 'electron') return { app: { getPath: () => path.join(home, 'app-data') } };
         if (id === 'os') return { homedir: () => home };
-        if (id === '../shared/pathUtils') return { buildAugmentedPath: () => bin };
+        if (id === '../shared/pathUtils') return { findExecutable: command => require('../src/shared/pathUtils').findExecutable(command, bin) };
         if (id === './gitExecUtils') return { execFileCmd };
         return require(id.startsWith('../shared/') ? `../src/shared/${id.split('/').pop()}` : id);
       }

@@ -11,11 +11,18 @@ let currentTool = null;
 let availableTools = {};
 let onToolChangeCallback = null;
 
+const DEFAULT_AI_TOOL_ICON = '<svg class="ai-tool-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m4 6 6 6-6 6M13 18h7"/></svg>';
+
 // Inline SVG icons for AI tools
 const AI_TOOL_ICONS = {
   claude: `<svg class="ai-tool-icon" width="14" height="14" viewBox="0 0 100 100"><g transform="translate(50,50)" fill="currentColor"><polygon points="-3.5,0 -2,-42 2,-42 3.5,0" transform="rotate(0)"/><polygon points="-3.5,0 -2,-42 2,-42 3.5,0" transform="rotate(32.7)"/><polygon points="-3.5,0 -2,-42 2,-42 3.5,0" transform="rotate(65.5)"/><polygon points="-3.5,0 -2,-42 2,-42 3.5,0" transform="rotate(98.2)"/><polygon points="-3.5,0 -2,-42 2,-42 3.5,0" transform="rotate(130.9)"/><polygon points="-3.5,0 -2,-42 2,-42 3.5,0" transform="rotate(163.6)"/><polygon points="-3.5,0 -2,-42 2,-42 3.5,0" transform="rotate(196.4)"/><polygon points="-3.5,0 -2,-42 2,-42 3.5,0" transform="rotate(229.1)"/><polygon points="-3.5,0 -2,-42 2,-42 3.5,0" transform="rotate(261.8)"/><polygon points="-3.5,0 -2,-42 2,-42 3.5,0" transform="rotate(294.5)"/><polygon points="-3.5,0 -2,-42 2,-42 3.5,0" transform="rotate(327.3)"/></g></svg>`,
   codex: `<svg class="ai-tool-icon" width="14" height="14" viewBox="0 0 721 721" fill="currentColor"><path d="M304.246 295.411V249.828C304.246 245.989 305.687 243.109 309.044 241.191L400.692 188.412C413.167 181.215 428.042 177.858 443.394 177.858C500.971 177.858 537.44 222.482 537.44 269.982C537.44 273.34 537.44 277.179 536.959 281.018L441.954 225.358C436.197 222 430.437 222 424.68 225.358L304.246 295.411ZM518.245 472.945V364.024C518.245 357.304 515.364 352.507 509.608 349.149L389.174 279.096L428.519 256.543C431.877 254.626 434.757 254.626 438.115 256.543L529.762 309.323C556.154 324.679 573.905 357.304 573.905 388.971C573.905 425.436 552.315 459.024 518.245 472.941V472.945ZM275.937 376.982L236.592 353.952C233.235 352.034 231.794 349.154 231.794 345.315V239.756C231.794 188.416 271.139 149.548 324.4 149.548C344.555 149.548 363.264 156.268 379.102 168.262L284.578 222.964C278.822 226.321 275.942 231.119 275.942 237.838V376.986L275.937 376.982ZM360.626 425.922L304.246 394.255V327.083L360.626 295.416L417.002 327.083V394.255L360.626 425.922ZM396.852 571.789C376.698 571.789 357.989 565.07 342.151 553.075L436.674 498.374C442.431 495.017 445.311 490.219 445.311 483.499V344.352L485.138 367.382C488.495 369.299 489.936 372.179 489.936 376.018V481.577C489.936 532.917 450.109 571.785 396.852 571.785V571.789ZM283.134 464.79L191.486 412.01C165.094 396.654 147.343 364.029 147.343 332.362C147.343 295.416 169.415 262.309 203.48 248.393V357.791C203.48 364.51 206.361 369.308 212.117 372.665L332.074 442.237L292.729 464.79C289.372 466.707 286.491 466.707 283.134 464.79ZM277.859 543.48C223.639 543.48 183.813 502.695 183.813 452.314C183.813 448.475 184.294 444.636 184.771 440.797L279.295 495.498C285.051 498.856 290.812 498.856 296.568 495.498L417.002 425.927V471.509C417.002 475.349 415.562 478.229 412.204 480.146L320.557 532.926C308.081 540.122 293.206 543.48 277.854 543.48H277.859ZM396.852 600.576C454.911 600.576 503.37 559.313 514.41 504.612C568.149 490.696 602.696 440.315 602.696 388.976C602.696 355.387 588.303 322.762 562.392 299.25C564.791 289.173 566.231 279.096 566.231 269.024C566.231 200.411 510.571 149.067 446.274 149.067C433.322 149.067 420.846 150.984 408.37 155.305C386.775 134.192 357.026 120.758 324.4 120.758C266.342 120.758 217.883 162.02 206.843 216.721C153.104 230.637 118.557 281.018 118.557 332.357C118.557 365.946 132.95 398.571 158.861 422.083C156.462 432.16 155.022 442.237 155.022 452.309C155.022 520.922 210.682 572.266 274.978 572.266C287.931 572.266 300.407 570.349 312.883 566.028C334.473 587.141 364.222 600.576 396.852 600.576Z"/></svg>`
 };
+
+// Local brand artwork; source and license are in vendor/ai-tools/.
+for (const id of ['grok', 'gemini', 'copilot', 'cursor', 'qwen', 'kimi']) {
+  AI_TOOL_ICONS[id] = `<span class="ai-tool-icon ai-tool-brand" aria-hidden="true" style="mask-image: url('vendor/ai-tools/${id}.svg')"></span>`;
+}
 
 /**
  * Initialize the AI tool selector
@@ -49,90 +56,86 @@ function setupSelector() {
   const selector = document.getElementById('ai-tool-selector');
   if (!selector) return;
 
-  const label = selector.querySelector('.ai-tool-dropdown-label');
-  const menu = selector.querySelector('.ai-tool-dropdown-menu');
-  if (!label || !menu) return;
-
-  // Populate items
-  menu.innerHTML = '';
+  selector.innerHTML = '<button type="button" class="ai-tool-dropdown-trigger" aria-label="Choose AI coding tool" aria-haspopup="menu" aria-expanded="false" aria-controls="ai-tool-menu"><span class="ai-tool-dropdown-label"></span><svg class="ai-tool-dropdown-arrow" aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg></button><div id="ai-tool-menu" class="ai-tool-dropdown-menu" role="menu" aria-label="AI coding tools" hidden></div>';
+  const trigger = /** @type {HTMLButtonElement} */ (selector.querySelector('.ai-tool-dropdown-trigger'));
+  const menu = /** @type {HTMLDivElement} */ (selector.querySelector('.ai-tool-dropdown-menu'));
+  const close = () => {
+    menu.hidden = true;
+    trigger.setAttribute('aria-expanded', 'false');
+  };
+  const open = () => {
+    menu.hidden = false;
+    trigger.setAttribute('aria-expanded', 'true');
+    const active = /** @type {HTMLButtonElement} */ (menu.querySelector('[aria-checked="true"]') || menu.firstElementChild);
+    active?.focus();
+  };
   Object.values(availableTools).forEach(tool => {
-    const item = document.createElement('div');
+    const item = document.createElement('button');
+    item.type = 'button';
     item.className = 'ai-tool-dropdown-item';
     item.dataset.value = tool.id;
-    const icon = AI_TOOL_ICONS[tool.id] || '';
-    const name = tool.name.replace(' Code', '').replace(' CLI', '');
-    item.innerHTML = `${icon}<span>${escapeHtml(name)}</span>`;
+    item.setAttribute('role', 'menuitemradio');
+    item.tabIndex = -1;
+    item.innerHTML = `${AI_TOOL_ICONS[tool.id] || DEFAULT_AI_TOOL_ICON}<span>${escapeHtml(tool.name)}</span>`;
+    item.addEventListener('click', async () => {
+      close();
+      trigger.focus();
+      try {
+        await ipcRenderer.invoke(IPC.SET_AI_TOOL, tool.id);
+      } catch (error) {
+        console.error('Failed to select AI tool:', error);
+      } finally {
+        updateUI();
+      }
+    });
     menu.appendChild(item);
   });
-
-  // Set current value
-  if (currentTool) {
-    const icon = AI_TOOL_ICONS[currentTool.id] || '';
-    const name = currentTool.name.replace(' Code', '').replace(' CLI', '');
-    label.innerHTML = `${icon}<span>${escapeHtml(name)}</span>`;
-    const activeItem = menu.querySelector(`[data-value="${currentTool.id}"]`);
-    if (activeItem) activeItem.classList.add('active');
-  }
-
-  // Toggle dropdown on click
-  selector.addEventListener('click', (e) => {
-    e.stopPropagation();
-    selector.classList.toggle('open');
-  });
-
-  // Handle item click
-  menu.addEventListener('click', async (e) => {
-    const item = e.target.closest('.ai-tool-dropdown-item');
-    if (!item) return;
-    e.stopPropagation();
-
-    const toolId = item.dataset.value;
-    selector.classList.remove('open');
-
-    const success = await ipcRenderer.invoke(IPC.SET_AI_TOOL, toolId);
-    if (!success) {
-      // Revert
-      const icon = AI_TOOL_ICONS[currentTool.id] || '';
-      const name = currentTool.name.replace(' Code', '').replace(' CLI', '');
-      label.innerHTML = `${icon}<span>${escapeHtml(name)}</span>`;
+  trigger.addEventListener('click', () => menu.hidden ? open() : close());
+  trigger.addEventListener('keydown', event => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      open();
     }
   });
-
-  // Close on outside click
-  document.addEventListener('click', () => {
-    selector.classList.remove('open');
+  menu.addEventListener('keydown', event => {
+    if (event.key === 'Escape' || event.key === 'Tab') {
+      close();
+      trigger.focus();
+      if (event.key === 'Escape') event.preventDefault();
+      return;
+    }
+    const items = [...menu.querySelectorAll('button')];
+    const index = items.indexOf(/** @type {HTMLButtonElement} */ (document.activeElement));
+    const next = { ArrowDown: (index + 1) % items.length, ArrowUp: (index - 1 + items.length) % items.length, Home: 0, End: items.length - 1 }[event.key];
+    if (next !== undefined) {
+      event.preventDefault();
+      items[next].focus();
+    }
+  });
+  document.addEventListener('click', event => {
+    if (!(event.target instanceof Node) || !selector.contains(event.target)) close();
+  });
+  selector.addEventListener('focusout', event => {
+    if (!(event.relatedTarget instanceof Node) || !selector.contains(event.relatedTarget)) close();
   });
 }
 
-/**
- * Update UI to reflect current tool
- */
 function updateUI() {
   if (!currentTool) return;
-
-  // Update selector
   const selector = document.getElementById('ai-tool-selector');
   if (selector) {
-    const label = selector.querySelector('.ai-tool-dropdown-label');
-    if (label) {
-      const icon = AI_TOOL_ICONS[currentTool.id] || '';
-      const name = currentTool.name.replace(' Code', '').replace(' CLI', '');
-      label.innerHTML = `${icon}<span>${escapeHtml(name)}</span>`;
-    }
-    const menu = selector.querySelector('.ai-tool-dropdown-menu');
-    if (menu) {
-      menu.querySelectorAll('.ai-tool-dropdown-item').forEach(item => {
-        item.classList.toggle('active', item.dataset.value === currentTool.id);
-      });
-    }
+    selector.querySelectorAll('.ai-tool-dropdown-item').forEach(item => {
+      item.setAttribute('aria-checked', String(item.dataset.value === currentTool.id));
+    });
+    selector.title = `${currentTool.name} — ${currentTool.command}`;
+    selector.querySelector('.ai-tool-dropdown-label').innerHTML =
+      `${AI_TOOL_ICONS[currentTool.id] || DEFAULT_AI_TOOL_ICON}<span>${escapeHtml(currentTool.shortName || currentTool.name)}</span>`;
   }
-
-  // Update start button text
   const startBtn = document.getElementById('btn-start-ai');
   if (startBtn) {
-    startBtn.textContent = `Start ${currentTool.name}`;
+    startBtn.textContent = `Start ${currentTool.shortName || currentTool.name}`;
+    startBtn.title = `Start ${currentTool.name} (${currentTool.command})`;
   }
-
 }
 
 /**
@@ -179,5 +182,6 @@ module.exports = {
   getStartCommand,
   getCommand,
   supportsFeature,
-  AI_TOOL_ICONS
+  AI_TOOL_ICONS,
+  DEFAULT_AI_TOOL_ICON
 };

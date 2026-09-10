@@ -35,6 +35,10 @@ const IPC = {
   // Commands
   RUN_COMMAND: 'run-command',
 
+  GET_COMPUTER_STATUS: 'get-computer-status',
+  INSTALL_COMPUTER_USE: 'install-computer-use',
+  OPEN_COMPUTER_PERMISSION: 'open-computer-permission',
+
   // Workspace
   LOAD_WORKSPACE: 'load-workspace',
   WORKSPACE_DATA: 'workspace-data',

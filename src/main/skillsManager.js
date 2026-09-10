@@ -5,7 +5,7 @@ const path = require('path');
 const { app } = require('electron');
 const { IPC } = require('../shared/ipcChannels');
 const { SKILLS } = require('../shared/skillsCatalog');
-const { buildAugmentedPath } = require('../shared/pathUtils');
+const { findExecutable } = require('../shared/pathUtils');
 const { execFileCmd } = require('./gitExecUtils');
 const pending = new Set();
 let updater;
@@ -89,15 +89,6 @@ function readJson(filename) {
 
 function executable(command) {
   return !!findExecutable(command);
-}
-
-function findExecutable(command) {
-  // Do not cache missing binaries: a user can install one while the app is open.
-  return buildAugmentedPath().split(path.delimiter).map(directory => path.join(directory, command))
-    .find(candidate => {
-      try { fs.accessSync(candidate, fs.constants.X_OK); return fs.statSync(candidate).isFile(); }
-      catch { return false; }
-    });
 }
 
 async function getSkills(provider) {

@@ -10,6 +10,15 @@ const path = require('path');
 
 const commandPathCache = new Map();
 
+/** Fresh lookup for tools that can be installed while the application is open. */
+function findExecutable(command, envPath = buildAugmentedPath()) {
+  return envPath.split(path.delimiter).map(directory => path.join(directory, command))
+    .find(candidate => {
+      try { fs.accessSync(candidate, fs.constants.X_OK); return fs.statSync(candidate).isFile(); }
+      catch { return false; }
+    });
+}
+
 /**
  * Build an augmented PATH string that includes common bin directories.
  * @returns {string} Colon/semicolon-separated PATH
@@ -118,6 +127,7 @@ function resolveCommandPath(cmd, envPath) {
 }
 
 module.exports = {
+  findExecutable,
   buildAugmentedPath,
   buildExecEnv,
   resolveCommandPath

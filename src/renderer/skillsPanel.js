@@ -206,7 +206,7 @@ function render() {
       <p id="skill-repository-error" class="skills-note skill-error" role="alert"></p>
     </form>` : ''}
     ${skills.filter(skill => skill.category === category).map(renderSkill).join('')}
-    <p class="skills-note">Optional installs. Your tools and settings stay in your user profile across VibeConsole updates.</p>
+    <p class="skills-note">Managed installs support Claude Code and Codex. Your tools and settings stay in your user profile across VibeConsole updates.</p>
   </section>`;
 }
 

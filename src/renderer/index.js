@@ -4,6 +4,7 @@
  */
 
 const appearance = require('./appearance');
+const computerUse = require('./computerUse');
 const terminal = require('./terminal');
 const { terminalTheme } = require('../shared/appearance');
 const fileTreeUI = require('./fileTreeUI');
@@ -142,6 +143,7 @@ function init() {
 
   try { skillsPanel.init(); } catch (err) { console.error('Failed to initialize skills panel:', err); }
   appearance.init();
+  computerUse.init();
   window.addEventListener('vibe:appearance-changed', event => {
     for (const instance of terminal.getTerminal()?.terminals.values() || []) {
       instance.terminal.options.theme = terminalTheme(event.detail.values);
@@ -298,7 +300,7 @@ function setupButtonHandlers() {
       terminal.setActiveTerminal(newTerminalId);
 
       // Send start command for the selected AI tool
-      const startCommand = aiToolSelector.getStartCommand();
+      const startCommand = currentAiTool?.command || 'claude';
       setTimeout(() => {
         terminal.sendCommand(startCommand, newTerminalId);
       }, 150);

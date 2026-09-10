@@ -31,6 +31,7 @@ const workspace = require('./workspace');
 const fileEditor = require('./fileEditor');
 const droppedFiles = require('./droppedFiles');
 const skillsManager = require('./skillsManager');
+const computerUse = require('./computerUse');
 const claudeUsageManager = require('./claudeUsageManager');
 const codexUsageManager = require('./codexUsageManager');
 const gitBranchesManager = require('./gitBranchesManager');
@@ -120,7 +121,7 @@ function createWindow() {
   // Initialize modules with window reference
   ptyManager.init(mainWindow);
   aiToolProcessDetector.init(mainWindow);
-  aiToolManager.init(mainWindow, app);
+  aiToolManager.init(mainWindow, app, () => menu.createMenu());
   menu.init(mainWindow, app, aiToolManager);
   // The picked folder is the authoritative moment a project root comes into
   // existence; record it before the renderer can act on it.
@@ -197,34 +198,38 @@ function setupAllIPC() {
   fileEditor.setupIPC(ipcMain);
   droppedFiles.setupIPC(ipcMain);
   skillsManager.setupIPC(ipcMain);
+  computerUse.setupIPC(ipcMain);
   claudeUsageManager.setupIPC(ipcMain);
   codexUsageManager.setupIPC(ipcMain);
 
   // Generic AI usage routing - routes to correct provider based on toolId
   // Returns cached data immediately if available, then refreshes in background
-  ipcMain.on(IPC.LOAD_AI_USAGE, async (event, toolId) => {
+  const usageManagers = { claude: claudeUsageManager, codex: codexUsageManager };
+  ipcMain.on(IPC.LOAD_AI_USAGE, async (event, toolId = 'claude') => {
     try {
-      const manager = toolId === 'codex' ? codexUsageManager : claudeUsageManager;
+      const manager = Object.hasOwn(usageManagers, toolId) ? usageManagers[toolId] : null;
+      if (!manager) return;
       const cached = manager.getCachedUsage();
       if (cached && !event.sender.isDestroyed()) {
-        event.sender.send(IPC.AI_USAGE_DATA, { toolId: toolId || 'claude', ...cached });
+        event.sender.send(IPC.AI_USAGE_DATA, { toolId, ...cached });
       }
       // Always fetch fresh data in background
       const usage = await manager.fetchUsage();
       if (!event.sender.isDestroyed()) {
-        event.sender.send(IPC.AI_USAGE_DATA, { toolId: toolId || 'claude', ...usage });
+        event.sender.send(IPC.AI_USAGE_DATA, { toolId, ...usage });
       }
     } catch (err) {
       console.error('LOAD_AI_USAGE failed:', err);
     }
   });
 
-  ipcMain.on(IPC.REFRESH_AI_USAGE, async (event, toolId) => {
+  ipcMain.on(IPC.REFRESH_AI_USAGE, async (event, toolId = 'claude') => {
     try {
-      const manager = toolId === 'codex' ? codexUsageManager : claudeUsageManager;
+      const manager = Object.hasOwn(usageManagers, toolId) ? usageManagers[toolId] : null;
+      if (!manager) return;
       const usage = await manager.fetchUsage();
       if (!event.sender.isDestroyed()) {
-        event.sender.send(IPC.AI_USAGE_DATA, { toolId: toolId === 'codex' ? 'codex' : 'claude', ...usage });
+        event.sender.send(IPC.AI_USAGE_DATA, { toolId, ...usage });
       }
     } catch (err) {
       console.error('REFRESH_AI_USAGE failed:', err);

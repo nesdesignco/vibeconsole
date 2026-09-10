@@ -21,10 +21,10 @@ window.runAppScrollTests = async () => {
   };
   const topText = () => terminal.buffer.active.getLine(terminal.buffer.active.viewportY).translateToString(true);
   let serial = 0;
-  const output = async (clear = '', count = 350) => {
+  const output = async (clear = '', count = 350, suffix = '') => {
     const marker = `APP_DONE_${++serial}`;
     // Shell builtin output traverses node-pty -> coalescing -> preload -> xterm.
-    ui.sendCommand(`printf '${clear}'; i=0; while [ "$i" -lt ${count} ]; do printf 'app-line %s\\n' "$i"; i=$((i+1)); done; printf 'APP_DONE_'; printf '${serial}\\n'`, id);
+    ui.sendCommand(`printf '${clear}'; i=0; while [ "$i" -lt ${count} ]; do printf 'app-line %s ${suffix}\\n' "$i"; i=$((i+1)); done; printf 'APP_DONE_'; printf '${serial}\\n'`, id);
     for (let attempt = 0; attempt < 100; attempt++) {
       await wait(50);
       const buffer = terminal.buffer.active;
@@ -37,6 +37,33 @@ window.runAppScrollTests = async () => {
   };
 
   await output();
+  await output('\\033[2J\\033[3J\\033[H', 120, 'wrapped-content '.repeat(18));
+  for (const selector of ['.btn-settings', '.btn-computer', '.btn-skills-toggle']) {
+    document.querySelector(selector).click();
+    await wait(450);
+    check(`${selector} opens at bottom with wrapped output`, position().y === position().base);
+    document.querySelector(selector).click();
+    await wait(450);
+    check(`${selector} closes at bottom with wrapped output`, position().y === position().base);
+    checkScrollbar(`${selector} closing synchronizes wrapped output scrollbar`);
+  }
+  document.querySelector('.btn-settings').click();
+  await wait(450);
+  let line = 100;
+  while (!terminal.buffer.active.getLine(line).isWrapped) line++;
+  while (terminal.buffer.active.getLine(line + 1).isWrapped) line++;
+  terminal.scrollToLine(line);
+  await wait();
+  const logicalTop = () => {
+    let y = terminal.buffer.active.viewportY;
+    while (y > 0 && terminal.buffer.active.getLine(y).isWrapped) y--;
+    return terminal.buffer.active.getLine(y).translateToString(true).match(/app-line \d+/)?.[0];
+  };
+  const wrappedAnchor = logicalTop();
+  document.querySelector('#appearance-panel [data-close]').click();
+  await wait(450);
+  check('closing right panel preserves wrapped history paragraph', logicalTop() === wrappedAnchor, { before: wrappedAnchor, after: logicalTop(), ...position() });
+  await output('\\033[2J\\033[3J\\033[H');
   manager.setActiveTerminal(otherId);
   await wait();
   manager.setActiveTerminal(id);
@@ -87,7 +114,7 @@ window.runAppScrollTests = async () => {
   checkScrollbar('skills panel transitions keep native scrollbar synchronized');
 
   const settingsButton = document.querySelector('.btn-settings');
-  check('settings uses the library icon at the right edge of the toolbar', !!settingsButton.querySelector('svg') && settingsButton === settingsButton.parentElement.lastElementChild);
+  check('settings precedes the rightmost update action', !!settingsButton.querySelector('svg') && settingsButton.nextElementSibling.matches('.btn-upgrade') && settingsButton.parentElement.lastElementChild.matches('.btn-upgrade'));
   settingsButton.click();
   await wait(450);
   const panel = document.getElementById('appearance-panel');

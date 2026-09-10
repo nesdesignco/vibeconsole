@@ -9,6 +9,9 @@ declare global {
     terminalSendCommand?: (command: string, terminalId?: string | null) => void;
     terminalRunInNewSession?: (command: string) => Promise<string>;
     terminalFocus?: () => void;
+    terminalGetActiveState?: () => { id: string; aiTool: string | null; aiToolProcessDetected?: boolean } | null;
+    terminalPasteText?: (text: string, terminalId?: string) => boolean;
+    computerUseUpdateTarget?: () => void;
     fileTreeFocus?: () => void;
     toggleSidebar?: () => void;
     vibe?: {

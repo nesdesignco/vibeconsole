@@ -89,7 +89,26 @@ Save and reuse your most common prompts across sessions. One-click paste to term
 Real-time **Claude & Codex usage** monitoring. Session utilization, weekly limits, and reset timers.
 
 ### 🤖 AI Tool Selector
-Switch between **Claude Code**, **Codex CLI**, and **Gemini CLI** from the toolbar. Each terminal can run a different tool.
+Switch between **Claude Code**, **Codex CLI**, **Grok Build**, **Gemini CLI**, **GitHub Copilot CLI**, **Cursor CLI**, **Qwen Code**, and **Kimi Code** from the toolbar. Each terminal can run a different tool.
+
+Install and sign in to the CLI you want to use, then select it and click **Start**. The selected tool's application menu includes its setup guide. VibeConsole does not bundle these CLIs or their subscriptions.
+
+When Bash, Zsh, sh or Fish reports a supported CLI command is missing, the terminal shows its install command, prerequisites, a copy button and the official setup guide. This also works for manually typed commands. If already installed, check its PATH; after installing, open a fresh terminal and start the tool again.
+
+| CLI | Launch command | Setup |
+| --- | --- | --- |
+| Grok Build | `grok` | [Official guide](https://docs.x.ai/build/overview) |
+| Gemini CLI | `gemini` | [Official guide](https://geminicli.com/docs/get-started/installation/) |
+| GitHub Copilot CLI | `copilot` | [Official guide](https://docs.github.com/en/copilot/how-tos/copilot-cli/set-up-copilot-cli/install-copilot-cli) |
+| Cursor CLI | `cursor-agent` | [Official guide](https://cursor.com/docs/cli/installation) |
+| Qwen Code | `qwen` | [Official guide](https://github.com/QwenLM/qwen-code#installation) |
+| Kimi Code | `kimi` | [Official guide](https://moonshotai.github.io/kimi-code/en/guides/getting-started) |
+
+The legacy `kimi-cli` command is also recognized. Cursor starts with `cursor-agent` because both Cursor and Grok install an `agent` alias. Usage bars and managed Skills installations currently support Claude Code and Codex; other agents show their tool name without quota bars.
+
+### Computer Use
+
+Open the monitor button in the toolbar, install [Peekaboo](https://github.com/openclaw/Peekaboo/blob/main/docs/install.md), grant macOS permissions and refresh. Enter a task and choose **Prepare in terminal**, then review and press Enter in your running AI agent. Requires macOS 15+ and an agent allowed to run local shell tools. The agent uses Peekaboo to inspect and operate Mac apps; no separate AI account is needed for this CLI workflow.
 
 </td>
 </tr>

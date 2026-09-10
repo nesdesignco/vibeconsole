@@ -31,12 +31,14 @@ if (!process.versions.electron) {
     fs.rmSync(dir, { recursive: true, force: true });
   }
 } else {
+  os.homedir = () => process.argv.at(-1);
   const { app, BrowserWindow } = require('electron');
   const loadFile = BrowserWindow.prototype.loadFile;
   BrowserWindow.prototype.loadFile = function() {
     return loadFile.call(this, path.join(process.argv.at(-1), 'index.html'));
   };
   app.once('browser-window-created', (_event, win) => {
+    win.webContents.setBackgroundThrottling(false);
     win.webContents.once('did-finish-load', async () => {
       let code = 1;
       try {

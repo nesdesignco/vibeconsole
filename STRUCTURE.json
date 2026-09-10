@@ -32,6 +32,7 @@
         "fileEditor",
         "droppedFiles",
         "skillsManager",
+        "computerUse",
         "claudeUsageManager",
         "codexUsageManager",
         "gitBranchesManager",
@@ -46,33 +47,33 @@
       ],
       "functions": {
         "createWindow": {
-          "line": 52,
+          "line": 53,
           "purpose": "Create main application window"
         },
         "isTrustedAppUrl": {
-          "line": 139,
+          "line": 140,
           "params": [
             "rawUrl"
           ],
           "purpose": "Allow only local app URLs to load inside the app window."
         },
         "openExternalSafely": {
-          "line": 162,
+          "line": 163,
           "params": [
             "rawUrl"
           ],
           "purpose": "Avoid forwarding file/custom scheme URLs to the OS."
         },
         "setupAllIPC": {
-          "line": 189,
+          "line": 190,
           "purpose": "Setup all IPC handlers"
         },
         "init": {
-          "line": 248,
+          "line": 253,
           "purpose": "Initialize application"
         },
         "initModulesWithWindow": {
-          "line": 259,
+          "line": 264,
           "params": [
             "window"
           ],
@@ -207,30 +208,30 @@
           "purpose": "Build AI commands submenu based on active tool"
         },
         "buildToolSwitcherSubmenu": {
-          "line": 209,
+          "line": 216,
           "purpose": "Build tool switcher submenu"
         },
         "sendCommand": {
-          "line": 228,
+          "line": 233,
           "params": [
             "command"
           ],
           "purpose": "Send command to terminal"
         },
         "toggleHistoryPanel": {
-          "line": 237,
+          "line": 242,
           "purpose": "Toggle history panel"
         },
         "toggleSidebar": {
-          "line": 246,
+          "line": 251,
           "purpose": "Toggle sidebar visibility"
         },
         "openHistoryFile": {
-          "line": 255,
+          "line": 260,
           "purpose": "Open history file in default editor"
         },
         "createMenu": {
-          "line": 269,
+          "line": 274,
           "purpose": "Create and set application menu"
         }
       },
@@ -594,6 +595,7 @@
       "exports": [],
       "depends": [
         "appearance",
+        "computerUse",
         "terminal",
         "shared/appearance",
         "fileTreeUI",
@@ -615,18 +617,18 @@
       ],
       "functions": {
         "toggleSidebarSafe": {
-          "line": 30
+          "line": 31
         },
         "init": {
-          "line": 46,
+          "line": 47,
           "purpose": "Initialize all modules"
         },
         "setupButtonHandlers": {
-          "line": 268,
+          "line": 270,
           "purpose": "Setup button click handlers"
         },
         "setupKeyboardShortcuts": {
-          "line": 339,
+          "line": 341,
           "purpose": "Setup keyboard shortcuts"
         }
       },
@@ -729,7 +731,7 @@
           "purpose": "Get currently active terminal state."
         },
         "getMultiTerminalUI": {
-          "line": 147,
+          "line": 153,
           "purpose": "Get MultiTerminalUI instance"
         }
       },
@@ -1484,6 +1486,7 @@
         "scrollbackClearAddon",
         "shared/ipcChannels",
         "shared/aiToolDetection",
+        "shared/aiTools",
         "clipboardWrite",
         "shellEscape",
         "filePathLinker",
@@ -1493,7 +1496,7 @@
       ],
       "functions": {
         "createTerminalLinkHandler": {
-          "line": 28,
+          "line": 29,
           "params": [
             "ipc = ipcRenderer",
             "onFileActivate = (_path",
@@ -1860,12 +1863,14 @@
         "escapeHtml",
         "skillsPanel",
         "appearance",
+        "computerUse",
         "lucideIcons",
         "githubPanel",
         "savedPromptsPanel",
         "updaterModal",
         "aiToolSelector",
         "toast",
+        "shared/aiTools",
         "state"
       ],
       "functions": {},
@@ -2347,46 +2352,48 @@
         "electron",
         "fs",
         "path",
-        "shared/ipcChannels"
+        "shared/ipcChannels",
+        "shared/aiTools"
       ],
       "functions": {
         "init": {
-          "line": 54,
+          "line": 27,
           "params": [
             "window",
-            "app"
+            "app",
+            "onChange"
           ],
           "purpose": "Initialize the AI Tool Manager"
         },
         "loadConfig": {
-          "line": 64,
+          "line": 38,
           "purpose": "Load configuration from file"
         },
         "saveConfig": {
-          "line": 79,
+          "line": 53,
           "purpose": "Save configuration to file"
         },
         "getAvailableTools": {
-          "line": 90,
+          "line": 64,
           "purpose": "Get all available AI tools"
         },
         "getActiveTool": {
-          "line": 97,
+          "line": 71,
           "purpose": "Get the currently active tool"
         },
         "setActiveTool": {
-          "line": 105,
+          "line": 79,
           "params": [
             "toolId"
           ],
           "purpose": "Set the active AI tool"
         },
         "getConfig": {
-          "line": 124,
+          "line": 99,
           "purpose": "Get full configuration for renderer"
         },
         "setupIPC": {
-          "line": 134,
+          "line": 109,
           "purpose": "Setup IPC handlers"
         }
       },
@@ -2409,7 +2416,8 @@
         "getStartCommand",
         "getCommand",
         "supportsFeature",
-        "AI_TOOL_ICONS"
+        "AI_TOOL_ICONS",
+        "DEFAULT_AI_TOOL_ICON"
       ],
       "depends": [
         "electronBridge",
@@ -2418,37 +2426,36 @@
       ],
       "functions": {
         "init": {
-          "line": 23,
+          "line": 30,
           "params": [
             "onToolChange"
           ],
           "purpose": "Initialize the AI tool selector"
         },
         "setupSelector": {
-          "line": 48,
+          "line": 55,
           "purpose": "Setup the selector dropdown"
         },
         "updateUI": {
-          "line": 110,
-          "purpose": "Update UI to reflect current tool"
+          "line": 123
         },
         "getCurrentTool": {
-          "line": 141,
+          "line": 144,
           "purpose": "Get the current active tool"
         },
         "getStartCommand": {
-          "line": 148,
+          "line": 151,
           "purpose": "Get the start command for current tool"
         },
         "getCommand": {
-          "line": 155,
+          "line": 158,
           "params": [
             "action"
           ],
           "purpose": "Get a specific command for current tool"
         },
         "supportsFeature": {
-          "line": 163,
+          "line": 166,
           "params": [
             "feature"
           ],
@@ -4480,6 +4487,7 @@
       "file": "src/shared/pathUtils.js",
       "description": "S",
       "exports": [
+        "findExecutable",
         "buildAugmentedPath",
         "buildExecEnv",
         "resolveCommandPath"
@@ -4490,22 +4498,29 @@
         "path"
       ],
       "functions": {
+        "findExecutable": {
+          "line": 14,
+          "params": [
+            "command",
+            "envPath = buildAugmentedPath("
+          ]
+        },
         "buildAugmentedPath": {
-          "line": 17,
+          "line": 26,
           "purpose": "Build an augmented PATH string that includes common bin directories."
         },
         "buildExecEnv": {
-          "line": 49,
+          "line": 58,
           "purpose": "Build a process.env clone with augmented PATH."
         },
         "isExecutableFile": {
-          "line": 60,
+          "line": 69,
           "params": [
             "filePath"
           ]
         },
         "resolveCommandPath": {
-          "line": 76,
+          "line": 85,
           "params": [
             "cmd",
             "envPath"
@@ -5011,7 +5026,7 @@
       ],
       "functions": {
         "renderEditorIcons": {
-          "line": 41,
+          "line": 43,
           "params": [
             "root = document"
           ]
@@ -5029,41 +5044,61 @@
         "pollOnce",
         "parsePsOutput",
         "commToTool",
+        "interpreterToTool",
         "detectToolForPid",
         "nextDetectionState"
       ],
       "depends": [
         "child_process",
         "util",
+        "fs",
+        "path",
         "shared/ipcChannels",
-        "ptyManager"
+        "ptyManager",
+        "shared/aiToolDetection"
       ],
       "functions": {
         "parsePsOutput": {
-          "line": 33,
+          "line": 36,
           "params": [
             "text"
           ],
           "purpose": "that may contain spaces, so the whole line must not be split on whitespace."
         },
         "commToTool": {
-          "line": 62,
+          "line": 65,
           "params": [
             "comm"
           ],
           "purpose": "don't count (their parent `codex` is already in the tree)."
         },
+        "takeProcessArgument": {
+          "line": 85,
+          "params": [
+            "text"
+          ],
+          "purpose": "at the first file so paths in later prompt arguments cannot become scripts."
+        },
+        "interpreterToTool": {
+          "line": 106,
+          "params": [
+            "comm",
+            "args"
+          ],
+          "purpose": "entry script, never arbitrary prompt arguments or shell command strings."
+        },
         "detectToolForPid": {
-          "line": 77,
+          "line": 139,
           "params": [
             "shellPid",
             "{ commByPid",
-            "childrenByPpid }"
+            "childrenByPpid",
+            "argsByPid = new Map("
           ],
           "purpose": "from the shell is reported)."
         },
         "nextDetectionState": {
-          "line": 103,
+          "line": 165,
           "params": [
             "prevState",
             "rawDetected"
@@ -5071,32 +5106,32 @@
           "purpose": "disappearance only after NULL_DEBOUNCE_TICKS consecutive misses."
         },
         "pruneState": {
-          "line": 117,
+          "line": 179,
           "params": [
             "pids"
           ]
         },
         "pollOnce": {
-          "line": 126
+          "line": 188
         },
         "init": {
-          "line": 177,
+          "line": 248,
           "params": [
             "window"
           ],
           "purpose": "Initialize the module with window reference"
         },
         "startPolling": {
-          "line": 182,
+          "line": 253,
           "params": [
             "interval = POLL_INTERVAL_MS"
           ]
         },
         "stopPolling": {
-          "line": 192
+          "line": 263
         },
         "cleanup": {
-          "line": 202,
+          "line": 273,
           "purpose": "Cleanup on app quit"
         }
       },
@@ -5112,16 +5147,26 @@
       "description": "A",
       "exports": [
         "AI_TOOL_COMMAND_MAP",
-        "matchAiToolCommand"
+        "matchAiToolCommand",
+        "matchMissingAiTool"
       ],
-      "depends": [],
+      "depends": [
+        "aiTools"
+      ],
       "functions": {
         "matchAiToolCommand": {
-          "line": 20,
+          "line": 21,
           "params": [
             "line"
           ],
           "purpose": "`/usr/local/bin/claude -p` and `CLAUDE` both match."
+        },
+        "matchMissingAiTool": {
+          "line": 33,
+          "params": [
+            "line"
+          ],
+          "purpose": "Match complete shell diagnostics, not arbitrary mentions of a missing tool."
         }
       }
     },
@@ -5233,17 +5278,17 @@
           ]
         },
         "startAiTerminal": {
-          "line": 118,
+          "line": 122,
           "params": [
             "projectPath",
             "aiTool"
           ]
         },
         "prepareContextPrompt": {
-          "line": 128
+          "line": 132
         },
         "init": {
-          "line": 169
+          "line": 173
         }
       },
       "ipc": {
@@ -5507,20 +5552,14 @@
             "command"
           ]
         },
-        "findExecutable": {
-          "line": 94,
-          "params": [
-            "command"
-          ]
-        },
         "getSkills": {
-          "line": 103,
+          "line": 94,
           "params": [
             "provider"
           ]
         },
         "run": {
-          "line": 160,
+          "line": 151,
           "params": [
             "command",
             "args",
@@ -5528,41 +5567,41 @@
           ]
         },
         "errorMessage": {
-          "line": 166,
+          "line": 157,
           "params": [
             "err"
           ]
         },
         "isExpectedRemote": {
-          "line": 168,
+          "line": 159,
           "params": [
             "remote",
             "repo"
           ]
         },
         "verifyMarketplace": {
-          "line": 174,
+          "line": 165,
           "params": [
             "provider",
             "skill"
           ]
         },
         "installPlugin": {
-          "line": 190,
+          "line": 181,
           "params": [
             "provider",
             "skill"
           ]
         },
         "installSkill": {
-          "line": 198,
+          "line": 189,
           "params": [
             "provider",
             "id"
           ]
         },
         "getSkillCommand": {
-          "line": 245,
+          "line": 236,
           "params": [
             "provider",
             "id",
@@ -5570,7 +5609,7 @@
           ]
         },
         "toggleSkill": {
-          "line": 263,
+          "line": 254,
           "params": [
             "provider",
             "id",
@@ -5578,7 +5617,7 @@
           ]
         },
         "setupIPC": {
-          "line": 272,
+          "line": 263,
           "params": [
             "ipcMain"
           ]
@@ -5899,6 +5938,117 @@
       ],
       "depends": [],
       "functions": {}
+    },
+    "shared/aiTools": {
+      "file": "src/shared/aiTools.js",
+      "description": "Built-in CLI integrations. Commands run in the user's project shell;",
+      "exports": [
+        "AI_TOOLS"
+      ],
+      "depends": [],
+      "functions": {}
+    },
+    "main/computerUse": {
+      "file": "src/main/computerUse.js",
+      "description": "",
+      "exports": [
+        "setupIPC",
+        "getStatus",
+        "install"
+      ],
+      "depends": [
+        "os",
+        "electron",
+        "shared/ipcChannels",
+        "shared/pathUtils",
+        "gitExecUtils"
+      ],
+      "functions": {
+        "supported": {
+          "line": 13
+        },
+        "errorText": {
+          "line": 14,
+          "params": [
+            "error"
+          ]
+        },
+        "getStatus": {
+          "line": 16
+        },
+        "install": {
+          "line": 38
+        },
+        "setupIPC": {
+          "line": 53,
+          "params": [
+            "ipcMain"
+          ]
+        }
+      },
+      "ipc": {
+        "listens": [
+          "GET_COMPUTER_STATUS",
+          "INSTALL_COMPUTER_USE",
+          "OPEN_COMPUTER_PERMISSION"
+        ],
+        "emits": []
+      }
+    },
+    "renderer/computerUse": {
+      "file": "src/renderer/computerUse.js",
+      "description": "",
+      "exports": [
+        "init",
+        "toggle",
+        "prepareTask"
+      ],
+      "depends": [
+        "electronBridge",
+        "shared/ipcChannels",
+        "shared/aiTools",
+        "escapeHtml",
+        "shellEscape",
+        "panelVisibility",
+        "panelCoordinator"
+      ],
+      "functions": {
+        "activeTerminal": {
+          "line": 13,
+          "purpose": "Use the existing terminal global to avoid terminal -> tab bar -> panel cycles."
+        },
+        "updateTarget": {
+          "line": 14
+        },
+        "render": {
+          "line": 24
+        },
+        "refresh": {
+          "line": 45
+        },
+        "prepareTask": {
+          "line": 55,
+          "params": [
+            "task",
+            "executable"
+          ]
+        },
+        "init": {
+          "line": 69
+        },
+        "close": {
+          "line": 113
+        },
+        "toggle": {
+          "line": 114
+        }
+      },
+      "ipc": {
+        "listens": [],
+        "emits": [
+          "OPEN_EXTERNAL_URL"
+        ]
+      }
     }
   },
   "ipcChannels": {

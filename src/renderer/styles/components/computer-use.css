@@ -1,0 +1,23 @@
+#computer-panel {
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  background: var(--bg-secondary);
+}
+#computer-panel.visible { width: 360px; min-width: 360px; border-left: 1px solid var(--border-default); }
+#computer-panel .panel-header { justify-content: space-between; }
+.computer-content { padding: 20px; overflow-y: auto; min-height: 0; font-size: 12px; }
+.computer-content p { line-height: 1.6; margin: 0 0 12px; color: var(--text-secondary); overflow-wrap: anywhere; }
+.computer-content h4 { margin: 24px 0 10px; font-size: 13px; color: var(--text-primary); }
+.computer-content .computer-permission { display: flex; justify-content: space-between; gap: 12px; }
+.computer-permission strong { color: var(--text-primary); white-space: nowrap; }
+.computer-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+.computer-content a { color: var(--accent-primary); text-decoration: underline; text-underline-offset: 3px; }
+.computer-content textarea { width: 100%; min-height: 88px; resize: vertical; margin: 8px 0; padding: 10px; color: var(--text-primary); background: var(--bg-primary); border: 1px solid var(--border-default); border-radius: var(--radius-sm); font: inherit; }
+.computer-content textarea::placeholder { color: var(--text-secondary); }
+.computer-content [data-action="prepare"] { width: 100%; margin-bottom: 12px; }
+.computer-content :is(button, a, textarea):focus-visible { outline: 2px solid var(--accent-primary); outline-offset: 3px; }
+.computer-content .computer-status { color: var(--text-primary); }

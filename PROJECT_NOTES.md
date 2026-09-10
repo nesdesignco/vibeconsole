@@ -2,6 +2,35 @@
 
 ## Session Notes
 
+### [2026-09-10] Version 1.3.19 Release
+- Prepared 1.3.19 with six additional AI CLIs, local provider logos, missing-command installation guidance, the Peekaboo Computer Use setup/task panel, toolbar ordering and wrapped-history resize fixes.
+- Validation before release: 243 unit tests, lint, typecheck, real Electron terminal scroll checks and all eight CLI integration checks passed. Desktop-control integration uses isolated CLI fixtures; live model-driven Mac actions remain untested.
+- Build signed and notarized Apple Silicon artifacts locally using the existing Developer ID and keychain profile, with automatic publication disabled. Publish the DMG, ZIP, blockmaps and updater metadata together after verification.
+
+### [2026-09-10] Preserve wrapped terminal history when closing panels
+- xterm deletes wrapped continuation rows when the terminal widens, disposing markers attached to those rows. Resize now anchors the logical line and clamps the visible offset to its remaining wraps.
+- Reproduced the jump in the real Electron/PTY scroll test before the fix; verified the same paragraph stays visible afterward, alongside bottom-following, tab, grid and native scrollbar checks.
+
+### [2026-09-10] Computer Use for terminal agents
+
+- Added a compact toolbar panel for Peekaboo installation, macOS permission status/settings and task preparation in the active running AI terminal. Uses the agent's existing shell tools with an absolute CLI path; no separate model subscription, MCP configuration changes or automatic task submission. Supports the eight built-in CLI identities.
+- Requires macOS 15+. Installation runs only on click; permission checks use Peekaboo's execution-host status. The task instructs the agent to recheck permissions in its own sandbox, inspect fresh UI snapshots and verify actions. macOS consent remains with the user.
+- Reused the shared terminal paste and panel lifecycle; moved the existing uncached executable lookup into pathUtils for Skills and Computer Use. Unit checks cover installation/retry, malformed permission data, unsupported platforms and active-terminal targeting. Isolated Electron/PTYS verify the panel and task drafts for all eight tools with temporary installer/CLI stubs; live provider reasoning and physical desktop actions are not exercised.
+
+### [2026-09-10] Installation guidance for missing AI commands
+
+- Recognize complete Bash/Zsh/sh/Fish missing-command diagnostics in the shared terminal output path, including split PTY chunks and ANSI formatting. All eight built-in tools offer their official install command, prerequisites, copy action and setup guide. No installer executes automatically; the message also covers tools already installed outside the shell PATH.
+- Guidance applies to Start, native menu launches and typed commands. A successful retry clears the card; project-context initialization exits immediately when the selected command is missing instead of waiting for the readiness timeout.
+- Validation: 240 unit tests, lint, typecheck and renderer build; real Electron/PTYS with isolated temporary executables verify all eight missing tools, copying, documentation links, retry after installation, typed/split diagnostics and context initialization. Provider authentication and actual global installations are not performed by these tests.
+
+### [2026-09-10] Six additional terminal AI integrations
+- Added Grok Build (`grok`), Gemini (`gemini`), GitHub Copilot (`copilot`), Cursor (`cursor-agent`), Qwen Code (`qwen`), and Kimi Code (`kimi`) alongside Claude Code and Codex. Shared catalog data drives selection, command matching, and toolbar identity. The legacy `kimi-cli` command is recognized. The ambiguous `agent` alias is classified only when its executable target identifies the provider.
+- The toolbar keeps the selector on one line at the Start button height, preserves keyboard focus after selection, and uses a keyboard-accessible menu with local brand logos, saves the chosen tool, and synchronizes the application menu. Menu Start and the sidebar button both create a fresh project terminal. New tools include official setup-guide links; CLIs and accounts remain user-managed.
+- Process detection also inspects interpreter entry scripts for npm/Python installations. Known package entry points are matched without treating prompt arguments as tool launches. Existing absolute executable and script paths are recovered from flattened `ps` arguments, preserving spaces and stopping at the first file rather than scanning later prompt arguments.
+- Quota loading and refresh are restricted to Claude and Codex; new tools display their identity without stale quota bars or retries. Managed Skills installation remains explicitly scoped to Claude/Codex.
+- Validation: 239 unit tests, lint, typecheck, renderer build, and `node test/aiToolsApp.js` (real Electron, IPC and PTYs with temporary CLI stubs, isolated home/profile, all eight tools, native menu launch, process detection, persistence and quota isolation). Provider authentication/model calls are not exercised by these tests.
+
+
 ### [2026-09-10] Version 1.3.18 Published
 - Published [v1.3.18](https://github.com/nesdesignco/vibeconsole/releases/tag/v1.3.18) from `3cf76f1` with terminal media links and Source Control file navigation. GitHub CI passed unit tests, lint, typecheck, renderer build, smoke and terminal scroll regressions.
 - The release runner still fails at `security set-key-partition-list` with `SecKeychainUnlock`. Built the Apple Silicon artifacts locally under `release/1.3.18` using the existing Developer ID and `vibeconsole-notary` profile, with automatic publication disabled.

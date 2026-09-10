@@ -9,7 +9,8 @@ const { FitAddon } = require('@xterm/addon-fit');
 const { WebLinksAddon } = require('@xterm/addon-web-links');
 const { ScrollbackClearAddon } = require('./scrollbackClearAddon');
 const { IPC } = require('../shared/ipcChannels');
-const { matchAiToolCommand } = require('../shared/aiToolDetection');
+const { matchAiToolCommand, matchMissingAiTool } = require('../shared/aiToolDetection');
+const { AI_TOOLS } = require('../shared/aiTools');
 const { writeClipboardText } = require('./clipboardWrite');
 const { shellQuote } = require('./shellEscape');
 const { registerFilePathLinks } = require('./filePathLinker');
@@ -837,7 +838,7 @@ class TerminalManager {
   /**
    * Associate an AI tool with a terminal.
    * @param {string} terminalId - Terminal ID
-   * @param {'claude'|'codex'|null} aiTool - Tool identifier
+   * @param {string|null} aiTool - Tool identifier
    */
   setTerminalAiTool(terminalId, aiTool) {
     const instance = this.terminals.get(terminalId);
@@ -988,15 +989,20 @@ class TerminalManager {
     const colsBefore = instance.terminal.cols;
     const rowsBefore = instance.terminal.rows;
     const buffer = instance.terminal.buffer.active;
-    // A marker follows the visible line through wrapping and scrollback trims.
-    // A raw viewportY would point at different text after a column resize.
+    // Wrapped continuation rows can disappear when widening the terminal.
+    // Anchor the logical line, then keep the visible offset within its wraps.
+    let anchorLine = buffer.viewportY;
+    while (anchorLine > 0 && buffer.getLine(anchorLine)?.isWrapped) anchorLine--;
+    const wrappedOffset = buffer.viewportY - anchorLine;
     const anchor = !wasAtBottom && buffer.type === 'normal'
-      ? instance.terminal.registerMarker(buffer.viewportY - buffer.baseY - buffer.cursorY)
+      ? instance.terminal.registerMarker(anchorLine - buffer.baseY - buffer.cursorY)
       : null;
     try {
       instance.fitAddon.fit();
       if (anchor && !anchor.isDisposed) {
-        instance.terminal.scrollToLine(anchor.line);
+        let line = anchor.line;
+        while (line < anchor.line + wrappedOffset && buffer.getLine(line + 1)?.isWrapped) line++;
+        instance.terminal.scrollToLine(line);
       }
     } finally {
       anchor?.dispose();
@@ -1140,6 +1146,12 @@ class TerminalManager {
   }
 
   _detectAiToolFromCommand(terminalId, line) {
+    const instance = this.terminals.get(terminalId);
+    if (instance && line.trim()) {
+      instance.state.missingAiTool = null;
+      instance.missingToolOutput = '';
+      instance.element.querySelector('.terminal-install-help')?.remove();
+    }
     const aiTool = matchAiToolCommand(line);
     if (aiTool) {
       this._aiToolHeuristicSetAt.set(terminalId, Date.now());
@@ -1150,7 +1162,7 @@ class TerminalManager {
   /**
    * Apply an authoritative process-based detection from the main process.
    * @param {string} terminalId - Terminal ID
-   * @param {'claude'|'codex'|null} aiTool - Detected tool (null = none running)
+   * @param {string|null} aiTool - Detected tool (null = none running)
    */
   _applyDetectedAiTool(terminalId, aiTool) {
     const instance = this.terminals.get(terminalId);
@@ -1163,6 +1175,8 @@ class TerminalManager {
       if (setAt && (Date.now() - setAt) < AI_TOOL_DETECTION_GRACE_MS) return;
     } else {
       this._aiToolHeuristicSetAt.delete(terminalId);
+      instance.state.missingAiTool = null;
+      instance.element.querySelector('.terminal-install-help')?.remove();
     }
 
     const processDetected = aiTool !== null;
@@ -1241,6 +1255,7 @@ class TerminalManager {
   }
 
   _notifyStateChange() {
+    window.computerUseUpdateTarget?.();
     if (this.onStateChange) {
       this.onStateChange({
         terminals: this.getTerminalStates(),
@@ -1281,6 +1296,7 @@ class TerminalManager {
       const instance = this.terminals.get(terminalId);
       if (instance) {
         this._writeKeepingBottom(instance, data);
+        this._checkMissingAiTool(instance, data);
       }
     });
 
@@ -1298,6 +1314,55 @@ class TerminalManager {
         this._applyDetectedAiTool(terminalId, aiTool);
       }
     });
+  }
+
+  _checkMissingAiTool(instance, data) {
+    if (instance.state.aiToolProcessDetected) {
+      instance.missingToolOutput = '';
+      return;
+    }
+    // Keep incomplete lines so diagnostics split across PTY chunks still match.
+    const lines = ((instance.missingToolOutput || '') + data).split('\n');
+    instance.missingToolOutput = lines.pop().slice(-8192);
+    for (const line of lines) {
+      const toolId = matchMissingAiTool(this._stripTerminalControlSequences(line));
+      if (!toolId) continue;
+      instance.state.missingAiTool = toolId;
+      instance.element.querySelector('.terminal-install-help')?.remove();
+      const tool = AI_TOOLS[toolId];
+      const help = document.createElement('section');
+      help.className = 'terminal-install-help';
+      help.setAttribute('role', 'status');
+      help.setAttribute('aria-label', `${tool.name} installation`);
+      const title = document.createElement('strong');
+      title.textContent = `${tool.name} command not found`;
+      const note = document.createElement('p');
+      note.textContent = `Install it below, or check PATH if already installed. ${tool.installNote}. After installation, open a new terminal and start ${tool.shortName}.`;
+      const command = document.createElement('code');
+      command.textContent = tool.installCommand;
+      const actions = document.createElement('div');
+      const copy = document.createElement('button');
+      copy.type = 'button';
+      copy.textContent = 'Copy install command';
+      copy.addEventListener('click', async () => {
+        copy.textContent = await writeClipboardText(tool.installCommand) ? 'Copied' : 'Copy failed — select the command';
+      });
+      const guide = document.createElement('button');
+      guide.type = 'button';
+      guide.textContent = 'Setup guide';
+      guide.addEventListener('click', () => ipcRenderer.send(IPC.OPEN_EXTERNAL_URL, tool.docsUrl));
+      const close = document.createElement('button');
+      close.type = 'button';
+      close.textContent = 'Dismiss';
+      close.addEventListener('click', () => { help.remove(); instance.terminal.focus(); });
+      // The terminal's right-click/paste handlers must not consume card actions.
+      for (const event of ['contextmenu', 'paste', 'mousedown', 'click', 'keydown']) {
+        help.addEventListener(event, e => e.stopPropagation());
+      }
+      actions.append(copy, guide, close);
+      help.append(title, note, command, actions);
+      instance.element.appendChild(help);
+    }
   }
 
   /**

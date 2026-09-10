@@ -8,6 +8,7 @@ const {
   Map,
   Maximize2,
   Minimize2,
+  Monitor,
   Redo2,
   Replace,
   Save,
@@ -20,6 +21,7 @@ const {
 } = require('lucide/dist/cjs/lucide');
 
 const EDITOR_ICONS = {
+  Monitor,
   Command,
   List,
   Map,

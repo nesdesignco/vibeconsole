@@ -12,35 +12,8 @@ let mainWindow = null;
 let configPath = null;
 let ipcSetup = false;
 
-// Default AI tools configuration
-const AI_TOOLS = {
-  claude: {
-    id: 'claude',
-    name: 'Claude Code',
-    command: 'claude',
-    description: 'Anthropic Claude Code CLI',
-    commands: {
-      init: '/init',
-      commit: '/commit',
-      review: '/review-pr',
-      help: '/help'
-    },
-    menuLabel: 'Claude Commands'
-  },
-  codex: {
-    id: 'codex',
-    name: 'Codex CLI',
-    command: 'codex',
-    description: 'OpenAI Codex CLI',
-    commands: {
-      review: '/review',
-      model: '/model',
-      permissions: '/permissions',
-      help: '/help'
-    },
-    menuLabel: 'Codex Commands'
-  }
-};
+const { AI_TOOLS } = require('../shared/aiTools');
+let onToolChange = null;
 
 // Current configuration
 let config = {
@@ -51,7 +24,8 @@ let config = {
 /**
  * Initialize the AI Tool Manager
  */
-function init(window, app) {
+function init(window, app, onChange) {
+  onToolChange = onChange;
   mainWindow = window;
   configPath = path.join(app.getPath('userData'), 'ai-tool-config.json');
   loadConfig();
@@ -104,9 +78,10 @@ function getActiveTool() {
  */
 function setActiveTool(toolId) {
   const tools = getAvailableTools();
-  if (tools[toolId]) {
+  if (Object.hasOwn(tools, toolId)) {
     config.activeTool = toolId;
     saveConfig();
+    if (onToolChange) onToolChange();
 
     // Notify renderer about the change
     if (mainWindow && !mainWindow.isDestroyed()) {

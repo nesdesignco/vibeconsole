@@ -113,6 +113,8 @@ function getActiveTerminalState() {
 
 // Expose sendCommand globally for modules that can't import terminal directly (circular dependency)
 window.terminalSendCommand = sendCommand;
+window.terminalGetActiveState = getActiveTerminalState;
+window.terminalPasteText = pasteText;
 window.terminalRunInNewSession = async function(command) {
   if (!multiTerminalUI) throw new Error('Terminal is not ready');
   const terminalId = await multiTerminalUI.createTerminalForCurrentProject();
@@ -136,6 +138,10 @@ window.terminalFocus = function() {
 
 // Handle RUN_COMMAND IPC from menu accelerators (Cmd+K, Cmd+I, etc.)
 ipcRenderer.on(IPC.RUN_COMMAND, (event, command) => {
+  if (command?.startAiTool) {
+    document.getElementById('btn-start-ai')?.click();
+    return;
+  }
   if (multiTerminalUI) {
     multiTerminalUI.sendCommand(command);
   }

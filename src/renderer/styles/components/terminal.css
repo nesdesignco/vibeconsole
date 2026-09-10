@@ -441,6 +441,60 @@
   transition: box-shadow var(--transition-fast);
 }
 
+.terminal-install-help {
+  position: absolute;
+  z-index: 10;
+  top: 12px;
+  right: 12px;
+  left: 12px;
+  max-width: 540px;
+  max-height: calc(100% - 24px);
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid var(--border-default);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 12px;
+  box-shadow: 0 4px 16px #0004;
+  user-select: text;
+}
+
+.terminal-install-help p {
+  margin: 8px 0;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.terminal-install-help code {
+  display: block;
+  padding: 8px;
+  background: var(--bg-primary);
+  border-radius: 4px;
+  overflow-wrap: anywhere;
+}
+
+.terminal-install-help > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.terminal-install-help button {
+  padding: 5px 8px;
+  border: 1px solid var(--border-default);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.terminal-install-help button:hover,
+.terminal-install-help button:focus-visible {
+  border-color: var(--accent-primary);
+}
+
 .terminal-instance:focus,
 .terminal-instance:focus-visible,
 .terminal-instance .xterm:focus,
